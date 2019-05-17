@@ -27,6 +27,9 @@ type
   LineType* = enum
     ltNone, ltSolid, ltDashed, ltDotted, ltDotDash, ltLongDash, ltTwoDash
 
+  TextAlignKind* = enum
+    taLeft, taCenter, taRight
+
   FontSlant* = enum
     fsNormal, fsItalic, fsOblique
 

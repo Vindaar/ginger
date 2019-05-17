@@ -101,17 +101,42 @@ func toCairoFontWeight(font: Font): TFontWeight =
     result = FONT_WEIGHT_NORMAL
 
 proc drawText*(img: BImage, text: string, font: Font, at: Point,
-               rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
+               alignKind: TextAlignKind = taLeft,
+               rotate: Option[float] = none[float](),
+               rotateInView: Option[(float, Point)] = none[(float, Point)]()) =
   # NOTE: with text_extents we can center the text too, see:
   # https://www.cairographics.org/samples/text_align_center/
   img.cCanvas.withSurface:
-    if rotateAngle.isSome:
-      let rotAngTup = rotateAngle.get
+    if rotateInView.isSome:
+      let rotAngTup = rotateInView.get
       ctx.rotate(rotAngTup[0], rotAngTup[1])
     ctx.select_font_face(font.family, font.toCairoFontSlant, font.toCairoFontWeight)
     ctx.set_font_size(font.size)
     ctx.set_source_rgba(font.color.r, font.color.g, font.color.b, font.color.a)
-    ctx.move_to(at.x, at.y)
+    var
+      x = at.x
+      y = at.y
+      extents: TTextExtents
+
+    ctx.text_extents(text, addr extents)
+    # potentially rotate around specific point (location depends on where we align)
+    if rotate.isSome:
+      let
+        rotAtX = at.x
+        rotAtY = at.y# - (extents.height / 2.0 + extents.y_bearing)
+      ctx.rotate(rotate.get(), (rotAtX, rotAtY))
+    case alignKind
+    of taLeft:
+      x = at.x
+      y = at.y - (extents.height / 2.0 + extents.y_bearing)
+    of taCenter:
+      x = at.x - (extents.width / 2.0 + extents.x_bearing)
+      y = at.y - (extents.height / 2.0 + extents.y_bearing)
+    of taRight:
+      x = at.x - (extents.width + extents.x_bearing)
+      y = at.y - (extents.height / 2.0 + extents.y_bearing)
+
+    ctx.move_to(x, y)
     ctx.show_text(text)
 
 proc drawRectangle*(img: BImage, left, bottom, width, height: float,
