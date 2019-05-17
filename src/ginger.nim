@@ -4,10 +4,20 @@ import chroma
 import options
 export options
 
+import sequtils
+import strformat
+from seqmath import linspace
+
 import ginger / [macroUtils, backends, types]
 export types, backends, macroUtils
 
 # TODO: think about renaming `Coord1D` to someting like Unit?
+
+# TODO: implement some more units so that we can use it to define
+# distances in absolute numbers (without knowing width / height)
+# instead of relatives, which will be useful for things which should
+# NOT depend on the aspect ratio of the plot, e.g. distance of label
+# from an axis
 
 ## backendLayer
 ## implements the prototype backend layer
@@ -20,7 +30,7 @@ export types, backends, macroUtils
 # makes use of backends layer
 type
   GraphObjectKind* = enum
-    goAxis, goLabel, goTick, goPoint, goLine, goRect
+    goAxis, goText, goLabel, goTick, goTickLabel, goPoint, goLine, goRect
 
   MarkerKind* = enum
     mkCircle, mkCross, mkRotCross, mkStar
@@ -28,15 +38,23 @@ type
   GraphObject* = object
     children*: seq[GraphObject]
     style*: Style
-    rotate*: Option[(float, Point)]
+    rotateInView*: Option[(float, Point)] # rotation of viewport applied to all objs
+    rotate*: Option[float] # rotation around center position
     case kind*: GraphObjectKind
     of goAxis:
       axWidth*: float
-      axStart*: Point
-      axStop*: Point
-    of goLabel:
-      lbText*: string
-      lbFont*: Font
+      axStart*: Coord
+      axStop*: Coord
+    of goLabel, goText, goTickLabel:
+      txtText*: string
+      txtFont*: Font
+      txtPos*: Coord
+      txtAlign*: TextAlignKind
+      txtRotate*: float # possible additional rotation
+    of goTick:
+      tkMajor*: bool # is a major tick, e.g. large tick w/ label
+      tkPos*: Coord
+      tkAxis*: AxisKind
     of goPoint:
       ptMarker*: MarkerKind
       ptSize*: float
@@ -58,10 +76,15 @@ type
 
   CoordKind* = enum
     ckRelative, # relative to viewport (0.0, 1.0)
-    ckAbsolute, # absolute to size of image
     ckData, # based on xScale, yScale of data
-    ckCentimeter # absolute cm based on dpi of 72.27
-    ckStrWidth # based on width of a string in a given fontsize
+    ckStrWidth,#, # based on width of a string in a given fontsize
+    # kinds requiring absolute scale
+    ckAbsolute, # absolute to size of image ~= points
+    ckCentimeter, # absolute cm based on dpi of 72.27
+    ckInch # absolute inch, 2.54 cm = 1 inch
+
+    #ckSquareRelative # relative coords but square. Takes min(width, height)
+                     # as def for (0, 1)
     # ...
 
   Coord1D* = object
@@ -69,13 +92,14 @@ type
     case kind*: CoordKind
     of ckRelative:
       discard
-    of ckAbsolute:
-      length*: float
+    of ckAbsolute, ckCentimeter, ckInch:
+      # length of scale in points
+      # 72.27 points in inch
+      # 2.54 cm in inch
+      # Option since this is only used to convert it to relative coords.
+      length*: Option[float]
     of ckData:
       scale*: Scale
-    of ckCentimeter:
-      # NOTE: requires a size in either inches or pixel...!
-      discard
     of ckStrWidth:
       text*: string
       font*: Font
@@ -115,72 +139,143 @@ type
     scale*: Option[float] # scaling factor to scale elements by
     origin*: Coord # "origin" of the viewport, i.e. the location of the
                   # (left, bottom) position in relative coordinates (ckRelative)
-    width*: Coord1D
+    width*: Coord1D # width in relative coordinates
     height*: Coord1D
     objects*: seq[GraphObject]
     children*: seq[Viewport]
+    wImg*: float # absolute width, height in points (pixels)
+    hImg*: float
+    backend*: BackendKind
 
-func toRelative*(p: Coord1D): Coord1D =
+func eitherOrRaise[T](either: Option[T],
+                      `or`: Option[T]): T {.raises: [ValueError,
+                                                     ref UnpackError].} =
+  ## returns either `x.get` or `or.get` or raise `ValueError`
+  ## should in principle only be used if either of the two `certainly` contains
+  ## a value!
+  if either.isSome:
+    result = either.get()
+  elif `or`.isSome:
+    result = `or`.get()
+  else:
+    raise newException(ValueError, "Neither of the two optionals contains a value!")
+
+
+template cmToInch(x: float): float = x / 2.54
+template inchToAbs(x: float): float = x * 72.27
+template absToInch(x: float): float = x / 72.27
+template inchToCm(x: float): float = x * 2.54
+
+func toRelative*(p: Coord1D,
+                 length: Option[float] = none[float]()): Coord1D =
   ## converts the given coordinate to a relative coordinate
   case p.kind
   of ckRelative:
     result = p
-  of ckAbsolute:
-    result = Coord1D(pos: p.pos / p.length,
-                     kind: ckRelative)
+  of ckAbsolute, ckCentimeter, ckInch:
+    if p.length.isSome or length.isSome:
+      # either get p.length or use length
+      let ln = eitherOrRaise(p.length, length)
+      var newPos: float
+      case p.kind
+      of ckAbsolute:
+        newPos = p.pos / ln
+      of ckCentimeter:
+        newPos = p.pos.cmToInch.inchToAbs / ln
+      of ckInch:
+        newPos = p.pos.inchToAbs / ln
+      else: raise newException(Exception, "CoordKind is invalid!")
+      result = Coord1D(pos: newPos,
+                       kind: ckRelative)
+    else:
+      raise newException(ValueError, "Cannot convert `" & $p.kind & "` into " &
+        " relative coordinate if no length scale given!")
   of ckData:
     result = Coord1D(pos: (p.pos - p.scale.low) / (p.scale.high - p.scale.low),
                      kind: ckRelative)
-  of ckCentimeter:
-    const dpi = 72.27
-    const inch = 2.54
-    #result = Coord(x:
-    raise newException(Exception,
-                       "Conversion from cm to relative currently not supported!")
   of ckStrWidth:
     # can either use cairo's internals, e.g. get the extent of the string in a
     # given font, or assuming a font size in dots calculate from DPI?
     raise newException(Exception,
                        "Conversion from StrWidth to relative currently not supported!")
 
+func toPoints*(p: Coord1D,
+               length: Option[float] = none[float]()): Coord1D =
+  ## converts the given coordinate to point based absolute values
+  case p.kind
+  of ckRelative:
+    if length.isSome:
+      result = Coord1D(pos: p.pos * length.get(),
+                       length: length,
+                       kind: ckAbsolute)
+    else:
+      raise newException(Exception, "Cannot convert relative coordinate to " &
+        "absolute points without a length scale!")
+  of ckAbsolute, ckCentimeter, ckInch:
+    var newPos: float
+    case p.kind
+    of ckAbsolute:
+      newPos = p.pos
+    of ckCentimeter:
+      newPos = p.pos.cmToInch.inchToAbs
+    of ckInch:
+      newPos = p.pos.inchToAbs
+    else: raise newException(Exception, "CoordKind is invalid!")
+    result = Coord1D(pos: newPos,
+                     length: p.length,
+                     kind: ckAbsolute)
+  of ckData:
+    result = result.toRelative.toPoints(length = length)
+  of ckStrWidth:
+    # can either use cairo's internals, e.g. get the extent of the string in a
+    # given font, or assuming a font size in dots calculate from DPI?
+    raise newException(Exception,
+                       "Conversion from StrWidth to relative currently not supported!")
 
 func toRelative*(p: Coord): Coord =
   ## converts the given coordinate to a relative coordinate
   result = Coord(x: p.x.toRelative,
-                 y: p.x.toRelative,
+                 y: p.y.toRelative,
                  kind: ckRelative)
-  #case p.kind
-  #of ckRelative:
-  #  result = p
-  #of ckAbsolute:
-  #  result = Coord(x: p.x / p.absWidth,
-  #                 y: p.y / p.absHeight,
-  #                 kind: ckRelative)
-  #of ckData:
-  #  result = Coord(x: (p.x - p.xScale.low) / (p.xScale.high - p.xScale.low),
-  #                 y: (p.y - p.yScale.low) / (p.yScale.high - p.yScale.low),
-  #                 kind: ckRelative)
-  #of ckCentimeter:
-  #  const dpi = 72.27
-  #  const inch = 2.54
-  #  #result = Coord(x:
-  #  raise newException(Exception,
-  #                     "Conversion from cm to relative currently not supported!")
-  #of ckStrWidth:
-  #  # can either use cairo's internals, e.g. get the extent of the string in a
-  #  # given font, or assuming a font size in dots calculate from DPI?
-  #  raise newException(Exception,
-  #                     "Conversion from StrWidth to relative currently not supported!")
+
+proc `==`*(c1, c2: Coord1D): bool =
+  ## TODO: after certain conversion we may end up with unequal values
+  ## due to floating point errors. Handle?
+  # check for equality of absolute value coordinate kinds first
+  if c1.kind in ckAbsolute .. ckInch and
+     c2.kind in ckAbsolute .. ckInch:
+    # do not require length scale
+    result = c1.toPoints.pos == c2.toPoints.pos
+  else:
+    result = c1.toRelative.pos == c2.toRelative.pos
 
 proc `==`*(c1, c2: Coord): bool =
-  let
-    c1Rel = c1.toRelative
-    c2Rel = c2.toRelative
-  result = if c1Rel.x.pos == c2Rel.x.pos and
-              c1Rel.y.pos == c2Rel.y.pos:
+  result = if c1.x == c2.x and
+              c1.y == c2.y:
              true
            else:
              false
+
+proc `+`(c1, c2: Coord1D): Coord1D =
+  ## adds two Coord1D by converting to relative coordinates.
+  ## Note that this may be a lossy conversion, e.g. if one is given
+  ## in `ckAbsolute` (length is lost)
+  result = Coord1D(pos: c1.toRelative.pos + c2.toRelative.pos,
+                   kind: ckRelative)
+
+proc `-`(c1, c2: Coord1D): Coord1D =
+  ## subtracts two Coord1D by converting to relative coordinates.
+  ## Note that this may be a lossy conversion, e.g. if one is given
+  ## in `ckAbsolute` (length is lost)
+  result = Coord1D(pos: c1.toRelative.pos - c2.toRelative.pos,
+                   kind: ckRelative)
+
+proc `*`(c1, c2: Coord1D): Coord1D =
+  ## multiplies two Coord1D by converting to relative coordinates.
+  ## Note that this may be a lossy conversion, e.g. if one is given
+  ## in `ckAbsolute` (length is lost)
+  result = Coord1D(pos: c1.toRelative.pos * c2.toRelative.pos,
+                   kind: ckRelative)
 
 proc to*(p: Coord1D, ckKind: CoordKind,
          absLength = none[float](),
@@ -189,28 +284,64 @@ proc to*(p: Coord1D, ckKind: CoordKind,
   ## converts the given 1D Coordinate position in a certain coordinate
   ## system to the same position in a target coordinate system
   ## NOTE: this procedure is a potentially lossy conversion!
-  # first convert any point to a relative point, from which we can
-  # calculate any other position easiest
-  let pRel = p.toRelative
-  case ckKind
-  of ckRelative: result = p # nothing to do
-  of ckAbsolute:
-    doAssert absLength.isSome, "Conversion to absolute requires a length scale!"
-    result = Coord1D(pos: pRel.pos * absLength.get(),
-                     length: absLength.get(),
-                     kind: ckAbsolute)
-  of ckData:
-    doAssert datScale.isSome, "Conversion to data requires a scale!"
-    let scale = datScale.get()
-    result = Coord1D(pos: (scale.high - scale.low) * pRel.pos + scale.low,
-                     scale: scale,
-                     kind: ckData)
-  of ckCentimeter:
-    raise newException(Exception, "Conversion to cm not yet implemented!")
-  of ckStrWidth:
-    doAssert strText.isSome, "Conversion to string width requires an string!"
-    doAssert strFont.isSome, "Conversion to string width requires a Font!"
-    raise newException(Exception, "Conversion to string width not yet implemented!")
+  # first check whether it's only a unit conversion between absolute values
+  # in this case the conversion is loss free
+  if ckKind in ckAbsolute .. ckInch and
+     p.kind in ckAbsolute .. ckInch:
+    case ckKind
+    of ckAbsolute:
+      result = p.toPoints
+    of ckCentimeter:
+      let newPos = p.toPoints.pos.absToInch.inchToCm
+      result = Coord1D(pos: newPos,
+                       length: p.length,
+                       kind: ckCentimeter)
+    of ckInch:
+      let newPos = p.toPoints.pos.absToInch
+      result = Coord1D(pos: newPos,
+                       length: p.length,
+                       kind: ckInch)
+    else: raise newException(Exception, "CoordKing is invalid!")
+  else:
+    # first convert any point to a relative point, from which we can
+    # calculate any other position easiest
+    var pRel: Coord1D
+    if absLength.isSome:
+      pRel = p.toRelative(absLength)
+    else:
+      pRel = p.toRelative
+    case ckKind
+    of ckRelative: result = p # nothing to do
+    of ckAbsolute:
+      doAssert absLength.isSome, "Conversion to absolute requires a length scale!"
+      result = Coord1D(pos: pRel.pos * absLength.get(),
+                       length: absLength,
+                       kind: ckAbsolute)
+    of ckInch:
+      doAssert absLength.isSome, "Conversion to inches requires an absolute length scale!"
+      # assumes absLength is size in points!
+      const dpi = 72.27
+      result = Coord1D(pos: pRel.pos * absLength.get() / dpi,
+                       length: absLength,
+                       kind: ckInch)
+    of ckCentimeter:
+      doAssert absLength.isSome, "Conversion to inches requires an absolute length scale!"
+      # assumes absLength is size in points!
+      const dpi = 72.27
+      const inch = 2.54
+      result = Coord1D(pos: pRel.pos * absLength.get() / dpi * inch,
+                       length: absLength,
+                       kind: ckCentimeter)
+    of ckData:
+      doAssert datScale.isSome, "Conversion to data requires a scale!"
+      let scale = datScale.get()
+      result = Coord1D(pos: (scale.high - scale.low) * pRel.pos + scale.low,
+                       scale: scale,
+                       kind: ckData)
+    of ckStrWidth:
+      doAssert strText.isSome, "Conversion to string width requires an string!"
+      doAssert strFont.isSome, "Conversion to string width requires a Font!"
+      raise newException(Exception, "Conversion to string width not yet implemented!")
 
 proc to*(p: Coord, ckKind: CoordKind,
          absWidth = none[float](), absHeight = none[float](),
@@ -228,6 +359,18 @@ proc to*(p: Coord, ckKind: CoordKind,
     result = Coord(x: p.x.to(ckAbsolute, absLength = absWidth),
                    y: p.y.to(ckAbsolute, absLength = absHeight),
                    kind: ckAbsolute)
+  of ckInch:
+    doAssert absWidth.isSome, "Conversion to inches requires a width!"
+    doAssert absHeight.isSome, "Conversion to inches requires a height!"
+    result = Coord(x: p.x.to(ckInch, absLength = absWidth),
+                   y: p.y.to(ckInch, absLength = absHeight),
+                   kind: ckInch)
+  of ckCentimeter:
+    doAssert absWidth.isSome, "Conversion to cm requires a width!"
+    doAssert absHeight.isSome, "Conversion to cm requires a height!"
+    result = Coord(x: p.x.to(ckCentimeter, absLength = absWidth),
+                   y: p.y.to(ckCentimeter, absLength = absHeight),
+                   kind: ckCentimeter)
   of ckData:
     doAssert datXScale.isSome, "Conversion to data requires an X scale!"
     doAssert datYScale.isSome, "Conversion to data requires a Y scale!"
@@ -237,8 +380,6 @@ proc to*(p: Coord, ckKind: CoordKind,
     result = Coord(x: p.x.to(ckData, datScale = datXScale),
                    y: p.y.to(ckData, datScale = datYScale),
                    kind: ckData)
-  of ckCentimeter:
-    raise newException(Exception, "Conversion to cm not yet implemented!")
   of ckStrWidth:
     doAssert strText.isSome, "Conversion to string width requires an string!"
     doAssert strFont.isSome, "Conversion to string width requires a Font!"
@@ -271,42 +412,48 @@ proc to*(p: Coord, ckKind: CoordKind,
   #   doAssert strFont.isSome, "Conversion to string width requires a Font!"
   #  raise newException(Exception, "Conversion to string width not yet implemented!")
 
-proc initViewport*(origin: Coord,
-                   width, height: Coord1D,
-                   style = none[Style](),
-                   xScale = none[Scale](),
-                   yScale = none[Scale](),
-                   rotate = none[float](),
-                   scale = none[float]()): Viewport =
-  ## initializes a `Viewport` with `origin` in any coordinate system
-  ## with 1D coordinates providing width and height
-  ## Uses Coord1D to allow to define sizes in arbitrary units
-  result = Viewport(origin: origin,
-                    width: width,
-                    height: height,
-                    rotate: rotate,
-                    scale: scale)
-  if style.isSome:
-    result.style = style.get()
-  if xScale.isSome:
-    result.xScale = xScale.get()
-  if yScale.isSome:
-    result.yScale = yScale.get()
+func initCoord1D*(at: float, kind: CoordKind = ckRelative): Coord1D =
+  ## returns a Coord1D at coordinate `at` of kind `kind`
+  result = Coord1D(pos: at, kind: kind)
 
-proc initViewport*(left, bottom, width, height: float,
-                   style = none[Style](),
-                   xScale = none[Scale](),
-                   yScale = none[Scale](),
-                   rotate = none[float](),
-                   scale = none[float]()): Viewport =
-  ## convenience init function for Viewport using relative coordinates
-  let origin = Coord(x: Coord1D(pos: left, kind: ckRelative),
-                     y: Coord1D(pos: bottom, kind: ckRelative))
-  let
-    widthCoord = Coord1D(pos: width, kind: ckRelative)
-    heightCoord = Coord1D(pos: height, kind: ckRelative)
-  result = initViewport(origin, widthCoord, heightCoord,
-                        style, xScale, yScale, rotate, scale)
+func initCoord*(x, y: float, kind: CoordKind = ckRelative): Coord =
+  ## returns a coordinate at coordinates x, y of kind `kind`
+  result = Coord(x: initCoord1D(x, kind = kind),
+                 y: initCoord1D(y, kind = kind),
+                 kind: kind)
+
+func patchCoord(c: Coord1D, length: float): Coord1D =
+  ## patches the given coordinate in case it requries an absolute
+  ## scale (ckAbsolute .. ckInch) to have a length field
+  result = c
+  if result.kind in ckAbsolute .. ckInch and not result.length.isSome:
+    result.length = some(length)
+
+func patchCoord(c: Coord, view: Viewport): Coord =
+  ## patches the coordinate if it contains an absolute scale to have
+  ## width / height inherited from its viewport
+  result = Coord(x: c.x.patchCoord(view.wImg),
+                 y: c.y.patchCoord(view.hImg),
+                 kind: c.kind)
+
+proc `[]`(view: Viewport, idx: int): Viewport =
+  ## returns the `idx` child of `view`
+  if view.children.len > idx:
+    result = view.children[idx]
+  else:
+    raise newException(IndexError, "`idx` is invalid for " & $view.children.len &
+      " children viewports!")
+
+proc `[]=`(view: var Viewport, idx: int, viewToSet: Viewport) =
+  ## override the `idx` child of `view` with `viewToSet`
+  if view.children.len > idx:
+    view.children[idx] = viewToSet
+  else:
+    raise newException(IndexError, "`idx` is invalid for " & $view.children.len &
+      " children viewports!")
+
+proc len(view: Viewport): int = view.children.len
+proc high(view: Viewport): int = view.len - 1
 
 proc left(view: Viewport): float =
   ## returns the left (x) position of the `Viewport` in `ckRelative`
@@ -330,43 +477,56 @@ proc convertToKind(c: Coord1D, toKind: Coord1D): Coord1D =
   of ckRelative:
     result = c.toRelative
   of ckAbsolute:
-    result = c.to(ckAbsolute,
-                  absLength = some(toKind.length))
+    if toKind.length.isSome:
+      result = c.to(ckAbsolute,
+                    absLength = toKind.length)
+    else:
+      raise newException(ValueError, "Conversion to `ckAbsolute` requires a length!")
+  of ckInch:
+    if toKind.length.isSome:
+      result = c.to(ckInch,
+                    absLength = toKind.length)
+    else:
+      raise newException(ValueError, "Conversion to `ckInch` requires a length!")
+  of ckCentimeter:
+    if toKind.length.isSome:
+      result = c.to(ckCentimeter,
+                    absLength = toKind.length)
+    else:
+      raise newException(ValueError, "Conversion to `ckCentimeter` requires a length!")
   of ckData:
     result = c.to(ckData,
                   datScale = some(toKind.scale))
   else:
     raise newException(Exception, "convertToKind not implemented for " & $toKind.kind)
 
-proc translate(c: Coord1D, byCoord: Coord1D): Coord1D =
-  ## translates the coordinate `c` by `byCoord`
-  let pos = c.toRelative.pos + byCoord.toRelative.pos
-  result = Coord1D(pos: pos, kind: ckRelative)
-  result = result.convertToKind(c)
+#proc translate(c: Coord1D, byCoord: Coord1D): Coord1D =
+#  ## translates the coordinate `c` by `byCoord`
+#  let pos = c.toRelative.pos + byCoord.toRelative.pos
+#  result = Coord1D(pos: pos, kind: ckRelative)
+#  result = result.convertToKind(c)
 
-proc translate(c: Coord, byCoord: Coord): Coord =
-  result = Coord(x: c.x.translate(byCoord.x),
-                 y: c.y.translate(byCoord.y),
-                 kind: c.kind)
+#proc translate(c: Coord, byCoord: Coord): Coord =
+#  result = Coord(x: c.x.translate(byCoord.x),
+#                 y: c.y.translate(byCoord.y),
+#                 kind: c.kind)
 
 proc embedInto(c: Coord, view: Viewport): Coord =
   ## embeds the coordinate `c` into `Viewport`
-  result = Coord(x: Coord1D(pos: left(view) + c.x.toRelative.pos * width(view),
+  result = Coord(x: Coord1D(pos: left(view) + width(view) * c.x.toRelative.pos,
                             kind: ckRelative),
-                 y: Coord1D(pos: bottom(view) + c.y.toRelative.pos * height(view),
+                 y: Coord1D(pos: bottom(view) + height(view) * c.y.toRelative.pos,
                             kind: ckRelative),
                  kind: ckRelative)
-  #result = result.convertToKind(c)
 
 proc embedInto(view: Viewport, into: Viewport): Viewport =
   ## embeds the given `view` into the `into` Viewport by embedding
   ## the (left, bottom) coordinates and scaling the width / height
   result = view
   result.origin = result.origin.embedInto(into)
-  result.width = Coord1D(pos: result.width.toRelative.pos * into.width.toRelative.pos,
-                         kind: ckRelative)
-  result.height = Coord1D(pos: result.height.toRelative.pos * into.height.toRelative.pos,
-                          kind: ckRelative)
+  result.width = result.width * into.width#Coord1D(pos: result.width.toRelative.pos * into.width.toRelative.pos,
+                                          #        kind: ckRelative)
+  result.height = result.height * into.height
 
 proc point(c: Coord): Point =
   ## converts the given coordinate to `ckRelative` and returns the position as a
@@ -374,23 +534,134 @@ proc point(c: Coord): Point =
   #result = (x: c.x.toRelative.pos, y: c.y.toRelative.pos)
   result = (x: c.x.pos, y: c.y.pos)
 
+
+
+
+
+################################################################################
+############ INIT FUNCTIONS
+################################################################################
+
+
+
+
+
+
+proc initViewport*(origin: Coord,
+                   width, height: Coord1D,
+                   style = none[Style](),
+                   xScale = none[Scale](),
+                   yScale = none[Scale](),
+                   rotate = none[float](),
+                   scale = none[float](),
+                   wImg = 640.0,
+                   hImg = 480.0,
+                   backend = bkCairo): Viewport =
+  ## initializes a `Viewport` with `origin` in any coordinate system
+  ## with 1D coordinates providing width and height
+  ## Uses Coord1D to allow to define sizes in arbitrary units
+  result = Viewport(origin: origin,
+                    width: width,
+                    height: height,
+                    rotate: rotate,
+                    scale: scale,
+                    wImg: wImg,
+                    hImg: hImg,
+                    backend: backend)
+  if style.isSome:
+    result.style = style.get()
+  if xScale.isSome:
+    result.xScale = xScale.get()
+  if yScale.isSome:
+    result.yScale = yScale.get()
+
+proc initViewport*(left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
+                   style = none[Style](),
+                   xScale = none[Scale](),
+                   yScale = none[Scale](),
+                   rotate = none[float](),
+                   scale = none[float](),
+                   wImg = 640.0,
+                   hImg = 480.0,
+                   backend = bkCairo): Viewport =
+  ## convenience init function for Viewport using relative coordinates
+  let origin = Coord(x: Coord1D(pos: left, kind: ckRelative),
+                     y: Coord1D(pos: bottom, kind: ckRelative))
+  let
+    widthCoord = Coord1D(pos: width, kind: ckRelative)
+    heightCoord = Coord1D(pos: height, kind: ckRelative)
+  result = initViewport(origin, widthCoord, heightCoord,
+                        style, xScale, yScale, rotate, scale,
+                        wImg, hImg, backend)
+
+proc addViewport*(view: var Viewport,
+                  origin: Coord,
+                  width, height: Coord1D,
+                  style = none[Style](),
+                  xScale = none[Scale](),
+                  yScale = none[Scale](),
+                  rotate = none[float](),
+                  scale = none[float]()): Viewport =
+  ## add a new viewport with the given settings to the `view`
+  ## TODO: do not return viewchild???
+  var viewChild = initViewport(origin.patchCoord(view),
+                               width.patchCoord(view.wImg),
+                               height.patchCoord(view.hImg),
+                               style, xScale, yScale, rotate, scale,
+                               backend = view.backend)
+  # override width and height
+  viewChild.wImg = view.wImg * width.toRelative.pos
+  viewChild.hImg = view.hImg * height.toRelative.pos
+  # TODO: this is not useful, since all objects have value semantics, i.e. if we change it
+  # the change is not reflected, since we work on a copy.
+  view.children.add viewChild
+  result = viewChild
+
+proc addViewport*(view: var Viewport,
+                  left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
+                  style = none[Style](),
+                  xScale = none[Scale](),
+                  yScale = none[Scale](),
+                  rotate = none[float](),
+                  scale = none[float]()): Viewport =
+  ## add a new viewport with the given settings to the `view`, set at relative
+  ## coordinates (left, bottom), (width, height)
+  ## TODO: Do not return viewchild???
+  let origin = Coord(x: Coord1D(pos: left, kind: ckRelative),
+                     y: Coord1D(pos: bottom, kind: ckRelative))
+  let
+    widthCoord = Coord1D(pos: width, kind: ckRelative)
+    heightCoord = Coord1D(pos: height, kind: ckRelative)
+  result = view.addViewport(origin, widthCoord, heightCoord, style, xScale,
+                            yScale, rotate, scale)
+
 proc initAxis(view: Viewport,
-              kind: AxisKind,
+              axKind: AxisKind,
               width = 1.0,
               color = color(0.0, 0.0, 0.0)): GraphObject =
   var axis = GraphObject(kind: goAxis,
                          axWidth: width,
-                         axStart: (0.0, 1.0),
-                         axStop: (1.0, 1.0),
+                         axStart: initCoord(0.0, 1.0),
+                         axStop: initCoord(1.0, 1.0),
                          style: Style(color: color,
                                       lineWidth: width))
-  case kind
+  case axKind
   of akX:
     result = axis
   of akY:
     result = replace(axis):
-      axStart = (0.0, 0.0)
-      axStop = (0.0, 1.0)
+      axStart = initCoord(0.0, 0.0)
+      axStop = initCoord(0.0, 1.0)
+
+proc xaxis(view: Viewport,
+           width = 1.0,
+           color = color(0.0, 0.0, 0.0)): GraphObject =
+  result = view.initAxis(akX, width, color)
+
+proc yaxis(view: Viewport,
+           width = 1.0,
+           color = color(0.0, 0.0, 0.0)): GraphObject =
+  result = view.initAxis(akY, width, color)
 
 proc initRect(view: Viewport,
               origin: Coord,
@@ -398,15 +669,16 @@ proc initRect(view: Viewport,
               color = color(0.0, 0.0, 0.0),
               style = none[Style]()): GraphObject =
   result = GraphObject(kind: goRect,
-                       reOrigin: origin,
-                       reWidth: width,
-                       reHeight: height)
+                       reOrigin: origin.patchCoord(view),
+                       reWidth: width.patchCoord(view.wImg),
+                       reHeight: height.patchCoord(view.hImg))
   if style.isSome:
     result.style = style.get()
   else:
     result.style = Style(lineWidth: 0.0,
                          color: color(0.0, 0.0, 0.0, 0.0),
                          size: 0.0,
+                         lineType: ltSolid,
                          fillColor: color)
 
 proc initRect(view: Viewport,
@@ -423,12 +695,20 @@ proc initRect(view: Viewport,
                          height = heightCoord,
                          color = color,
                          style = style)
-  #                     GraphObject(kind: goRect,
-  #                     reLeft: left,
-  #                     reBottom: bottom,
-  #                     reWidth: width,
-  #                     reHeight: height,
-  #                     style: Style(fillColor: color))
+
+proc initText(view: Viewport,
+              origin: Coord,
+              text: string,
+              alignKind: TextAlignKind,
+              font: Font,
+              rotate = none[float]()): GraphObject =
+  result = GraphObject(kind: goText,
+                       txtText: text,
+                       txtFont: font,
+                       txtAlign: alignKind,
+                       txtPos: origin.patchCoord(view))
+  if rotate.isSome:
+    result.rotate = some(rotate.get())
 
 proc scaleTo(p: Point, view: Viewport): Point =
   ## scales the point from data coordinates to viewport coordinates
@@ -447,43 +727,296 @@ proc initPoint(view: Viewport,
                                     y: Coord1D(pos: pos.y, scale: view.yScale, kind: ckData)))
                        #ptPos: pos.scaleTo(view))
 
+proc initAxisLabel(view: Viewport,
+                   label: string,
+                   axKind: AxisKind,
+                   margin: Coord1D,
+                   font: Option[Font] = none[Font]()): GraphObject =
+  ## margin is positive value!
+  result = GraphObject(kind: goText,
+                       txtText: label,
+                       txtAlign: taCenter)
+  if font.isSome:
+    result.txtFont = font.get()
+  else:
+    result.txtFont = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0))
+  case axKind
+  of akX:
+    # TODO: fix positions based on absolute unit (e.g. cm) instead of
+    # relatives?
+    let yPos = initCoord1D(1.0) + Coord1D(pos: margin.pos,
+                                          length: some(view.hImg),
+                                          kind: ckCentimeter)
+    result.txtPos = Coord(x: initCoord1D(0.5),
+                          y: ypos)
+  of akY:
+    let xPos = Coord1D(pos: -margin.pos,
+                       length: some(view.wImg),
+                       kind: ckCentimeter)
+    result.txtPos = Coord(x: xPos,
+                          y: initCoord1D(0.5))
+    result.rotate = some(-90.0)
+
+proc xlabel(view: Viewport,
+            label: string,
+            font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
+            margin = 1.25): GraphObject =
+  result = view.initAxisLabel(label = label,
+                              axKind = akX,
+                              margin = initCoord1D(margin, ckCentimeter),
+                              font = some(font))
+
+proc ylabel(view: Viewport,
+            label: string,
+            font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
+            margin = 1.25): GraphObject =
+  result = view.initAxisLabel(label = label,
+                              axKind = akY,
+                              margin = initCoord1D(margin, ckCentimeter),
+                              font = some(font))
+
+proc initTickLabel(view: Viewport,
+                   tick: GraphObject,
+                   font: Font = Font(family: "sans-serif", size: 8.0, color: color(0.0, 0.0, 0.0)),
+                   rotate = none[float]()): GraphObject =
+  doAssert tick.kind == goTick, "object must be a `goTick` to create a `goTickLabel`!"
+  var label: GraphObject
+  var text: string
+  var origin: Coord
+  let loc = tick.tkPos
+  case tick.tkAxis
+  of akX:
+    let xCoord = Coord1D(pos: loc.x.pos, kind: ckData, scale: loc.x.scale)
+    let yCoord = Coord1D(pos: loc.y.scale.high, kind: ckData, scale: loc.y.scale)
+    origin = Coord(x: xCoord,
+                   y: yCoord + Coord1D(pos: 0.5, kind: ckCentimeter, length: some(view.hImg)),
+                   kind: ckData)
+    text = &"{loc.x.pos:.2f}"
+  of akY:
+    let xCoord = Coord1D(pos: loc.x.scale.low, kind: ckData, scale: loc.x.scale)
+    let yCoord = Coord1D(pos: loc.y.pos, kind: ckData, scale: loc.y.scale)
+    origin = Coord(x: xCoord - Coord1D(pos: 0.5, kind: ckCentimeter, length: some(view.wImg)),
+                   y: yCoord,
+                   kind: ckData)
+    text = &"{loc.y.pos:.2f}"
+  result = view.initText(origin, text, taCenter, font, rotate)
+
+proc tickLabels(view: Viewport, ticks: seq[GraphObject],
+                font: Font = Font(family: "sans-serif", size: 8.0, color: color(0.0, 0.0, 0.0))): seq[GraphObject] =
+  ## returns all tick labels for the given ticks
+  result = ticks.mapIt(view.initTickLabel(it, font))
+
+proc initTick(view: Viewport,
+              axKind: AxisKind,
+              major: bool,
+              at: Coord,
+              style: Option[Style] = none[Style]()): GraphObject =
+  result = GraphObject(kind: goTick,
+                       tkPos: at.patchCoord(view),
+                       tkMajor: major,
+                       tkAxis: axKind)
+  if style.isSome:
+    result.style = style.get()
+  else:
+    result.style = Style(lineWidth: 1.0, # width of tick
+                         color: color(0.0, 0.0, 0.0),
+                         size: 5.0, # total length of tick
+                         lineType: ltSolid)
+
+# taken straight from: *cough*
+# https://stackoverflow.com/questions/4947682/intelligently-calculating-chart-tick-positions
+proc niceNumber(val: float, round: bool): float =
+  var niceFrac: float
+  let exponent = val.log10.floor.int
+  let frac = val / pow(10, exponent.float)
+
+  if round:
+    if frac < 1.5:
+      niceFrac = 1.0
+    elif frac < 3.0:
+      niceFrac = 2.0
+    elif frac < 7.0:
+      niceFrac = 5.0
+    else:
+      niceFrac = 10.0
+  else:
+    if frac <= 1.0:
+      niceFrac = 1.0
+    elif frac <= 2.0:
+      niceFrac = 2.0
+    elif frac <= 5.0:
+      niceFrac = 5.0
+    else:
+      niceFrac = 10.0
+
+  result = niceFrac * pow(10, exponent.float)
+
+proc initTicks(view: Viewport,
+               axKind: AxisKind,
+               numTicks: int = 0,
+               tickLocs: seq[Coord] = @[],
+               major = true,
+               style: Option[Style] = none[Style]()): seq[GraphObject] =
+  # check whether there
+  if numTicks == 0 and tickLocs.len == 0:
+    raise newException(ValueError, "Either need a number of ticks or tick " &
+      "locations if auto tick locations not used!")
+  if numTicks == 0 and tickLocs.len > 0:
+    for loc in tickLocs:
+      result.add initTick(view, axKind = axKind, major = major, at = loc,
+                          style = style)
+  elif numTicks > 0:
+    var scale: Scale
+    if axKind == akX:
+      scale = view.xScale
+    else:
+      scale = view.yScale
+    if scale.low == scale.high:
+      raise newException(ValueError, "A data scale is required to calculate " &
+        "tick positions!")
+
+    # TODO: extend for log scale
+    let
+      axStart = scale.low
+      axEnd   = scale.high
+
+    # Check for special cases
+    let axWidth = axEnd - axStart;
+
+    # Compute the new nice range and ticks
+    let niceRange = niceNumber(axEnd - axStart, false)
+    let niceTick = niceNumber(niceRange / (numTicks - 1).float, true)
+
+    # Compute the new nice start and end values
+    let newaxStart = floor(axStart / niceTick) * niceTick
+    let newaxEnd = ceil(axEnd / niceTick) * niceTick
+    let tickWidth = (newAxEnd - newAxStart) / numTicks.float
+
+    var autoTickLocs: seq[Coord] #(newAxStart, newAxEnd - tickWidth, numTicks)
+    #var ticks: seq[]
+    if axKind == akX:
+      autoTickLocs = linspace(newAxStart, newAxEnd - tickWidth, numTicks).mapIt(
+          Coord(x: Coord1D(pos: it, kind: ckData, scale: scale),
+                y: Coord1D(pos: scale.high, kind: ckData, scale: scale),
+                kind: ckData)
+        )
+    else:
+      autoTickLocs = linspace(newAxStart, newAxEnd, numTicks + 1).mapIt(
+        Coord(x: Coord1D(pos: scale.low, kind: ckData, scale: scale),
+              y: Coord1D(pos: it, kind: ckData, scale: scale),
+              kind: ckData)
+      )
+    result = view.initTicks(axKind, tickLocs = autoTickLocs,
+                            major = major, style = style)
+
+proc xticks(view: Viewport,
+            numTicks: int = 10,
+            tickLocs: seq[Coord] = @[],
+            major = true,
+            style: Option[Style] = none[Style]()): seq[GraphObject] =
+  result = view.initTicks(akX,
+                          numTicks = numTicks,
+                          tickLocs = tickLocs,
+                          major = true,
+                          style = style)
+
+proc yticks(view: Viewport,
+            numTicks: int = 10,
+            tickLocs: seq[Coord] = @[],
+            major = true,
+            style: Option[Style] = none[Style]()): seq[GraphObject] =
+  result = view.initTicks(akY,
+                          numTicks = numTicks,
+                          tickLocs = tickLocs,
+                          major = true,
+                          style = style)
+
+################################################################################
+########## DRAWING FUNCTIONS
+################################################################################
+
+
+
+
+
 proc drawAxis(img: BImage, gobj: GraphObject) =
   doAssert gobj.kind == goAxis, "object must be a `goAxis`!"
-  echo "Drawing to ", gobj.axStart, " to ", gobj.axStop
-  img.drawLine(gobj.axStart, gobj.axStop,
-               gobj.style.lineWidth,
-               gobj.style.color,
-               gobj.rotate)
+  img.drawLine(gobj.axStart.point, gobj.axStop.point,
+               gobj.style,
+               rotateAngle = gobj.rotateInView)
 
 proc drawRect(img: BImage, gobj: GraphObject) =
   doAssert gobj.kind == goRect, "object must be a `goRect`!"
   img.drawRectangle(gobj.reOrigin.point.x, gobj.reOrigin.point.y,
                     gobj.reWidth.pos, gobj.reHeight.pos,
                     gobj.style,
-                    gobj.rotate)
+                    gobj.rotateInView)
 
 proc drawPoint(img: BImage, gobj: GraphObject) =
   doAssert gobj.kind == goPoint, "object must be a `goPoint`!"
   case gobj.ptMarker
   of mkCircle:
-    #echo "Pos at ", gobj.ptPos.point
     img.drawCircle(gobj.ptPos.point, gobj.ptSize, lineWidth = 0.0,
                    strokeColor = color(0.0, 0.0, 0.0, 0.0),
                    fillColor = gobj.ptColor,
-                   rotateAngle = gobj.rotate)
+                   rotateAngle = gobj.rotateInView)
   of mkCross:
-    img.drawLine((gobj.ptPos.point.x - gobj.ptSize / 2.0, gobj.ptPos.point.y),
-                 (gobj.ptPos.point.x + gobj.ptSize / 2.0, gobj.ptPos.point.y),
-                 gobj.ptSize / 4.0,
-                 gobj.ptColor,
-                 rotateAngle = gobj.rotate)
-    img.drawLine((gobj.ptPos.point.x, gobj.ptPos.point.y - gobj.ptSize / 2.0),
-                 (gobj.ptPos.point.x, gobj.ptPos.point.y + gobj.ptSize / 2.0),
-                 gobj.ptSize / 4.0,
-                 gobj.ptColor,
-                 rotateAngle = gobj.rotate)
+    var style = gobj.style
+    # modify line width to accomodate drawing a cross
+    style.lineWidth = gobj.ptSize / 4.0
+    style.color = gobj.ptColor
+    style.lineType = ltSolid
+    style.fillColor = gobj.ptColor
+    let
+      posX = gobj.ptPos.point.x
+      posY = gobj.ptPos.point.y
+    img.drawLine((posX - gobj.ptSize / 2.0, posY),
+                 (posX + gobj.ptSize / 2.0, posY),
+                 style,
+                 rotateAngle = gobj.rotateInView)
+    img.drawLine((posX, posY - gobj.ptSize / 2.0),
+                 (posX, posY + gobj.ptSize / 2.0),
+                 style,
+                 rotateAngle = gobj.rotateInView)
   else:
     raise newException(Exception, "Not implemented yet!")
+
+proc drawText(img: BImage, gobj: GraphObject) =
+  doAssert(
+    (gobj.kind == goText or gobj.kind == goLabel),
+    "object must be a `goText` or `goLabel`!"
+  )
+  img.drawText(gobj.txtText, gobj.txtFont, gobj.txtPos.point, gobj.txtAlign,
+               gobj.rotate)
+
+proc drawTick(img: BImage, gobj: GraphObject) =
+  ## draw a tick
+  doAssert gobj.kind == goTick, "object must be a `goTick`!"
+
+  var style = gobj.style
+  var length = gobj.style.size
+  if not gobj.tkMajor:
+    # minor ticks use half the width of normal ticks
+    style.lineWidth = style.lineWidth / 2.0
+    length = length / 2.0
+
+  case gobj.tkAxis
+  of akX:
+    let tkStart = gobj.tkPos.point.y + length
+    let tkStop = gobj.tkPos.point.y - length
+    let tkX = gobj.tkPos.point.x
+    img.drawLine((tkX, tkStart),
+                 (tkX, tkStop),
+                 style,
+                 rotateAngle = gobj.rotateInView)
+  of akY:
+    let tkStart = gobj.tkPos.point.x + length
+    let tkStop = gobj.tkPos.point.x - length
+    let tkY = gobj.tkPos.point.y
+    img.drawLine((tkStart, tkY),
+                 (tkStop, tkY),
+                 style,
+                 rotateAngle = gobj.rotateInView)
 
 proc scale[T: SomeNumber](p: Point, width, height: T): Point =
   result = (p.x * width.float,
@@ -493,14 +1026,13 @@ proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
   result = gobj
   case gobj.kind
   of goAxis:
-    result.axStart = result.axStart.scale(img.width, img.height)
-    result.axStop = result.axStop.scale(img.width, img.height)
+    result.axStart = result.axStart.to(ckAbsolute,
+                                       absWidth = some(img.width.float),
+                                       absHeight = some(img.height.float))
+    result.axStop = result.axStop.to(ckAbsolute,
+                                     absWidth = some(img.width.float),
+                                     absHeight = some(img.height.float))
   of goRect:
-    #let nPos = (result.reLeft, result.reBottom).scale(img.width, img.height)
-    #result.reLeft = nPos[0]
-    #result.reBottom = nPos[1]
-    #result.reWidth = result.reWidth * img.width.float
-    #result.reHeight = result.reHeight * img.height.float
     result.reOrigin = result.reOrigin.to(ckAbsolute,
                                          absWidth = some(img.width.float),
                                          absHeight = some(img.height.float))
@@ -514,7 +1046,14 @@ proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
     result.ptPos = gobj.ptPos.to(ckAbsolute,
                                  absWidth = some(img.width.float),
                                  absHeight = some(img.height.float))
-    #echo "Point at ", result.ptPos
+  of goText, goLabel:
+    result.txtPos = gobj.txtPos.to(ckAbsolute,
+                                   absWidth = some(img.width.float),
+                                   absHeight = some(img.height.float))
+  of goTick:
+    result.tkPos = gobj.tkPos.to(ckAbsolute,
+                                 absWidth = some(img.width.float),
+                                 absHeight = some(img.height.float))
   else:
     raise newException(Exception, "Not yet implemented!")
 
@@ -531,6 +1070,10 @@ proc draw*(img: BImage, gobj: GraphObject) =
   #  img.drawLabel(gobj)
   of goPoint:
     img.drawPoint(globalObj)
+  of goLabel, goText:
+    img.drawText(globalObj)
+  of goTick:
+    img.drawTick(globalObj)
   #of goLine:
   #  img.drawLine(gobj)
   else:
@@ -544,38 +1087,30 @@ iterator mitems*(view: var Viewport): Viewport =
   for ch in mitems(view.children):
     yield ch
 
-proc translate(p: Point, view: Viewport): Point =
-  result = (left(view) + p.x * (width(view)),
-            bottom(view) + p.y * (height(view)))
+#proc translate(p: Point, view: Viewport): Point =
+#  result = (left(view) + p.x * (width(view)),
+#            bottom(view) + p.y * (height(view)))
 
 proc transform(gobj: GraphObject, view: Viewport): GraphObject =
   result = gobj
   case gobj.kind
   of goAxis:
-    result.axStart = result.axStart.translate(view)
-    result.axStop = result.axStop.translate(view)
+    result.axStart = result.axStart.embedInto(view)
+    result.axStop = result.axStop.embedInto(view)
   of goRect:
     result.reOrigin = gobj.reOrigin.embedInto(view)
-    result.reWidth = Coord1D(pos: result.reWidth.toRelative.pos * view.width.toRelative.pos,
-                             kind: ckRelative)
-    result.reHeight = Coord1D(pos: result.reHeight.toRelative.pos * view.height.toRelative.pos,
-                            kind: ckRelative)
+    result.reWidth = result.reWidth * view.width
+    result.reHeight = result.reHeight * view.height
   of goPoint:
-    #let pos = result.ptPos.translate(view)
     result.ptPos = gobj.ptPos.embedInto(view)
-    #discard
-    #let coord = result.ptPos.to(ckAbsolute,
-    #absWidth = some(width(view)),
-    #                                absHeight = some(height(view)))
-    #result.ptPos = coord
-    #echo "PtPos ", result.ptPos
-    #result.ptPos = Coord(x: Coord1D(pos: pos.x, kind: ckRelative),
-    #                     y: Coord1D(pos: pos.y, kind: ckRelative),
-    #                     kind: ckRelative)
+  of goLabel, goText:
+    result.txtPos = gobj.txtPos.embedInto(view)
+  of goTick:
+    result.tkPos = gobj.tkPos.embedInto(view)
   else:
     raise newException(Exception, "transform not implemented yet!")
 
-proc draw*(img: BImage, view: Viewport) =
+proc draw(img: BImage, view: Viewport) =
   ## draws the full viewport including all objects and all
   ## children onto the image
   ## NOTE: children are drawn `after` the parent viewport
@@ -588,37 +1123,46 @@ proc draw*(img: BImage, view: Viewport) =
     # transform the object to draw to the global image coordinate system
     # and draw
     var mobj = obj
+    # first check if object shall be rotate individually
     if view.rotate.isSome:
-      mobj.rotate = some((view.rotate.get,
-                          (centerX, centerY).scale(img.width, img.height)))
+      mobj.rotateInView = some((view.rotate.get,
+                               (centerX, centerY).scale(img.width, img.height)))
     img.draw(mobj.transform(view))
 
   # draw all children viewports
   for chView in view:
     var mchView = chView.embedInto(view)
-    echo "\n\n\n"
-    echo mchView.origin
-    echo mchView.width
     mchView.rotate = view.rotate
     img.draw(mchView)
+
+proc draw*(view: Viewport, filename: string, ftype = fkPdf) =
+  ## draws the given viewport and all its children and stores it in the
+  ## file `filename`
+  echo view.backend
+  var img = initBImage(filename,
+                       width = view.wImg.round.int, height = view.hImg.round.int,
+                       backend = view.backend,
+                       ftype = ftype)
+  img.draw(view)
+  img.destroy()
 
 when isMainModule:
 
   import seqmath, sequtils
-
-
   block:
-    var img = initBImage("testView.pdf",
-                         width = 600, height = 400,
-                         backend = bkCairo,
-                         ftype = fkPdf)
+    #var img = initBImage("testView.pdf",
+    #                     width = 600, height = 400,
+    #                     backend = bkCairo,
+    #                     ftype = fkPdf)
+    # create default viewport (== image) of 640x480
+    var img = initViewport()
 
-    var view1 = initViewport(left = 0.1,
-                             bottom = 0.1,
-                             width = 0.8,
-                             height = 0.8,
-                             xScale = some((low: 0.0, high: 2.0 * PI)),
-                             yScale = some((low: -1.0, high: 1.0)))
+    var view1 = img.addViewport(left = 0.1,
+                                bottom = 0.1,
+                                width = 0.8,
+                                height = 0.8,
+                                xScale = some((low: 0.0, high: 2.0 * PI)),
+                                yScale = some((low: -1.0, high: 1.0)))
     var view2 = initViewport(left = 0.25,
                              bottom = 0.5,
                              width = 0.75,
@@ -627,7 +1171,7 @@ when isMainModule:
                              yScale = some((low: -1.0, high: 1.0)))
     let line1 = view1.initAxis(akX)
     let line2 = view1.initAxis(akY)
-    let x = linspace(0.0, 6.28, 1_000_000)
+    let x = linspace(0.0, 6.28, 1_000)
     let y = x.mapIt(sin(it))
     let points = zip(x, y)
     var gobjPoints: seq[GraphObject]
@@ -635,6 +1179,15 @@ when isMainModule:
       gobjPoints.add initPoint(view2, (x: p.a, y: p.b),
                                marker = mkCross)
 
+    let
+      xticks = view1.xticks()
+      yticks = view1.yticks()
+      xtickLabels = view1.tickLabels(xticks)
+      ytickLabels = view1.tickLabels(yticks)
+    for x in yticks:
+      echo x.tkPos
+    #if true:
+    #  quit()
 
     #img.drawRectangle(200.0, 100.0, 150.0, 100.0)
     let rect = view1.initRect(0.3, 0.3, 0.1, 0.2)
@@ -647,15 +1200,22 @@ when isMainModule:
       )
     )
 
-    #view1.rotate = some(30.0)
-    view1.objects = concat(@[line1, line2, rect])
+    let cmSquare = view1.initRect(initCoord(0.1, 0.1),
+                                  width = Coord1D(pos: 1, kind: ckCentimeter),
+                                  height = Coord1D(pos: 1, kind: ckCentimeter))
+
+    let inchSquare = view1.initRect(initCoord(0.3, 0.3),
+                                  width = Coord1D(pos: 1, kind: ckInch),
+                                  height = Coord1D(pos: 1, kind: ckInch))
+
+    let xlabel = view1.xlabel("Energy")
+    let ylabel = view1.ylabel("Count")
+
+    view1.objects = concat(xticks, yticks, xticklabels, yticklabels, @[line1, line2, rect, xlabel, ylabel, cmSquare, inchSquare])
     view2.objects = concat(@[rect2], gobjPoints)
     view1.children.add view2
-    img.draw(view1)
-    #for i in 0 ..< 3:
-    #  view1.rotate = some(i.float * 10.0)
-    #  img.draw(view1)
-    img.destroy()
+    img.children.add view1
+    img.draw("testView.pdf")
 
 
   block:
@@ -677,15 +1237,79 @@ when isMainModule:
     let rect = view2.initRect(0.0, 0.0, 1.0, 0.5,
                               style = some(Style(lineWidth: 2.0,
                                                  color: color(1.0, 0.0, 0.0),
+                                                 lineType: ltDashed,
                                                  fillColor: color(0.0, 0.0, 0.0, 0.5))))
+
+
+    let text = view2.initText(initCoord(0.5, 1.05),
+                              "Hello",
+                              alignKind = taCenter,
+                              font = Font(family: "serif",
+                                   size: 12.0,
+                                   color: color(0.0, 0.0, 0.0)))
+
+
+    let textRot = view2.initText(initCoord(-0.05, 0.5),
+                                 "Counts",
+                                 alignKind = taCenter,
+                                 font = Font(family: "serif",
+                                             size: 12.0,
+                                             color: color(0.0, 0.0, 0.0)),
+                                 rotate = some(90.0))
+    var textRot2 = textRot
+    textRot2.txtAlign = taLeft
+    textRot2.rotate = some(70.0)
+    textRot2.txtFont.color = color(0.0, 1.0, 0.0)
+
+    var textRot3 = textRot
+    textRot3.txtAlign = taRight
+    textRot3.rotate = some(70.0)
+    textRot3.txtFont.color = color(1.0, 0.0, 0.0)
+    var textRot3a = textRot
+    textRot3a.txtAlign = taRight
+    textRot3a.rotate = some(90.0)
+    textRot3a.txtFont.color = color(1.0, 1.0, 0.0)
+
+    var textRot4 = textRot
+    textRot4.txtAlign = taLeft
+    textRot4.rotate = some(90.0)
+    textRot4.txtFont.color = color(0.0, 0.0, 1.0)
+
+    var textRot5 = textRot
+    textRot5.txtAlign = taCenter
+    textRot5.rotate = some(70.0)
+    textRot5.txtFont.color = color(0.0, 1.0, 1.0)
+    #view1.rotate = some(30.0)
     view2.objects = @[rect,
                       initPoint(view2, (x: 0.0, y: 0.0)),
                       initPoint(view2, (x: 1.0, y: 0.0)),
                       initPoint(view2, (x: 0.0, y: 1.0)),
-                      initPoint(view2, (x: 1.0, y: 1.0))]
+                      initPoint(view2, (x: 1.0, y: 1.0)),
+                      text, textRot, textRot2, textRot3, textRot4, textRot5, textRot3a]
     view1.children.add view2
     img.draw(view1)
     img.destroy()
+
+  block:
+    var img = initViewport(wImg = 800,
+                           hImg = 100)
+    var axisVp = img.addViewport(left = 0.1,
+                                 bottom = 0.1,
+                                 width = 0.8,
+                                 height = 0.3)
+    let line1 = axisVp.initAxis(akX)
+    let line2 = axisVp.initAxis(akY)
+
+    let xlabel = axisVp.xlabel("Energy")
+    let ylabel = axisVp.ylabel("Count")
+    let yx0 = img.initAxis(akY)
+
+    img.objects = @[yx0]
+    axisVp.objects = @[line1, line2, xlabel, ylabel]
+    img.children.add axisVp
+    img.draw("axisCheck.pdf")
+
+
 
 
 ## gogLayer
