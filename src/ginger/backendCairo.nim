@@ -28,16 +28,42 @@ template rotate(ctx: PContext, angle: float, around: Point): untyped =
   ctx.rotate(angle * PI / 180.0)
   ctx.translate(-around[0], -around[1])
 
+func getLineStyle(lineType: LineType, lineWidth: float): seq[float] =
+  template dash: untyped = lineWidth * 4.0
+  template dashSpace: untyped = lineWidth * 5.0
+  template dot: untyped = lineWidth / 2.0
+  template dotSpace: untyped = lineWidth * 2.0
+  template longDash: untyped = lineWidth * 8.0
+
+  case lineType
+  of ltDashed:
+    result = @[dash(), dashSpace()]
+  of ltDotted:
+    result = @[dot(), dotSpace()]
+  of ltDotDash:
+    result = @[dot(), dotSpace(), dash(), dotSpace()]
+  of ltLongDash:
+    result = @[longDash(), dashSpace()]
+  of ltTwoDash:
+    result = @[dash(), dotSpace() * 2.0, longDash(), dotSpace() * 2.0]
+  else: discard
+
+func setLineStyle(ctx: PContext, lineType: LineType, lineWidth: float) =
+  if lineType in ltDashed .. ltTwoDash:
+    let lineStyle = getLineStyle(lineType, lineWidth)
+    ctx.set_dash(lineStyle, lineStyle.len.float)
+    ctx.set_line_cap(LINE_CAP_ROUND)
+
 proc drawLine*(img: BImage, start, stop: Point,
-               lineWidth: float = 2.0,
-               color: Color = color(0.0, 1.0, 0.0),
+               style: Style,
                rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
   img.cCanvas.withSurface:
     if rotateAngle.isSome:
       let rotAngTup = rotateAngle.get
       ctx.rotate(rotAngTup[0], rotAngTup[1])
-    ctx.set_source_rgba(color.r, color.g, color.b, color.a)
-    ctx.set_line_width(lineWidth)
+    ctx.set_source_rgba(style.color.r, style.color.g, style.color.b, style.color.a)
+    ctx.setLineStyle(style.lineType, style.lineWidth)
+    ctx.set_line_width(style.lineWidth)
     ctx.move_to(start.x, start.y)
     ctx.line_to(stop.x, stop.y)
     ctx.stroke()
@@ -98,6 +124,7 @@ proc drawRectangle*(img: BImage, left, bottom, width, height: float,
       ctx.rotate(rotAngTup[0], rotAngTup[1])
     ctx.rectangle(left, bottom, width, height)
     ctx.set_line_width(style.lineWidth)
+    ctx.setLineStyle(style.lineType, style.lineWidth)
     ctx.set_source_rgba(style.color.r, style.color.g, style.color.b, style.color.a)
     ctx.stroke_preserve()
     ctx.set_source_rgba(style.fillColor.r, style.fillColor.g, style.fillColor.b, style.fillColor.a)

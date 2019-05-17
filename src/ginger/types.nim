@@ -24,6 +24,9 @@ type
     of bkVega:
       discard
 
+  LineType* = enum
+    ltNone, ltSolid, ltDashed, ltDotted, ltDotDash, ltLongDash, ltTwoDash
+
   FontSlant* = enum
     fsNormal, fsItalic, fsOblique
 
@@ -40,5 +43,6 @@ type
   Style* = object
     color*: Color
     size*: float
+    lineType*: LineType
     lineWidth*: float
     fillColor*: Color
