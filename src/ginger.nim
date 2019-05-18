@@ -141,7 +141,9 @@ type
                   # (left, bottom) position in relative coordinates (ckRelative)
     width*: Coord1D # width in relative coordinates
     height*: Coord1D
-    objects*: seq[GraphObject]
+    objects*: seq[GraphObject] # NOTE: when adding objects manually, be aware
+                               # that certain transformations have to be applied
+                               # manually beforehand!
     children*: seq[Viewport]
     wImg*: float # absolute width, height in points (pixels)
     hImg*: float
@@ -191,6 +193,8 @@ func toRelative*(p: Coord1D,
       raise newException(ValueError, "Cannot convert `" & $p.kind & "` into " &
         " relative coordinate if no length scale given!")
   of ckData:
+    # TODO: this REQUIRES that the sclae of the Coord is up to date!
+    # After potential change of data scale of plot, this will fail!
     result = Coord1D(pos: (p.pos - p.scale.low) / (p.scale.high - p.scale.low),
                      kind: ckRelative)
   of ckStrWidth:
@@ -470,6 +474,59 @@ proc width(view: Viewport): float =
 proc height(view: Viewport): float =
   ## returns the height of the `Viewport` in `ckRelative`
   result = view.height.toRelative.pos
+
+func updateScale(view: Viewport, c: var Coord1D, axKind: AxisKind) =
+  ## update the scale coordinate of the 1D coordinate `c` in place
+  if c.kind == ckData:
+    case axKind
+    of akX:
+      c.scale = view.xScale
+    of akY:
+      c.scale = view.yScale
+
+func updateScale(view: Viewport, c: var Coord) =
+  ## update the scale coordinate of the coordinate `c` in place
+  view.updateScale(c.x, akX)
+  view.updateScale(c.y, akY)
+
+func updateScale(view: Viewport, c: Coord): Coord =
+  ## same as above, but returns a mutated copy
+  result = c
+  view.updateScale(result)
+
+func updateDataScale(view: Viewport, obj: var GraphObject) =
+  ## updates the data scale associated to the `obj`
+  case obj.kind
+  of goAxis:
+    view.updateScale(obj.axStart)
+    view.updateScale(obj.axStop)
+  of goLabel, goText, goTickLabel:
+    view.updateScale(obj.txtPos)
+  of goGrid:
+    obj.gdXPos.applyIt(view.updateScale(it))
+    obj.gdYPos.applyIt(view.updateScale(it))
+  of goTick:
+    view.updateScale(obj.tkPos)
+  of goPoint:
+    view.updateScale(obj.ptPos)
+  of goRect:
+    view.updateScale(obj.reOrigin)
+    view.updateScale(obj.reWidth, akX)
+    view.updateScale(obj.reHeight, akY)
+  else:
+    raise newException(Exception, "updating of goLine not yet implemented!")
+
+func updateDataScale(view: Viewport,
+                     objs: var seq[GraphObject]) =
+  ## updates the data scales associated to the `objs` to the current
+  ## `view.(x|y)scale`. This is important, because due to calculation
+  ## of tick locations (and thus new range scale) the associated scales
+  ## may be wrong.
+  ## Potentially other objects may also have an associated scale (e.g.
+  ## the user may want to define some location in scale coordinates),
+  ## hence check for any Coord in the object.
+  for p in mitems(objs):
+    view.updateDataScale(p)
 
 proc convertToKind(c: Coord1D, toKind: Coord1D): Coord1D =
   ## converts the coordinate `c` to the kind of `toKind`
@@ -851,7 +908,31 @@ proc niceNumber(val: float, round: bool): float =
 
   result = niceFrac * pow(10, exponent.float)
 
-proc initTicks(view: Viewport,
+proc calcTickLocations(scale: Scale, numTicks: int): (Scale, float, int) =
+  # TODO: extend for log scale
+  # Check for special cases
+  if scale.low == scale.high:
+    raise newException(ValueError, "A data scale is required to calculate " &
+      "tick positions!")
+  let
+    axEnd = scale.high
+    axStart = scale.low
+
+  let axWidth = axEnd - axStart;
+
+  # Compute the new nice range and ticks
+  let niceRange = niceNumber(axEnd - axStart, false)
+  let niceTick = niceNumber(niceRange / (numTicks - 1).float, true)
+
+  # Compute the new nice start and end values
+  let newaxStart = floor(axStart / niceTick) * niceTick
+  let newaxEnd = ceil(axEnd / niceTick) * niceTick
+  let newNumTicks = ((newAxEnd - newAxStart) / niceTick).round.int
+  result = ((low: newAxStart, high: newAxEnd),
+            niceTick,
+            ((newAxEnd - newAxStart) / niceTick).round.int)
+
+proc initTicks(view: var Viewport,
                axKind: AxisKind,
                numTicks: int = 0,
                tickLocs: seq[Coord] = @[],
@@ -871,45 +952,34 @@ proc initTicks(view: Viewport,
       scale = view.xScale
     else:
       scale = view.yScale
-    if scale.low == scale.high:
-      raise newException(ValueError, "A data scale is required to calculate " &
-        "tick positions!")
 
-    # TODO: extend for log scale
-    let
-      axStart = scale.low
-      axEnd   = scale.high
-
-    # Check for special cases
-    let axWidth = axEnd - axStart;
-
-    # Compute the new nice range and ticks
-    let niceRange = niceNumber(axEnd - axStart, false)
-    let niceTick = niceNumber(niceRange / (numTicks - 1).float, true)
-
-    # Compute the new nice start and end values
-    let newaxStart = floor(axStart / niceTick) * niceTick
-    let newaxEnd = ceil(axEnd / niceTick) * niceTick
-    let tickWidth = (newAxEnd - newAxStart) / numTicks.float
-
-    var autoTickLocs: seq[Coord] #(newAxStart, newAxEnd - tickWidth, numTicks)
-    #var ticks: seq[]
+    let (newScale, newWidth, newNumTicks) = calcTickLocations(scale, numTicks)
+    var autoTickLocs: seq[Coord]
     if axKind == akX:
-      autoTickLocs = linspace(newAxStart, newAxEnd - tickWidth, numTicks).mapIt(
-          Coord(x: Coord1D(pos: it, kind: ckData, scale: scale),
-                y: Coord1D(pos: scale.high, kind: ckData, scale: scale),
+      autoTickLocs = linspace(newScale.low, newScale.high, newNumTicks + 1).mapIt(
+          Coord(x: Coord1D(pos: it, kind: ckData, scale: newScale),
+                y: Coord1D(pos: view.yScale.high, kind: ckData, scale: view.yScale),
                 kind: ckData)
         )
     else:
-      autoTickLocs = linspace(newAxStart, newAxEnd, numTicks + 1).mapIt(
-        Coord(x: Coord1D(pos: scale.low, kind: ckData, scale: scale),
-              y: Coord1D(pos: it, kind: ckData, scale: scale),
+      autoTickLocs = linspace(newScale.low, newScale.high, newNumTicks + 1).mapIt(
+        Coord(x: Coord1D(pos: view.xScale.low, kind: ckData, scale: view.xScale),
+              y: Coord1D(pos: it, kind: ckData, scale: newScale),
               kind: ckData)
       )
     result = view.initTicks(axKind, tickLocs = autoTickLocs,
                             major = major, style = style)
+    # finally update the scale associated to the view
+    case axKind
+    of akX:
+      view.xScale = newScale
+    of akY:
+      view.yScale = newScale
 
-proc xticks(view: Viewport,
+    # and update the scales of all objects owned by the viewport
+    view.updateDataScale(view.objects)
+
+proc xticks(view: var Viewport,
             numTicks: int = 10,
             tickLocs: seq[Coord] = @[],
             major = true,
@@ -920,7 +990,7 @@ proc xticks(view: Viewport,
                           major = true,
                           style = style)
 
-proc yticks(view: Viewport,
+proc yticks(view: var Viewport,
             numTicks: int = 10,
             tickLocs: seq[Coord] = @[],
             major = true,
