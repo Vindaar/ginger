@@ -30,7 +30,8 @@ export types, backends, macroUtils
 # makes use of backends layer
 type
   GraphObjectKind* = enum
-    goAxis, goText, goLabel, goTick, goTickLabel, goPoint, goLine, goRect
+    goAxis, goText, goLabel, goTick, goTickLabel, goPoint, goLine, goRect,
+    goGrid, goPolyLine
 
   MarkerKind* = enum
     mkCircle, mkCross, mkRotCross, mkStar
@@ -51,6 +52,12 @@ type
       txtPos*: Coord
       txtAlign*: TextAlignKind
       txtRotate*: float # possible additional rotation
+    of goGrid:
+      gdOrigin: Coord     # Coordinate of origin of plot viewport
+      gdOriginDiag: Coord # and corner diagonal along viewport
+                          # used to define bounds of grid lines
+      gdXPos*: seq[Coord1D] # stores X position of lines to draw
+      gdYPos*: seq[Coord1D]
     of goTick:
       tkMajor*: bool # is a major tick, e.g. large tick w/ label
       tkPos*: Coord
@@ -484,6 +491,11 @@ func updateScale(view: Viewport, c: var Coord1D, axKind: AxisKind) =
     of akY:
       c.scale = view.yScale
 
+func updateScale(view: Viewport, c: Coord1D, axKind: AxisKind): Coord1D =
+  ## update the scale coordinate of the 1D coordinate `c` in place
+  result = c
+  view.updateScale(result, axKind)
+
 func updateScale(view: Viewport, c: var Coord) =
   ## update the scale coordinate of the coordinate `c` in place
   view.updateScale(c.x, akX)
@@ -503,8 +515,8 @@ func updateDataScale(view: Viewport, obj: var GraphObject) =
   of goLabel, goText, goTickLabel:
     view.updateScale(obj.txtPos)
   of goGrid:
-    obj.gdXPos.applyIt(view.updateScale(it))
-    obj.gdYPos.applyIt(view.updateScale(it))
+    obj.gdXPos.applyIt(view.updateScale(it, akX))
+    obj.gdYPos.applyIt(view.updateScale(it, akY))
   of goTick:
     view.updateScale(obj.tkPos)
   of goPoint:
@@ -1018,6 +1030,68 @@ proc yticks(view: var Viewport,
                           major = true,
                           style = style)
 
+func calcMinorTicks(ticks: seq[GraphObject], axKind: AxisKind): seq[Coord1D] =
+  ## calculates the position in the middle between each tick and
+  ## the successive tick
+  doAssert ticks[0].kind == goTick, "Elements for grid lines must be `goTick`!"
+  result = newSeq[Coord1D](ticks.len - 1)
+  var scale: Scale
+  case axKind
+  of akX:
+    scale = ticks[0].tkPos.x.scale
+  of akY:
+    scale = ticks[0].tkPos.y.scale
+  let cdiv2 = Coord1D(pos: 2.0, kind: ckData, scale: scale)
+  for i in 0 ..< ticks.high: # ignore last tick
+    doAssert ticks[i].kind == goTick, "Elements for grid lines must be `goTick`!"
+    debugecho "Current tick ", ticks[i]
+    # calculate position between both ticks
+    case axKind
+    of akX:
+      let midPos = (ticks[i].tkPos.x + ticks[i+1].tkPos.x) / cdiv2
+      result[i] = midPos
+    of akY:
+      let midPos = (ticks[i].tkPos.y + ticks[i+1].tkPos.y) / cdiv2
+      result[i] = midPos
+    debugecho "Resulting pos ", result[i].pos
+
+proc initGridLines(view: Viewport,
+                   xticks: Option[seq[GraphObject]] = none[seq[GraphObject]](),
+                   yticks: Option[seq[GraphObject]] = none[seq[GraphObject]](),
+                   major = true,
+                   style: Option[Style] = none[Style]()): GraphObject =
+  doAssert xticks.isSome or yticks.isSome, "At least one of xticks, yticks " &
+    "required for grid lines!"
+  # TODO: could use `calcTickLocations` to calculate based on Viewport!?
+  result = GraphObject(kind: goGrid)
+  if style.isSome:
+    result.style = style
+  else:
+    var lineWidth = 1.0
+    if not major:
+      lineWidth = lineWidth / 3.0
+    result.style = some(Style(lineWidth: lineWidth,
+                              color: white,
+                              lineType: ltSolid))
+
+  if major:
+    # take tick positions directly
+    if xticks.isSome:
+      result.gdXPos = xticks.unsafeGet.mapIt(it.tkPos.x)
+    if yticks.isSome:
+      result.gdYPos = yticks.unsafeGet.mapIt(it.tkPos.y)
+  else:
+    # if log scale, no minor
+    #if not logScale:
+    # if normal scale, minor lines at (x_i + x_{i+1})/2
+    if xticks.isSome:
+      let ticks = xticks.get()
+      result.gdXPos = calcMinorTicks(ticks, akX)
+      echo "Positions are ", result.gdXPos
+    if yticks.isSome:
+      let ticks = yticks.get()
+      result.gdYPos = calcMinorTicks(ticks, akY)
+
 ################################################################################
 ########## DRAWING FUNCTIONS
 ################################################################################
@@ -1106,6 +1180,23 @@ proc drawTick(img: BImage, gobj: GraphObject) =
                  style,
                  rotateAngle = gobj.rotateInView)
 
+proc drawGrid(img: BImage, gobj: GraphObject) =
+  ## draws the (major / minor) grid
+  doAssert gobj.kind == goGrid, "object must be a `goGrid`!"
+  var style = gobj.style.get() # style *has* to exist
+  # start with vertical lines
+  for x in gobj.gdXPos:
+    echo "Drawing at ", x.pos
+    let
+      start = (x.pos, gobj.gdOrigin.y.pos)
+      stop = (x.pos, gobj.gdOriginDiag.y.pos)
+    img.drawLine(start, stop, style, rotateAngle = gobj.rotateInView)
+  for y in gobj.gdYPos:
+    let
+      start = (gobj.gdOrigin.x.pos, y.pos)
+      stop = (gobj.gdOriginDiag.x.pos, y.pos)
+    img.drawLine(start, stop, style, rotateAngle = gobj.rotateInView)
+
 proc scale[T: SomeNumber](p: Point, width, height: T): Point =
   result = (p.x * width.float,
             p.y * height.float)
@@ -1142,6 +1233,14 @@ proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
     result.tkPos = gobj.tkPos.to(ckAbsolute,
                                  absWidth = some(img.width.float),
                                  absHeight = some(img.height.float))
+  of goGrid:
+    result.gdOrigin = gobj.gdOrigin.toAbsImage(img)
+    result.gdOriginDiag = gobj.gdOriginDiag.toAbsImage(img)
+    result.gdXPos = gobj.gdXPos.mapIt(it.to(ckAbsolute,
+                                            absLength = some(img.width.float)))
+    result.gdYPos = gobj.gdYPos.mapIt(it.to(ckAbsolute,
+                                            absLength = some(img.height.float)))
+
   else:
     raise newException(Exception, "Not yet implemented!")
 
@@ -1162,6 +1261,8 @@ proc draw*(img: BImage, gobj: GraphObject) =
     img.drawText(globalObj)
   of goTick:
     img.drawTick(globalObj)
+  of goGrid:
+    img.drawGrid(globalObj)
   #of goLine:
   #  img.drawLine(gobj)
   else:
@@ -1195,6 +1296,14 @@ proc transform(gobj: GraphObject, view: Viewport): GraphObject =
     result.txtPos = gobj.txtPos.embedInto(view)
   of goTick:
     result.tkPos = gobj.tkPos.embedInto(view)
+  of goGrid:
+    # assign and convert origin and diagonal origin
+    result.gdOrigin = view.origin
+    result.gdOriginDiag = Coord(x: view.origin.x + view.width,
+                                y: view.origin.y + view.height,
+                                kind: ckRelative)
+    result.gdXPos = gobj.gdXPos.mapIt(view.origin.x + it * view.width)
+    result.gdYPos = gobj.gdYPos.mapIt(view.origin.y + it * view.height)
   else:
     raise newException(Exception, "transform not implemented yet!")
 
@@ -1300,6 +1409,9 @@ when isMainModule:
     let ylabel = view1.ylabel("Count")
 
     view1.addObj concat(gobjPoints, xticks, yticks, xticklabels, yticklabels, @[line1, line2, rect, xlabel, ylabel, cmSquare, inchSquare])
+    let grdlines = view1.initGridLines(some(xticks), some(yticks))
+    let grdLnMinor = view1.initGridLines(some(xticks), some(yticks), major = false)
+
     view2.addObj concat(@[rect2], gobjPoints)
     view1.children.add view2
     img.children.add view1
