@@ -164,6 +164,11 @@ type
     hImg*: float
     backend*: BackendKind
 
+func ggColorHue(num: int): seq[Color] =
+  ## returns the default ggplot2 color hue for `num` colors
+  let hues = linspace(15.0, 375.0, num + 1)
+  result = hues.mapIt(color(ColorHCL(h: it, l: 65.0, c: 100.0)))
+
 func eitherOrRaise[T](either: Option[T],
                       `or`: Option[T]): T {.raises: [ValueError,
                                                      ref UnpackError].} =
@@ -1654,6 +1659,27 @@ when isMainModule:
     img.children.add axisVp
     img.draw("axisCheck.pdf")
 
+  block:
+    var img = initViewport()
+    var axisVp = img.addViewport(left = 0.1,
+                                 bottom = 0.1,
+                                 width = 0.8,
+                                 height = 0.8)
+    var rects: seq[GraphObject]
+    const num = 4
+    let cols = ggColorHue(num + 1)
+    for i in 0 .. num:
+      let style = Style(color: cols[i],
+                        fillColor: cols[i])
+      echo "Color is ", cols[i]
+      rects.add axisVp.initRect(initCoord(i.float * 0.1, i.float * 0.1),
+                                initCoord1D(1.0, ckCentimeter),
+                                initCoord1D(1.0, ckCentimeter),
+                                color = cols[i],
+                                style = some(style))
+    axisVp.addObj rects
+    img.children.add axisVp
+    img.draw("testGGCols.pdf")
 
 
 
