@@ -68,6 +68,29 @@ proc drawLine*(img: BImage, start, stop: Point,
     ctx.line_to(stop.x, stop.y)
     ctx.stroke()
 
+proc drawPolyLine*(img: BImage, points: seq[Point],
+                   style: Style,
+                   rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
+  img.cCanvas.withSurface:
+    if rotateAngle.isSome:
+      let rotAngTup = rotateAngle.get
+      ctx.rotate(rotAngTup[0], rotAngTup[1])
+    ctx.set_source_rgba(style.color.r, style.color.g, style.color.b, style.color.a)
+    ctx.setLineStyle(style.lineType, style.lineWidth)
+    ctx.set_line_width(style.lineWidth)
+    echo style
+    let p0 = points[0]
+    ctx.move_to(p0.x, p0.y)
+    for i in 1 .. points.high:
+      ctx.line_to(points[i].x, points[i].y)
+    # now stroke the path we created
+    ctx.stroke_preserve()
+    #ctx.close_path()
+    # and fill the created path if desired
+    ctx.set_source_rgba(style.fillColor.r, style.fillColor.g, style.fillColor.b,
+                        style.fillColor.a)
+    ctx.fill_preserve()
+
 proc drawCircle*(img: BImage, center: Point, radius: float,
                  lineWidth: float,
                  strokeColor = color(0.0, 0.0, 0.0),

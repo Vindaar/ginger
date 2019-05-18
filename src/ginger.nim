@@ -64,9 +64,11 @@ type
       tkAxis*: AxisKind
     of goPoint:
       ptMarker*: MarkerKind
-      ptSize*: float
-      ptColor*: Color
+      ptSize*: float # can be removed, due to style
+      ptColor*: Color # can be removed, due to style
       ptPos*: Coord
+    of goPolyLine:
+      plPos*: seq[Coord]
     of goRect:
       reOrigin*: Coord
       #reBottom*: float
@@ -618,6 +620,8 @@ func updateDataScale(view: Viewport, obj: var GraphObject) =
     view.updateScale(obj.tkPos)
   of goPoint:
     view.updateScale(obj.ptPos)
+  of goPolyLine:
+    obj.plPos.applyIt(view.updateScale(it))
   of goRect:
     view.updateScale(obj.reOrigin)
     view.updateScale(obj.reWidth, akX)
@@ -909,6 +913,22 @@ proc initPoint(view: Viewport,
                        ptPos: Coord(x: Coord1D(pos: pos.x, scale: view.xScale, kind: ckData),
                                     y: Coord1D(pos: pos.y, scale: view.yScale, kind: ckData)))
                        #ptPos: pos.scaleTo(view))
+
+proc initPolyLine(view: Viewport,
+                  pos: seq[Point],
+                  style: Option[Style] = none[Style]()): GraphObject =
+  result = GraphObject(kind: goPolyLine)
+  if style.isSome:
+    result.style = style
+  else:
+    result.style = some(Style(lineWidth: 2.0,
+                              lineType: ltSolid,
+                              color: black,
+                              fillColor: transparent))
+  result.plPos = newSeqOfCap[Coord](pos.len)
+  for p in pos:
+    result.plPos.add Coord(x: Coord1D(pos: p.x, scale: view.xScale, kind: ckData),
+                           y: Coord1D(pos: p.y, scale: view.yScale, kind: ckData))
 
 proc initAxisLabel(view: Viewport,
                    label: string,
@@ -1255,6 +1275,14 @@ proc drawPoint(img: BImage, gobj: GraphObject) =
   else:
     raise newException(Exception, "Not implemented yet!")
 
+proc drawPolyLine(img: BImage, gobj: GraphObject) =
+  doAssert gobj.kind == goPolyLine, "object must be a `goPolyLine`!"
+  # TODO: we assume that the coordinates are sorted for now
+  img.drawPolyLine(gobj.plPos.mapIt((x: it.x.pos, y: it.y.pos)),
+                   gobj.style.get, # there *has* to be a style here
+                   rotateAngle = gobj.rotateInView)
+
+
 proc drawText(img: BImage, gobj: GraphObject) =
   doAssert(
     (gobj.kind == goText or gobj.kind == goLabel),
@@ -1312,38 +1340,32 @@ proc scale[T: SomeNumber](p: Point, width, height: T): Point =
   result = (p.x * width.float,
             p.y * height.float)
 
+proc toAbsImage(c: Coord, img: BImage): Coord =
+  result = c.to(ckAbsolute,
+                absWidth = some(img.width.float),
+                absHeight = some(img.height.float))
+
 proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
   result = gobj
   case gobj.kind
   of goAxis:
-    result.axStart = result.axStart.to(ckAbsolute,
-                                       absWidth = some(img.width.float),
-                                       absHeight = some(img.height.float))
-    result.axStop = result.axStop.to(ckAbsolute,
-                                     absWidth = some(img.width.float),
-                                     absHeight = some(img.height.float))
+    result.axStart = result.axStart.toAbsImage(img)
+    result.axStop = result.axStop.toAbsImage(img)
   of goRect:
-    result.reOrigin = result.reOrigin.to(ckAbsolute,
-                                         absWidth = some(img.width.float),
-                                         absHeight = some(img.height.float))
+    result.reOrigin = result.reOrigin.toAbsImage(img)
     result.reWidth = Coord1D(pos: result.reWidth.toRelative.pos * img.width.float,
                              kind: ckRelative)
     result.reHeight = Coord1D(pos: result.reHeight.toRelative.pos * img.height.float,
                             kind: ckRelative)
 
   of goPoint:
-    #result.ptPos = gobj.ptPos.toRelative #Coord(x: Coord1D(pos: gobj.ptPos.x, scale:
-    result.ptPos = gobj.ptPos.to(ckAbsolute,
-                                 absWidth = some(img.width.float),
-                                 absHeight = some(img.height.float))
+    result.ptPos = gobj.ptPos.toAbsImage(img)
+  of goPolyLine:
+    result.plPos = gobj.plPos.mapIt(it.toAbsImage(img))
   of goText, goLabel:
-    result.txtPos = gobj.txtPos.to(ckAbsolute,
-                                   absWidth = some(img.width.float),
-                                   absHeight = some(img.height.float))
+    result.txtPos = gobj.txtPos.toAbsImage(img)
   of goTick:
-    result.tkPos = gobj.tkPos.to(ckAbsolute,
-                                 absWidth = some(img.width.float),
-                                 absHeight = some(img.height.float))
+    result.tkPos = gobj.tkPos.toAbsImage(img)
   of goGrid:
     result.gdOrigin = gobj.gdOrigin.toAbsImage(img)
     result.gdOriginDiag = gobj.gdOriginDiag.toAbsImage(img)
@@ -1368,6 +1390,8 @@ proc draw*(img: BImage, gobj: GraphObject) =
   #  img.drawLabel(gobj)
   of goPoint:
     img.drawPoint(globalObj)
+  of goPolyLine:
+    img.drawPolyLine(globalObj)
   of goLabel, goText:
     img.drawText(globalObj)
   of goTick:
@@ -1403,6 +1427,8 @@ proc transform(gobj: GraphObject, view: Viewport): GraphObject =
     result.reHeight = result.reHeight * view.height
   of goPoint:
     result.ptPos = gobj.ptPos.embedInto(view)
+  of goPolyLine:
+    result.plPos = gobj.plPos.mapIt(it.embedInto(view))
   of goLabel, goText:
     result.txtPos = gobj.txtPos.embedInto(view)
   of goTick:
@@ -1486,6 +1512,7 @@ when isMainModule:
     for p in points:
       gobjPoints.add initPoint(view2, (x: p.a, y: p.b),
                                marker = mkCross)
+    let ptsLine = view1.initPolyLine(pos = points.mapIt((x: it.a, y: it.b)))
 
     let
       xticks = view1.xticks()
@@ -1513,23 +1540,22 @@ when isMainModule:
                                   height = Coord1D(pos: 1, kind: ckCentimeter))
 
     let inchSquare = view1.initRect(initCoord(0.3, 0.3),
-                                  width = Coord1D(pos: 1, kind: ckInch),
-                                  height = Coord1D(pos: 1, kind: ckInch))
+                                    width = Coord1D(pos: 1, kind: ckInch),
+                                    height = Coord1D(pos: 1, kind: ckInch))
 
     let xlabel = view1.xlabel("Energy")
     let ylabel = view1.ylabel("Count")
 
-    view1.addObj concat(gobjPoints, xticks, yticks, xticklabels, yticklabels, @[line1, line2, rect, xlabel, ylabel, cmSquare, inchSquare])
     view1.background()
 
     let grdlines = view1.initGridLines(some(xticks), some(yticks))
     let grdLnMinor = view1.initGridLines(some(xticks), some(yticks), major = false)
 
+    view1.addObj concat(xticks, yticks, xticklabels, yticklabels, @[line1, line2, rect, xlabel, ylabel, cmSquare, inchSquare, grdLines, grdLnMinor, ptsLine])#, gobjPoints)
     view2.addObj concat(@[rect2], gobjPoints)
     view1.children.add view2
     img.children.add view1
     img.draw("testView.pdf")
-
 
   block:
     var img = initBImage("testEmbed.svg",
