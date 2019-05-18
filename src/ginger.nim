@@ -303,26 +303,87 @@ proc `==`*(c1, c2: Coord): bool =
            else:
              false
 
+func equalKindAndScale(c1, c2: Coord1D): bool =
+  ## checks whether c1 and c2 are of the same kind and if it's an
+  ## absolute unit whether the two scales match
+  if c1.kind != c2.kind:
+    result = false
+  else:
+    let kind = c1.kind
+    case kind
+    of ckRelative:
+      result = true
+    of ckAbsolute, ckCentimeter, ckInch:
+      result = if c1.length == c2.length:
+                 true
+               else:
+                 false
+    of ckData:
+      result = if c1.scale == c2.scale:
+                 true
+               else:
+                 false
+    else:
+      raise newException(Exception, "strwidth comparison not implemented yet!")
+
 proc `+`(c1, c2: Coord1D): Coord1D =
-  ## adds two Coord1D by converting to relative coordinates.
-  ## Note that this may be a lossy conversion, e.g. if one is given
-  ## in `ckAbsolute` (length is lost)
-  result = Coord1D(pos: c1.toRelative.pos + c2.toRelative.pos,
-                   kind: ckRelative)
+  ## adds two Coord1D by converting to relative coordinates if necessary.
+  ## If both coordinates have the same kind and their potential scales
+  ## match (if in absolute units), the result will be of the same kind
+  ## as the input. Otherwise this will be a lossy conversion to relative
+  ## coordinates
+  if c1.equalKindAndScale(c2):
+    # assign to c1 to keep correct scale
+    result = c1
+    result.pos = c1.pos + c2.pos
+  else:
+    result = Coord1D(pos: c1.toRelative.pos + c2.toRelative.pos,
+                     kind: ckRelative)
 
 proc `-`(c1, c2: Coord1D): Coord1D =
-  ## subtracts two Coord1D by converting to relative coordinates.
-  ## Note that this may be a lossy conversion, e.g. if one is given
-  ## in `ckAbsolute` (length is lost)
-  result = Coord1D(pos: c1.toRelative.pos - c2.toRelative.pos,
-                   kind: ckRelative)
+  ## subtracts two Coord1D by converting to relative coordinates if necessary.
+  ## If both coordinates have the same kind and their potential scales
+  ## match (if in absolute units), the result will be of the same kind
+  ## as the input. Otherwise this will be a lossy conversion to relative
+  ## coordinates
+  if c1.equalKindAndScale(c2):
+    # assign to c1 to keep correct scale
+    result = c1
+    result.pos = c1.pos - c2.pos
+  else:
+    result = Coord1D(pos: c1.toRelative.pos - c2.toRelative.pos,
+                     kind: ckRelative)
 
 proc `*`(c1, c2: Coord1D): Coord1D =
-  ## multiplies two Coord1D by converting to relative coordinates.
+  ## subtracts two Coord1D by converting to relative coordinates if necessary.
+  ## If both coordinates have the same kind and their potential scales
+  ## match (if in absolute units), the result will be of the same kind
+  ## as the input. Otherwise this will be a lossy conversion to relative
+  ## coordinates
+  ## NOTE: a multiplication does ``not`` imply a multiplication of dimensions,
+  ## but rather a pure "value multiplication", i.e. 1 cm * 1 cm != 1 cm^2!
+  if c1.equalKindAndScale(c2):
+    # assign to c1 to keep correct scale
+    result = c1
+    result.pos = c1.pos * c2.pos
+  else:
+    result = Coord1D(pos: c1.toRelative.pos * c2.toRelative.pos,
+                     kind: ckRelative)
+
+proc `/`(c1, c2: Coord1D): Coord1D =
+  ## divides two Coord1D by converting to relative coordinates.
   ## Note that this may be a lossy conversion, e.g. if one is given
   ## in `ckAbsolute` (length is lost)
-  result = Coord1D(pos: c1.toRelative.pos * c2.toRelative.pos,
-                   kind: ckRelative)
+  ## NOTE: a division does ``not`` imply a division of dimensions,
+  ## but rather a pure "value division", i.e. 1 cm * 1 cm != 1 cm^2!
+  if c1.equalKindAndScale(c2):
+    # assign to c1 to keep correct scale
+    result = c1
+    result.pos = c1.pos / c2.pos
+  else:
+    result = Coord1D(pos: c1.toRelative.pos / c2.toRelative.pos,
+                     kind: ckRelative)
+
 
 proc to*(p: Coord1D, ckKind: CoordKind,
          absLength = none[float](),
