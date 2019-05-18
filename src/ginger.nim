@@ -27,6 +27,12 @@ export types, backends, macroUtils
 ## baseLayer
 ## implements the prototype base layer
 
+const
+  grey92* = color(0.92, 0.92, 0.92)
+  black* = color(0.0, 0.0, 0.0)
+  white* = color(1.0, 1.0, 1.0)
+  transparent* = color(0.0, 0.0, 0.0, 0.0)
+
 # makes use of backends layer
 type
   GraphObjectKind* = enum
