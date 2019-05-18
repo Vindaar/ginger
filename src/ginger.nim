@@ -1189,6 +1189,20 @@ proc initGridLines(view: Viewport,
       let ticks = yticks.get()
       result.gdYPos = calcMinorTicks(ticks, akY)
 
+
+proc background(view: var Viewport,
+                style: Option[Style] = none[Style]()) =
+  var r = GraphObject(kind: goRect,
+                      reOrigin: initCoord(0.0, 0.0),
+                      reWidth: initCoord1D(1.0),
+                      reHeight: initCoord1D(1.0))
+  if style.isSome:
+    r.style = style
+  else:
+    r.style = some(Style(color: color(0.0, 0.0, 0.0, 0.0),
+                         fillColor: grey92))
+  view.addObj r
+
 ################################################################################
 ########## DRAWING FUNCTIONS
 ################################################################################
@@ -1506,6 +1520,8 @@ when isMainModule:
     let ylabel = view1.ylabel("Count")
 
     view1.addObj concat(gobjPoints, xticks, yticks, xticklabels, yticklabels, @[line1, line2, rect, xlabel, ylabel, cmSquare, inchSquare])
+    view1.background()
+
     let grdlines = view1.initGridLines(some(xticks), some(yticks))
     let grdLnMinor = view1.initGridLines(some(xticks), some(yticks), major = false)
 
