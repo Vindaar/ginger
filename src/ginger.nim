@@ -974,14 +974,14 @@ proc initTickLabel(view: Viewport,
     origin = Coord(x: xCoord,
                    y: yCoord + Coord1D(pos: 0.5, kind: ckCentimeter, length: some(view.hImg)),
                    kind: ckData)
-    text = &"{loc.x.pos:.2f}"
+    text = &"{loc.x.pos:.1f}"
   of akY:
     let xCoord = Coord1D(pos: loc.x.scale.low, kind: ckData, scale: loc.x.scale)
     let yCoord = Coord1D(pos: loc.y.pos, kind: ckData, scale: loc.y.scale)
     origin = Coord(x: xCoord - Coord1D(pos: 0.5, kind: ckCentimeter, length: some(view.wImg)),
                    y: yCoord,
                    kind: ckData)
-    text = &"{loc.y.pos:.2f}"
+    text = &"{loc.y.pos:.1f}"
   result = view.initText(origin, text, taCenter, font, rotate)
 
 proc tickLabels(view: Viewport, ticks: seq[GraphObject],
