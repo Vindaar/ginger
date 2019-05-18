@@ -37,7 +37,7 @@ type
 
   GraphObject* = object
     children*: seq[GraphObject]
-    style*: Style
+    style*: Option[Style]
     rotateInView*: Option[(float, Point)] # rotation of viewport applied to all objs
     rotate*: Option[float] # rotation around center position
     case kind*: GraphObjectKind
@@ -528,6 +528,23 @@ func updateDataScale(view: Viewport,
   for p in mitems(objs):
     view.updateDataScale(p)
 
+func addObj(view: var Viewport, obj: GraphObject) =
+  ## adds the given `obj` to the viewport's objects and makes
+  ## sure it inherits all properties, e.g. Style and data scales
+  var mobj = obj
+  # check if user assigned a style to overwrite viewport style
+  if not obj.style.isSome:
+    mobj.style = some(view.style)
+  # (potentially) update data scale
+  view.updateDataScale(mobj)
+  view.objects.add mobj
+
+func addObj(view: var Viewport, objs: varargs[GraphObject]) =
+  ## adds the `objs` to the viewport's objects and makes
+  ## sure they inherit all properties, e.g. Style and data scales
+  for obj in objs:
+    view.addObj obj
+
 proc convertToKind(c: Coord1D, toKind: Coord1D): Coord1D =
   ## converts the coordinate `c` to the kind of `toKind`
   case toKind.kind
@@ -700,8 +717,8 @@ proc initAxis(view: Viewport,
                          axWidth: width,
                          axStart: initCoord(0.0, 1.0),
                          axStop: initCoord(1.0, 1.0),
-                         style: Style(color: color,
-                                      lineWidth: width))
+                         style: some(Style(color: color,
+                                           lineWidth: width)))
   case axKind
   of akX:
     result = axis
@@ -730,13 +747,13 @@ proc initRect(view: Viewport,
                        reWidth: width.patchCoord(view.wImg),
                        reHeight: height.patchCoord(view.hImg))
   if style.isSome:
-    result.style = style.get()
+    result.style = style
   else:
-    result.style = Style(lineWidth: 0.0,
-                         color: color(0.0, 0.0, 0.0, 0.0),
-                         size: 0.0,
-                         lineType: ltSolid,
-                         fillColor: color)
+    result.style = some(Style(lineWidth: 0.0,
+                              color: color(0.0, 0.0, 0.0, 0.0),
+                              size: 0.0,
+                              lineType: ltSolid,
+                              fillColor: color))
 
 proc initRect(view: Viewport,
               left, bottom, width, height: float,
@@ -873,12 +890,12 @@ proc initTick(view: Viewport,
                        tkMajor: major,
                        tkAxis: axKind)
   if style.isSome:
-    result.style = style.get()
+    result.style = style
   else:
-    result.style = Style(lineWidth: 1.0, # width of tick
-                         color: color(0.0, 0.0, 0.0),
-                         size: 5.0, # total length of tick
-                         lineType: ltSolid)
+    result.style = some(Style(lineWidth: 1.0, # width of tick
+                              color: color(0.0, 0.0, 0.0),
+                              size: 5.0, # total length of tick
+                              lineType: ltSolid))
 
 # taken straight from: *cough*
 # https://stackoverflow.com/questions/4947682/intelligently-calculating-chart-tick-positions
@@ -1012,14 +1029,16 @@ proc yticks(view: var Viewport,
 proc drawAxis(img: BImage, gobj: GraphObject) =
   doAssert gobj.kind == goAxis, "object must be a `goAxis`!"
   img.drawLine(gobj.axStart.point, gobj.axStop.point,
-               gobj.style,
+               gobj.style.get, # if we end up here without a style,
+                               # it's a bug!
                rotateAngle = gobj.rotateInView)
 
 proc drawRect(img: BImage, gobj: GraphObject) =
   doAssert gobj.kind == goRect, "object must be a `goRect`!"
   img.drawRectangle(gobj.reOrigin.point.x, gobj.reOrigin.point.y,
                     gobj.reWidth.pos, gobj.reHeight.pos,
-                    gobj.style,
+                    gobj.style.get, # if we end up here without a style,
+                                    # it's a bug!
                     gobj.rotateInView)
 
 proc drawPoint(img: BImage, gobj: GraphObject) =
@@ -1031,7 +1050,7 @@ proc drawPoint(img: BImage, gobj: GraphObject) =
                    fillColor = gobj.ptColor,
                    rotateAngle = gobj.rotateInView)
   of mkCross:
-    var style = gobj.style
+    var style = gobj.style.get() # style *has* to exist
     # modify line width to accomodate drawing a cross
     style.lineWidth = gobj.ptSize / 4.0
     style.color = gobj.ptColor
@@ -1062,9 +1081,8 @@ proc drawText(img: BImage, gobj: GraphObject) =
 proc drawTick(img: BImage, gobj: GraphObject) =
   ## draw a tick
   doAssert gobj.kind == goTick, "object must be a `goTick`!"
-
-  var style = gobj.style
-  var length = gobj.style.size
+  var style = gobj.style.get() # style *has* to exist
+  var length = style.size
   if not gobj.tkMajor:
     # minor ticks use half the width of normal ticks
     style.lineWidth = style.lineWidth / 2.0
@@ -1281,8 +1299,8 @@ when isMainModule:
     let xlabel = view1.xlabel("Energy")
     let ylabel = view1.ylabel("Count")
 
-    view1.objects = concat(xticks, yticks, xticklabels, yticklabels, @[line1, line2, rect, xlabel, ylabel, cmSquare, inchSquare])
-    view2.objects = concat(@[rect2], gobjPoints)
+    view1.addObj concat(gobjPoints, xticks, yticks, xticklabels, yticklabels, @[line1, line2, rect, xlabel, ylabel, cmSquare, inchSquare])
+    view2.addObj concat(@[rect2], gobjPoints)
     view1.children.add view2
     img.children.add view1
     img.draw("testView.pdf")
@@ -1350,12 +1368,12 @@ when isMainModule:
     textRot5.rotate = some(70.0)
     textRot5.txtFont.color = color(0.0, 1.0, 1.0)
     #view1.rotate = some(30.0)
-    view2.objects = @[rect,
-                      initPoint(view2, (x: 0.0, y: 0.0)),
-                      initPoint(view2, (x: 1.0, y: 0.0)),
-                      initPoint(view2, (x: 0.0, y: 1.0)),
-                      initPoint(view2, (x: 1.0, y: 1.0)),
-                      text, textRot, textRot2, textRot3, textRot4, textRot5, textRot3a]
+    view2.addObj @[rect,
+                   initPoint(view2, (x: 0.0, y: 0.0)),
+                   initPoint(view2, (x: 1.0, y: 0.0)),
+                   initPoint(view2, (x: 0.0, y: 1.0)),
+                   initPoint(view2, (x: 1.0, y: 1.0)),
+                   text, textRot, textRot2, textRot3, textRot4, textRot5, textRot3a]
     view1.children.add view2
     img.draw(view1)
     img.destroy()
@@ -1375,7 +1393,7 @@ when isMainModule:
     let yx0 = img.initAxis(akY)
 
     img.objects = @[yx0]
-    axisVp.objects = @[line1, line2, xlabel, ylabel]
+    axisVp.addObj @[line1, line2, xlabel, ylabel]
     img.children.add axisVp
     img.draw("axisCheck.pdf")
 
