@@ -169,6 +169,42 @@ func eitherOrRaise[T](either: Option[T],
   else:
     raise newException(ValueError, "Neither of the two optionals contains a value!")
 
+func `$`(gobj: GraphObject): string =
+  # string conversion function of `GraphObject`
+  result = &"(GraphObject.kind: {gobj.kind}, "
+  case gobj.kind
+  of goAxis:
+    result &= &"axWidth: {gobj.axWidth}, axStart: {gobj.axStart}, "
+    result &= &"axStop: {gobj.axStop}"
+  of goLabel, goText, goTickLabel:
+    result &= &"txtText: {gobj.txtText}, txtPos: {gobj.txtPos}, "
+    result &= &"txtAlign: {gobj.txtAlign}, txtRotate: {gobj.txtRotate}, "
+    result &= &"txtFont: {gobj.txtFont}"
+  of goGrid:
+    result &= &"gdXPos: {gobj.gdXPos}, gdYPos: {gobj.gdYPos}"
+    result &= &"gdOrigin: {gobj.gdOrigin}, gdOriginDiag: {gobj.gdOriginDiag}"
+  of goTick:
+    result &= &"tkPos: {gobj.tkPos}, tkMajor: {gobj.tkMajor}, tkAxis: {gobj.tkAxis}"
+  of goPoint:
+    result &= &"ptPos: {gobj.ptPos}, ptMarker: {gobj.ptMarker}, "
+    result &= &"ptSize: {gobj.ptSize}, ptColor: {gobj.ptColor}"
+  of goPolyLine:
+    result &= &"plPos: {gobj.plPos}"
+  of goRect:
+    result &= &"reOrigin: {gobj.reOrigin}, reWidth: {gobj.reWidth}, "
+    result &= &"reHeight: {gobj.reHeight}"
+  else:
+    result &= &"<no conversion for {gobj.kind}"
+  result &= &", style: {gobj.style}, rotate: {gobj.rotate}, "
+  result &= &"rotateInView: {gobj.rotateInView}"
+  result &= &", children: "
+  if gobj.children.len == 0:
+    result &= "@[])"
+  else:
+    result &= "\n"
+  for ch in gobj.children:
+    result = &"\t {ch}\n"
+  result &= ")"
 
 template cmToInch(x: float): float = x / 2.54
 template inchToAbs(x: float): float = x * 72.27
