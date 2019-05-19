@@ -36,8 +36,16 @@ const
 # makes use of backends layer
 type
   GraphObjectKind* = enum
-    goAxis, goText, goLabel, goTick, goTickLabel, goPoint, goLine, goRect,
-    goGrid, goPolyLine
+    goAxis, # a plot axis
+    goText, # general text
+    goLabel, # an axis label
+    goTick, # an axis tick
+    goTickLabel, # a tick label (i.e. the number or text)
+    goPoint, # a general point
+    goLine, # a general line
+    goRect, # a general rectangle
+    goGrid, # the plot grid (lines along the ticks)
+    goPolyLine, # a line connecting several points
 
   MarkerKind* = enum
     mkCircle, mkCross, mkRotCross, mkStar
