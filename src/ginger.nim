@@ -53,6 +53,11 @@ type
 
   CompositeKind* = enum
     cmpErrorBar # an error bar consisting of potentially several lines
+
+  ErrorBarKind* = enum
+    ebLines, # simple lines extending the error
+    ebLinesT # lines with an orthogonal line at ends, like a `T`
+
   GraphObject* = object
     children*: seq[GraphObject]
     style*: Option[Style]
@@ -648,6 +653,9 @@ func initCoord*(view: Viewport, x, y: float,
                  y: view.initCoord1D(x, akY, kind),
                  kind: kind)
 
+template c*(view: Viewport, x, y: float, kind: CoordKind = ckRelative): Coord =
+  initCoord(view, x, y, kind)
+
 func updateScale(view: Viewport, c: var Coord1D, axKind: AxisKind) =
   ## update the scale coordinate of the 1D coordinate `c` in place
   if c.kind == ckData:
@@ -998,6 +1006,134 @@ proc initPoint(view: Viewport,
                        ptPos: Coord(x: Coord1D(pos: pos.x, scale: view.xScale, kind: ckData),
                                     y: Coord1D(pos: pos.y, scale: view.yScale, kind: ckData)))
                        #ptPos: pos.scaleTo(view))
+
+func isScaleNonTrivial(c: Coord1D): bool =
+  doAssert c.kind == ckData, "coord must be of kind ckData!"
+  result = not (c.scale.low == c.scale.high)
+
+func isScaleNonTrivial(c: Coord): bool =
+  result = c.x.isScaleNonTrivial and c.y.isScaleNonTrivial
+
+proc initErrorBar(view: Viewport,
+                  pt: GraphObject,
+                  errorUp: Coord1D,
+                  errorDown: Coord1D,
+                  axKind: AxisKind,
+                  ebKind: ErrorBarKind,
+                  style: Option[Style] = none[Style]()): GraphObject =
+  ## creates an error bar for the point `pt` of kind `ebKind` with the
+  ## errors given by `errorUp`  and `errorDown` along the axis `axKind`.
+  ## If the `axKind` is `akX`, `errorUp` will describe the increase along
+  ## the X axis (to the right).
+  ## NOTE: this proc assumes that if the errors are given as `ckData`, the
+  ## scales associated are the same as for the data point!
+  result = GraphObject(kind: goComposite)
+  if style.isSome:
+    result.style = style
+  else:
+    result.style = some(
+      Style(lineWidth: 1.0, # describes width of lines
+            color: black,
+            size: 10.0) # describes length of orthogonal line of `ebLinesT`
+    )
+  # in case the user hands the errors as `ckData`, update the scale
+  doAssert pt.ptPos.isScaleNonTrivial, "Data scale must be non trivial!"
+  var
+    # error variables with appropriate scales, if `ckData`
+    errUp: Coord1D
+    errDown: Coord1D
+
+  template createLines(axKind, x1, x2, y1, y2: untyped): untyped =
+    errUp = view.updateScale(errorUp, axKind)
+    errDown = view.updateScale(errorUp, axKind)
+    let chUp = view.initLine(
+      start = pt.ptPos,
+      stop = Coord(
+        x: x1,
+        y: y1,
+        kind: ckData
+      ),
+      style = style
+    )
+    let chDown = view.initLine(
+      start = pt.ptPos,
+      stop = Coord(
+        x: x2,
+        y: y2,
+        kind: ckData),
+      style = style
+    )
+    result.children = @[chDown, chUp]
+
+  case ebKind
+  of ebLines:
+    case axKind
+    of akX:
+      createLines(akX,
+                  x1 = pt.ptPos.x + errUp,
+                  x2 = pt.ptPos.x - errDown,
+                  y1 = pt.ptPos.y,
+                  y2 = pt.ptPos.y)
+    of akY:
+      createLines(akY,
+                  x1 = pt.ptPos.x,
+                  x2 = pt.ptPos.x,
+                  y1 = pt.ptPos.y + errUp,
+                  y2 = pt.ptPos.y - errDown)
+  of ebLinesT:
+    let locStyle = result.style.get()
+    case axKind
+    of akX:
+      createLines(akX,
+                  x1 = pt.ptPos.x + errUp,
+                  x2 = pt.ptPos.x - errDown,
+                  y1 = pt.ptPos.y,
+                  y2 = pt.ptPos.y)
+      let chRight = view.initLine(
+        start = Coord(x: pt.ptPos.x + errUp,
+                      y: pt.ptPos.y - view.c1(locStyle.size, akY, ckAbsolute),
+                      kind: ckRelative),
+        stop = Coord(x: pt.ptPos.x + errUp,
+                     y: pt.ptPos.y + view.c1(locStyle.size, akY, ckAbsolute),
+                     kind: ckRelative),
+        style = style
+      )
+      let chLeft = view.initLine(
+        start = Coord(x: pt.ptPos.x - errDown,
+                      y: pt.ptPos.y - view.c1(locStyle.size, akY, ckAbsolute),
+                      kind: ckRelative),
+        stop = Coord(x: pt.ptPos.x - errDown,
+                     y: pt.ptPos.y + view.c1(locStyle.size, akY, ckAbsolute),
+                     kind: ckRelative),
+        style = style
+      )
+      result.children.add @[chRight, chLeft]
+    of akY:
+      createLines(akY,
+                  x1 = pt.ptPos.x,
+                  x2 = pt.ptPos.x,
+                  y1 = pt.ptPos.y + errUp,
+                  y2 = pt.ptPos.y - errDown)
+      let chUp = view.initLine(
+        start = Coord(x: pt.ptPos.x - view.c1(locStyle.size, akX, ckAbsolute),
+                      y: pt.ptPos.y - errUp,
+                      kind: ckRelative),
+        stop = Coord(x: pt.ptPos.x + view.c1(locStyle.size, akX, ckAbsolute),
+                     y: pt.ptPos.y - errUp,
+                     kind: ckRelative),
+        style = style
+      )
+      let chDown = view.initLine(
+        start = Coord(x: pt.ptPos.x - view.c1(locStyle.size, akX, ckAbsolute),
+                      y: pt.ptPos.y + errDown,
+                      kind: ckRelative),
+        stop = Coord(x: pt.ptPos.x + view.c1(locStyle.size, akX, ckAbsolute),
+                     y: pt.ptPos.y + errDown,
+                     kind: ckRelative),
+        style = style
+      )
+      result.children.add @[chUp, chDown]
+  #else: discard
 
 proc initPolyLine(view: Viewport,
                   pos: seq[Point],
@@ -1610,13 +1746,25 @@ when isMainModule:
                              yScale = some((low: -1.0, high: 1.0)))
     let line1 = view1.initAxis(akX)
     let line2 = view1.initAxis(akY)
-    let x = linspace(0.0, 6.28, 1_000)
+    let x = linspace(0.0, 6.28, 1_0)
     let y = x.mapIt(sin(it))
     let points = zip(x, y)
     var gobjPoints: seq[GraphObject]
+    var gobjErrors: seq[GraphObject]
     for p in points:
       gobjPoints.add initPoint(view2, (x: p.a, y: p.b),
                                marker = mkCross)
+      gobjErrors.add initErrorBar(view2, gobjPoints[^1],
+                                  errorUp = view2.c1(0.5, akX, ckCentimeter), #initCoord1D(p.a * 0.05, kind = ckData),
+                                  errorDown = view2.c1(0.5, akX, ckCentimeter),#initCoord1D(p.a * 0.05, kind = ckData),
+                                  axKind = akX,
+                                  ebKind = ebLinesT)
+      gobjErrors.add initErrorBar(view2, gobjPoints[^1],
+                                  errorUp = view2.c1(0.25, akX, ckCentimeter), #initCoord1D(p.a * 0.05, kind = ckData),
+                                  errorDown = view2.c1(0.25, akX, ckCentimeter),#initCoord1D(p.a * 0.05, kind = ckData),
+                                  axKind = akY,
+                                  ebKind = ebLinesT)
+
     let ptsLine = view1.initPolyLine(pos = points.mapIt((x: it.a, y: it.b)))
 
     let
@@ -1657,7 +1805,7 @@ when isMainModule:
     let grdLnMinor = view1.initGridLines(some(xticks), some(yticks), major = false)
 
     view1.addObj concat(xticks, yticks, xticklabels, yticklabels, @[line1, line2, rect, xlabel, ylabel, cmSquare, inchSquare, grdLines, grdLnMinor, ptsLine])#, gobjPoints)
-    view2.addObj concat(@[rect2], gobjPoints)
+    view2.addObj concat(@[rect2], gobjErrors, gobjPoints)
     view1.children.add view2
     img.children.add view1
     img.draw("testView.pdf")
