@@ -1475,7 +1475,7 @@ iterator mitems*(view: var Viewport): Viewport =
 #  result = (left(view) + p.x * (width(view)),
 #            bottom(view) + p.y * (height(view)))
 
-proc transform(gobj: GraphObject, view: Viewport): GraphObject =
+proc embedInto(gobj: GraphObject, view: Viewport): GraphObject =
   result = gobj
   case gobj.kind
   of goLine, goAxis:
@@ -1502,7 +1502,7 @@ proc transform(gobj: GraphObject, view: Viewport): GraphObject =
     result.gdXPos = gobj.gdXPos.mapIt(view.origin.x + it * view.width)
     result.gdYPos = gobj.gdYPos.mapIt(view.origin.y + it * view.height)
   else:
-    raise newException(Exception, "transform not implemented yet!")
+    raise newException(Exception, "embedInto not implemented yet!")
 
 proc draw(img: BImage, view: Viewport) =
   ## draws the full viewport including all objects and all
