@@ -1430,6 +1430,76 @@ proc initGridLines(view: Viewport,
       let ticks = yticks.get()
       result.gdYPos = calcMinorTicks(ticks, akY)
 
+func fillEmptySizesEvenly(s: seq[Coord1D], num: int): seq[Coord1D] =
+  ## filters out the 0 sized Coord1D from `s` and replaces them with
+  ## evenly sized sizes filling up to a total of 1.0
+  let zeroNum = s.filterIt(it.toRelative.pos == 0.0).len
+  if zeroNum == 0:
+    result = s
+  else:
+    let sumWidths = s.mapIt(it.toRelative.pos).foldl(a + b)
+    let remainWidth = (1.0 - sumWidths) / zeroNum.float
+    if remainWidth < 0:
+      raise newException(ValueError, "Given layout sizes exceed the viewport " &
+        "size. Remaining sizes cannot be filled! Total size: " & $sumWidths &
+        " Remaining rows/cols: " & $zeroNum)
+    for i in 0 ..< num:
+      if s[i].toRelative.pos == 0:
+        result.add c1(remainWidth)
+      else:
+        result.add s[i]
+
+proc layout(view: var Viewport,
+            cols, rows: int,
+            colWidths: seq[Coord1D] = @[],
+            rowHeights: seq[Coord1D] = @[]) =
+  ## creates a layout of viewports within the given `view` of
+  ## `cols` columns and `rows` rows. Optionally the widths and
+  ## heights of the cols / rows may be set. If none are given,
+  ## the widths / heights will be evenly sized.
+  ## Any width or height that has a relative size of 0.0, will be
+  ## considered as unspecified. In this case we split the remaining
+  ## space after the other sizes are summed between those.
+  # extend the seq of children to accomodate for layout
+  #view.children.setLen(view.len + cols * rows)
+  doAssert colWidths.len == cols or colWidths.len == 0, "there must be " &
+    "one column width for each column!"
+  doAssert rowHeights.len == rows or rowHeights.len == 0, "there must be " &
+    "one row height for each row!"
+  var widths: seq[Coord1D]
+  var heights: seq[Coord1D]
+  if colWidths.len == 0:
+    widths = newSeqWith(cols, c1(1.0 / cols.float))
+  else:
+    widths = fillEmptySizesEvenly(colWidths, cols)
+  if rowHeights.len == 0:
+    heights = newSeqWith(rows, c1(1.0 / rows.float))
+  else:
+    heights = fillEmptySizesEvenly(rowHeights, rows)
+  var curRowT = 0.0
+  for i in 0 ..< rows:
+    var curColL = 0.0
+    let ypos = c1(curRowT)
+    for j in 0 ..< cols:
+      # use widths / heights to create new viewports
+      let xpos = c1(curColL)
+      let width = c1(curColL) + widths[j]
+      let height = c1(curRowT) + heights[i]
+      let ch = initViewport(
+        origin = Coord(x: c1(curColL),
+                       y: c1(curRowT)),
+        width = widths[j], #width,
+        height = heights[i], #height,
+        style = some(view.style) # inherit style of parent
+      )
+      view.children.add ch
+      curColL = curColL + widths[j].toRelative.pos
+    curRowT = curRowT + heights[i].toRelative.pos
+
+  echo "Children: ", view.children.mapIt($(it.origin))
+  echo "width ", view.children.mapIt($(it.width))
+  echo "height ", view.children.mapIt($(it.height))
+
 
 proc background(view: var Viewport,
                 style: Option[Style] = none[Style]()) =
@@ -1923,6 +1993,27 @@ when isMainModule:
     img.children.add axisVp
     img.draw("testGGCols.pdf")
 
+  block:
+    var img = initViewport()
+
+    let widths = @[img.c1(1.0, akX, ckCentimeter),
+                   c1(0.0),
+                   c1(0.0),
+                   img.c1(1.0, akX, ckCentimeter)]
+    let heights = @[img.c1(1.0, akY, ckCentimeter),
+                   c1(0.0),
+                   c1(0.0),
+                   img.c1(1.0, akY, ckCentimeter)]
+
+    img.layout(4, 4, colwidths = widths, rowHeights = heights)
+    for ch in mitems(img):
+      let st = Style(color: color(0.0, 0.0, 1.0, 1.0),
+                     lineType: ltSolid,
+                     lineWidth: 1.0,
+                     fillColor: grey92)
+      ch.background(some(st))
+    #img.background()
+    img.draw("layoutTest.pdf")
 
 
 ## gogLayer
