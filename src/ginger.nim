@@ -971,6 +971,21 @@ proc scaleTo(p: Point, view: Viewport): Point =
   ## scales the point from data coordinates to viewport coordinates
   discard
 
+proc initLine(view: Viewport,
+              start: Coord,
+              stop: Coord,
+              style: Option[Style] = none[Style]()): GraphObject =
+  result = GraphObject(kind: goLine,
+                       lnStart: start,
+                       lnStop: stop)
+  if style.isSome:
+    result.style = style
+  else:
+    result.style = some(
+      Style(lineWidth: 1.0,
+            color: black)
+    )
+
 proc initPoint(view: Viewport,
                pos: Point,
                size = 3.0,
