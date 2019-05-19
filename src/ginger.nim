@@ -56,10 +56,9 @@ type
     rotateInView*: Option[(float, Point)] # rotation of viewport applied to all objs
     rotate*: Option[float] # rotation around center position
     case kind*: GraphObjectKind
-    of goAxis:
-      axWidth*: float
-      axStart*: Coord
-      axStop*: Coord
+    of goLine, goAxis:
+      lnStart*: Coord
+      lnStop*: Coord
     of goLabel, goText, goTickLabel:
       txtText*: string
       txtFont*: Font
@@ -194,9 +193,8 @@ func `$`(gobj: GraphObject): string =
   # string conversion function of `GraphObject`
   result = &"(GraphObject.kind: {gobj.kind}, "
   case gobj.kind
-  of goAxis:
-    result &= &"axWidth: {gobj.axWidth}, axStart: {gobj.axStart}, "
-    result &= &"axStop: {gobj.axStop}"
+  of goLine, goAxis:
+    result &= &"lnStart: {gobj.lnStart}, lnStop: {gobj.lnStop}"
   of goLabel, goText, goTickLabel:
     result &= &"txtText: {gobj.txtText}, txtPos: {gobj.txtPos}, "
     result &= &"txtAlign: {gobj.txtAlign}, txtRotate: {gobj.txtRotate}, "
@@ -627,9 +625,9 @@ func updateScale(view: Viewport, c: Coord): Coord =
 func updateDataScale(view: Viewport, obj: var GraphObject) =
   ## updates the data scale associated to the `obj`
   case obj.kind
-  of goAxis:
-    view.updateScale(obj.axStart)
-    view.updateScale(obj.axStop)
+  of goLine, goAxis:
+    view.updateScale(obj.lnStart)
+    view.updateScale(obj.lnStop)
   of goLabel, goText, goTickLabel:
     view.updateScale(obj.txtPos)
   of goGrid:
@@ -846,9 +844,8 @@ proc initAxis(view: Viewport,
               width = 1.0,
               color = color(0.0, 0.0, 0.0)): GraphObject =
   var axis = GraphObject(kind: goAxis,
-                         axWidth: width,
-                         axStart: initCoord(0.0, 1.0),
-                         axStop: initCoord(1.0, 1.0),
+                         lnStart: initCoord(0.0, 1.0),
+                         lnStop: initCoord(1.0, 1.0),
                          style: some(Style(color: color,
                                            lineWidth: width)))
   case axKind
@@ -856,8 +853,8 @@ proc initAxis(view: Viewport,
     result = axis
   of akY:
     result = replace(axis):
-      axStart = initCoord(0.0, 0.0)
-      axStop = initCoord(0.0, 1.0)
+      lnStart = initCoord(0.0, 0.0)
+      lnStop = initCoord(0.0, 1.0)
 
 proc xaxis(view: Viewport,
            width = 1.0,
@@ -1250,9 +1247,9 @@ proc background(view: var Viewport,
 
 
 
-proc drawAxis(img: BImage, gobj: GraphObject) =
-  doAssert gobj.kind == goAxis, "object must be a `goAxis`!"
-  img.drawLine(gobj.axStart.point, gobj.axStop.point,
+proc drawLine(img: BImage, gobj: GraphObject) =
+  doAssert gobj.kind == goAxis or gobj.kind == goLine, "object must be a `goAxis` or `goLine`!"
+  img.drawLine(gobj.lnStart.point, gobj.lnStop.point,
                gobj.style.get, # if we end up here without a style,
                                # it's a bug!
                rotateAngle = gobj.rotateInView)
@@ -1367,9 +1364,9 @@ proc toAbsImage(c: Coord, img: BImage): Coord =
 proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
   result = gobj
   case gobj.kind
-  of goAxis:
-    result.axStart = result.axStart.toAbsImage(img)
-    result.axStop = result.axStop.toAbsImage(img)
+  of goLine, goAxis:
+    result.lnStart = result.lnStart.toAbsImage(img)
+    result.lnStop = result.lnStop.toAbsImage(img)
   of goRect:
     result.reOrigin = result.reOrigin.toAbsImage(img)
     result.reWidth = Coord1D(pos: result.reWidth.toRelative.pos * img.width.float,
@@ -1401,8 +1398,8 @@ proc draw*(img: BImage, gobj: GraphObject) =
   let globalObj = gobj.toGlobalCoords(img)
 
   case gobj.kind
-  of goAxis:
-    img.drawAxis(globalObj)
+  of goLine, goAxis:
+    img.drawLine(globalObj)
   of goRect:
     img.drawRect(globalObj)
   #of goLabel:
@@ -1437,9 +1434,9 @@ iterator mitems*(view: var Viewport): Viewport =
 proc transform(gobj: GraphObject, view: Viewport): GraphObject =
   result = gobj
   case gobj.kind
-  of goAxis:
-    result.axStart = result.axStart.embedInto(view)
-    result.axStop = result.axStop.embedInto(view)
+  of goLine, goAxis:
+    result.lnStart = result.lnStart.embedInto(view)
+    result.lnStop = result.lnStop.embedInto(view)
   of goRect:
     result.reOrigin = gobj.reOrigin.embedInto(view)
     result.reWidth = result.reWidth * view.width
