@@ -46,10 +46,13 @@ type
     goRect, # a general rectangle
     goGrid, # the plot grid (lines along the ticks)
     goPolyLine, # a line connecting several points
+    goComposite # an object consisting of several other GraphObjects
 
   MarkerKind* = enum
     mkCircle, mkCross, mkRotCross, mkStar
 
+  CompositeKind* = enum
+    cmpErrorBar # an error bar consisting of potentially several lines
   GraphObject* = object
     children*: seq[GraphObject]
     style*: Option[Style]
@@ -89,7 +92,10 @@ type
       #reHeight*: float
       reWidth*: Coord1D
       reHeight*: Coord1D
-    else: discard
+    of goComposite:
+      cmpKind*: CompositeKind # a purely generic kind to describe the composite
+                              # used for debugging / echoing
+    #else: discard
 
   # TODO:
   # - write function that applies `Style`!
@@ -687,8 +693,12 @@ func updateDataScale(view: Viewport, obj: var GraphObject) =
     view.updateScale(obj.reOrigin)
     view.updateScale(obj.reWidth, akX)
     view.updateScale(obj.reHeight, akY)
-  else:
-    raise newException(Exception, "updating of goLine not yet implemented!")
+  of goComposite:
+    # call this func for all children of the composite
+    for ch in mitems(obj.children):
+      view.updateDataScale(ch)
+  #else:
+  #  raise newException(Exception, "updating of " & $(obj.kind) & " not yet implemented!")
 
 func updateDataScale(view: Viewport,
                      objs: var seq[GraphObject]) =
@@ -1433,7 +1443,9 @@ proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
                                             absLength = some(img.width.float)))
     result.gdYPos = gobj.gdYPos.mapIt(it.to(ckAbsolute,
                                             absLength = some(img.height.float)))
-
+  of goComposite:
+    # composite has nothing to be drawn, only children, which are handled individually
+    discard
   else:
     raise newException(Exception, "Not yet implemented!")
 
@@ -1460,6 +1472,9 @@ proc draw*(img: BImage, gobj: GraphObject) =
     img.drawGrid(globalObj)
   #of goLine:
   #  img.drawLine(gobj)
+  of goComposite:
+    # composite itself has nothing to be drawn, only children handled individually
+    discard
   else:
     raise newException(Exception, "Not implemented yet!")
 
@@ -1501,6 +1516,10 @@ proc embedInto(gobj: GraphObject, view: Viewport): GraphObject =
                                 kind: ckRelative)
     result.gdXPos = gobj.gdXPos.mapIt(view.origin.x + it * view.width)
     result.gdYPos = gobj.gdYPos.mapIt(view.origin.y + it * view.height)
+  of goComposite:
+    # composite itself contains nothing to draw, only children.
+    # children will be drawn and embedded individually
+    discard
   else:
     raise newException(Exception, "embedInto not implemented yet!")
 
@@ -1513,15 +1532,26 @@ proc draw(img: BImage, view: Viewport) =
   let
     centerX = left(view) + width(view) / 2.0
     centerY = bottom(view) + height(view) / 2.0
-  for obj in view.objects:
-    # transform the object to draw to the global image coordinate system
-    # and draw
+
+  proc transformAndDraw(img: BImage, obj: GraphObject, view: Viewport) =
+    ## performs the embedding of the object into the viewport
+    ## and draws the resulting object
     var mobj = obj
     # first check if object shall be rotate individually
     if view.rotate.isSome:
       mobj.rotateInView = some((view.rotate.get,
-                               (centerX, centerY).scale(img.width, img.height)))
-    img.draw(mobj.transform(view))
+                                 (centerX, centerY).scale(img.width, img.height)))
+    img.draw(mobj.embedInto(view))
+
+  for obj in view.objects:
+    # transform the object to draw to the global image coordinate system
+    # and draw
+    img.transformAndDraw(obj, view)
+    # draw all children of the object
+    for ch in obj.children:
+      doAssert obj.kind == goComposite, "Object should be a composite if it " &
+        "has children!"
+      img.transformAndDraw(ch, view)
 
   # draw all children viewports
   for chView in view:
