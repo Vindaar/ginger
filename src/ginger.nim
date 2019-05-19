@@ -539,16 +539,6 @@ proc to*(p: Coord, ckKind: CoordKind,
   #   doAssert strFont.isSome, "Conversion to string width requires a Font!"
   #  raise newException(Exception, "Conversion to string width not yet implemented!")
 
-func initCoord1D*(at: float, kind: CoordKind = ckRelative): Coord1D =
-  ## returns a Coord1D at coordinate `at` of kind `kind`
-  result = Coord1D(pos: at, kind: kind)
-
-func initCoord*(x, y: float, kind: CoordKind = ckRelative): Coord =
-  ## returns a coordinate at coordinates x, y of kind `kind`
-  result = Coord(x: initCoord1D(x, kind = kind),
-                 y: initCoord1D(y, kind = kind),
-                 kind: kind)
-
 func patchCoord(c: Coord1D, length: float): Coord1D =
   ## patches the given coordinate in case it requries an absolute
   ## scale (ckAbsolute .. ckInch) to have a length field
@@ -597,6 +587,60 @@ proc width(view: Viewport): float =
 proc height(view: Viewport): float =
   ## returns the height of the `Viewport` in `ckRelative`
   result = view.height.toRelative.pos
+
+func initCoord1D*(at: float, kind: CoordKind = ckRelative): Coord1D =
+  ## returns a Coord1D at coordinate `at` of kind `kind`
+  result = Coord1D(pos: at, kind: kind)
+
+template c1*(at: float, kind: CoordKind = ckRelative): Coord1D =
+  initCoord1D(at, kind)
+
+func initCoord1d*(view: Viewport, at: float,
+                  axKind: AxisKind,
+                  kind: CoordKind = ckAbsolute): Coord1D =
+  ## Full name should be `initCoord1D`, but since it's a convenience function
+  ## given name is short.
+  ## initialize a Coord1D based on the given viewport. This is useful for
+  ## absolute or data variables, which depend on the absolute sizes or scales
+  result = Coord1D(pos: at, kind: kind)
+  case kind
+  of ckAbsolute .. ckInch:
+    case axKind
+    of akX:
+      result.length = some(view.wImg)
+    of akY:
+      result.length = some(view.hImg)
+  of ckData:
+    case axKind
+    of akX:
+      result.scale = view.xScale
+    of akY:
+      result.scale = view.yScale
+  of ckStrWidth:
+    raise newException(Exception, "Strwidth not yet implemented!")
+  else: discard
+
+template c1*(view: Viewport, at: float,
+             axKind: AxisKind,
+             kind: CoordKind = ckAbsolute): Coord1D =
+  initCoord1D(view, at, axKind, kind)
+
+func initCoord*(x, y: float, kind: CoordKind = ckRelative): Coord =
+  ## returns a coordinate at coordinates x, y of kind `kind`
+  result = Coord(x: initCoord1D(x, kind = kind),
+                 y: initCoord1D(y, kind = kind),
+                 kind: kind)
+
+template c*(x, y: float, kind: CoordKind = ckRelative): Coord =
+  initCoord(x, y, kind)
+
+func initCoord*(view: Viewport, x, y: float,
+                kind: CoordKind = ckRelative): Coord =
+  ## length and scale aware (using Viewport) initCoord, that automatically
+  ## assigns the correct length and scale for absolute / data coords
+  result = Coord(x: view.initCoord1D(x, akX, kind),
+                 y: view.initCoord1D(x, akY, kind),
+                 kind: kind)
 
 func updateScale(view: Viewport, c: var Coord1D, axKind: AxisKind) =
   ## update the scale coordinate of the 1D coordinate `c` in place
