@@ -1633,7 +1633,7 @@ iterator items*(view: Viewport): Viewport =
   for ch in view.children:
     yield ch
 
-iterator mitems*(view: var Viewport): Viewport =
+iterator mitems*(view: var Viewport): var Viewport =
   for ch in mitems(view.children):
     yield ch
 
