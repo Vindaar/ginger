@@ -58,6 +58,10 @@ type
     ebLines, # simple lines extending the error
     ebLinesT # lines with an orthogonal line at ends, like a `T`
 
+  TickKind* = enum
+    tkOneSide, # only outside the plot
+    tkBothSides # inside and outside the plot
+
   GraphObject* = object
     children*: seq[GraphObject]
     style*: Option[Style]
@@ -83,6 +87,7 @@ type
       tkMajor*: bool # is a major tick, e.g. large tick w/ label
       tkPos*: Coord
       tkAxis*: AxisKind
+      tkKind*: TickKind
     of goPoint:
       ptMarker*: MarkerKind
       ptSize*: float # can be removed, due to style
@@ -1234,11 +1239,13 @@ proc initTick(view: Viewport,
               axKind: AxisKind,
               major: bool,
               at: Coord,
+              tickKind: TickKind = tkOneSide,
               style: Option[Style] = none[Style]()): GraphObject =
   result = GraphObject(kind: goTick,
                        tkPos: at.patchCoord(view),
                        tkMajor: major,
-                       tkAxis: axKind)
+                       tkAxis: axKind,
+                       tkKind: tickKind)
   if style.isSome:
     result.style = style
   else:
@@ -1303,6 +1310,7 @@ proc initTicks(view: var Viewport,
                axKind: AxisKind,
                numTicks: int = 0,
                tickLocs: seq[Coord] = @[],
+               tickKind: TickKind = tkOneSide,
                major = true,
                style: Option[Style] = none[Style]()): seq[GraphObject] =
   # check whether there
@@ -1312,7 +1320,7 @@ proc initTicks(view: var Viewport,
   if numTicks == 0 and tickLocs.len > 0:
     for loc in tickLocs:
       result.add initTick(view, axKind = axKind, major = major, at = loc,
-                          style = style)
+                          tickKind = tickKind, style = style)
   elif numTicks > 0:
     var scale: Scale
     if axKind == akX:
@@ -1346,25 +1354,29 @@ proc initTicks(view: var Viewport,
     # and update the scales of all objects owned by the viewport
     view.updateDataScale(view.objects)
 
-proc xticks(view: var Viewport,
-            numTicks: int = 10,
-            tickLocs: seq[Coord] = @[],
-            major = true,
-            style: Option[Style] = none[Style]()): seq[GraphObject] =
+proc xticks*(view: var Viewport,
+             numTicks: int = 10,
+             tickLocs: seq[Coord] = @[],
+             major = true,
+             tickKind: TickKind = tkOneSide,
+             style: Option[Style] = none[Style]()): seq[GraphObject] =
   result = view.initTicks(akX,
                           numTicks = numTicks,
                           tickLocs = tickLocs,
+                          tickKind = tickKind,
                           major = true,
                           style = style)
 
-proc yticks(view: var Viewport,
-            numTicks: int = 10,
-            tickLocs: seq[Coord] = @[],
-            major = true,
-            style: Option[Style] = none[Style]()): seq[GraphObject] =
+proc yticks*(view: var Viewport,
+             numTicks: int = 10,
+             tickLocs: seq[Coord] = @[],
+             major = true,
+             tickKind: TickKind = tkOneSide,
+             style: Option[Style] = none[Style]()): seq[GraphObject] =
   result = view.initTicks(akY,
                           numTicks = numTicks,
                           tickLocs = tickLocs,
+                          tickKind = tickKind,
                           major = true,
                           style = style)
 
@@ -1592,18 +1604,31 @@ proc drawTick(img: BImage, gobj: GraphObject) =
     style.lineWidth = style.lineWidth / 2.0
     length = length / 2.0
 
+  var
+    tkStart: float
+    tkStop: float
   case gobj.tkAxis
   of akX:
-    let tkStart = gobj.tkPos.point.y + length
-    let tkStop = gobj.tkPos.point.y - length
+    case gobj.tkKind
+    of tkOneSide:
+      tkStart = gobj.tkPos.point.y + length
+      tkStop = gobj.tkPos.point.y
+    of tkBothSides:
+      tkStart = gobj.tkPos.point.y + length
+      tkStop = gobj.tkPos.point.y - length
     let tkX = gobj.tkPos.point.x
     img.drawLine((tkX, tkStart),
                  (tkX, tkStop),
                  style,
                  rotateAngle = gobj.rotateInView)
   of akY:
-    let tkStart = gobj.tkPos.point.x + length
-    let tkStop = gobj.tkPos.point.x - length
+    case gobj.tkKind
+    of tkOneSide:
+      tkStart = gobj.tkPos.point.x
+      tkStop = gobj.tkPos.point.x - length
+    of tkBothSides:
+      tkStart = gobj.tkPos.point.x + length
+      tkStop = gobj.tkPos.point.x - length
     let tkY = gobj.tkPos.point.y
     img.drawLine((tkStart, tkY),
                  (tkStop, tkY),
