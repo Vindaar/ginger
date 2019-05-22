@@ -177,7 +177,9 @@ type
                                # that certain transformations have to be applied
                                # manually beforehand!
     children*: seq[Viewport]
-    wImg*: Quantity # absolute width, height in points (pixels)
+    wView*: Quantity # absolute width, height in points (pixels) of viewport
+    hView*: Quantity
+    wImg*: Quantity # absolute width, height in points (pixels) of image
     hImg*: Quantity
     backend*: BackendKind
 
@@ -201,7 +203,7 @@ func toPoints*(q: Quantity,
     # NOTE: for ukSqRelative the caller needs to make sure the given length corresponds to
     # the smaller length of the viewport
     if length.isSome:
-      result = quant(q.val * length.get().toPoints.val, ukPoints)
+      result = quant(q.val * length.get().toPoints.val, ukPoint)
     else:
       raise newException(ValueError, "Cannot convert quantity with unit " &
         $q.unit & " to points without a length!")
@@ -750,11 +752,15 @@ proc bottom(view: Viewport): Coord1D =
 
 proc width(view: Viewport): Quantity =
   ## returns the width of the `Viewport` in `ukRelative`
-  result = view.width.toRelative(length = view.wImg)
+  ## NOTE: this procedure is a no-op, if the width is already stored as a
+  ## ukRelative!
+  result = view.width.toRelative(length = view.wView)
 
 proc height(view: Viewport): Quantity =
   ## returns the height of the `Viewport` in `ukRelative`
-  result = view.height.toRelative(length = view.hImg)
+  ## NOTE: this procedure is a no-op, if the height is already stored as a
+  ## ukRelative!
+  result = view.height.toRelative(length = view.hView)
 
 func updateScale(view: Viewport, c: var Coord1D) =
   ## update the scale coordinate of the 1D coordinate `c` in place
@@ -994,6 +1000,8 @@ proc initViewport*(origin: Coord,
                    scale = none[float](),
                    wImg = 640.0,
                    hImg = 480.0,
+                   wParentView: Option[Quantity] = none[Quantity](),
+                   hParentView: Option[Quantity] = none[Quantity](),
                    backend = bkCairo): Viewport =
   ## initializes a `Viewport` with `origin` in any coordinate system
   ## with 1D coordinates providing width and height
@@ -1006,6 +1014,17 @@ proc initViewport*(origin: Coord,
                     wImg: quant(wImg, ukPoint),
                     hImg: quant(hImg, ukPoint),
                     backend: backend)
+  echo "[DEBUG]: Initing viewport ", width.toRelative(result.wImg)
+  if wParentView.isSome and hParentView.isSome:
+    doAssert wParentView.get.unit == ukPoint and
+      hParentView.get.unit == ukPoint, "parent size must be given in `ukPoint`!"
+    result.wView = wParentView.get#quant(wParentView.get.toRelative(result.wImg).val, ukPoint)
+    result.hView = hParentView.get#quant(hParentView.get.toRelative(result.hImg).val, ukPoint)
+  else:
+    echo "[WARNING]: initializing viewport at ", origin, " with absolute " &
+      "sizes equal to image sizes!"
+    result.wView = result.wImg#quant(wImg * width.toRelative(result.wImg).val, ukPoint)
+    result.hView = result.hImg#quant(wImg * width.toRelative(result.hImg).val, ukPoint)#quant(hImg, ukPoint)
   if style.isSome:
     result.style = style.get()
   if xScale.isSome:
@@ -1023,6 +1042,8 @@ proc initViewport*(left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
                    hImg = 480.0,
                    backend = bkCairo): Viewport =
   ## convenience init function for Viewport using relative coordinates
+  ## NOTE: this function should only be used to create a Viewport within the
+  ## main image viewport! Otherwise use the `addViewport` procs on a viewport!
   let origin = Coord(x: Coord1D(pos: left, kind: ukRelative),
                      y: Coord1D(pos: bottom, kind: ukRelative))
   let
@@ -1030,7 +1051,7 @@ proc initViewport*(left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
     heightCoord = quant(height, ukRelative)
   result = initViewport(origin, widthCoord, heightCoord,
                         style, xScale, yScale, rotate, scale,
-                        wImg, hImg, backend)
+                        wImg, hImg, backend = backend)
 
 proc addViewport*(view: var Viewport,
                   origin: Coord,
@@ -1048,6 +1069,11 @@ proc addViewport*(view: var Viewport,
                                style, xScale, yScale, rotate, scale,
                                wImg = view.wImg.toPoints.val,
                                hImg = view.hImg.toPoints.val,
+                               # TODO: clean this up
+                               wParentView = some(
+                                 quant(view.wView.val * view.width.toRelative(view.wView).val, ukPoint)),
+                               hParentView = some(
+                                 quant(view.hView.val * view.height.toRelative(view.hView).val, ukPoint)),
                                backend = view.backend)
   # override width and height
   ## echo "TODO: make sure we want to give child viewport scaled (wImg, hImg)!"
@@ -1055,7 +1081,7 @@ proc addViewport*(view: var Viewport,
   #viewChild.hImg = quant(view.hImg.val * height.toRelative(view.hImg).val, ukPoint)
   # TODO: this is not useful, since all objects have value semantics, i.e. if we change it
   # the change is not reflected, since we work on a copy.
-  view.children.add viewChild
+  #view.children.add viewChild
   result = viewChild
 
 proc addViewport*(view: var Viewport,
