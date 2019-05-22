@@ -239,7 +239,7 @@ proc toRelative*(q: Quantity, length: Quantity): Quantity =
   doAssert length.unit in ukPoint .. ukInch, "length scale needed to convert " &
     "quantity to relative value!"
   if q.unit != ukRelative:
-    echo "WARNING: Converting quantity ", q, " to relative via ", length, "!"
+    echo "[WARNING]: Converting quantity ", q, " to relative via ", length, "!"
   case q.unit
   of ukRelative:
     result = q
