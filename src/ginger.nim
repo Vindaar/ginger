@@ -885,7 +885,7 @@ proc convertToKind(c: Coord1D, toKind: Coord1D): Coord1D =
 #                 y: c.y.translate(byCoord.y),
 #                 kind: c.kind)
 
-proc embedInto(q: Quantity, axKind: AxisKind, view: Viewport): Quantity =
+proc embedInto*(q: Quantity, axKind: AxisKind, view: Viewport): Quantity =
   ## Embeds the quantity `q` into the viewport `view`
   ## NOTE: Embedding a quantity is a special case. A quantity (in our case)
   ## describes a length. This means that any absolute quantity ``must not``
