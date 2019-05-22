@@ -63,6 +63,7 @@ type
     tkBothSides # inside and outside the plot
 
   GraphObject* = object
+    name*: string # name of the Graph Object. Currently mainly used for debugging
     children*: seq[GraphObject]
     style*: Option[Style]
     rotateInView*: Option[(float, Point)] # rotation of viewport applied to all objs
@@ -337,7 +338,7 @@ func eitherOrRaise[T](either: Option[T],
 
 func `$`*(gobj: GraphObject): string =
   # string conversion function of `GraphObject`
-  result = &"(GraphObject.kind: {gobj.kind}, "
+  result = &"(GraphObject.name: {gobj.name}, GraphObject.kind: {gobj.kind}, "
   case gobj.kind
   of goLine, goAxis:
     result &= &"lnStart: {gobj.lnStart}, lnStop: {gobj.lnStop}"
