@@ -1380,8 +1380,8 @@ proc initAxisLabel(view: Viewport,
   of akX:
     # TODO: fix positions based on absolute unit (e.g. cm) instead of
     # relatives?
-    let yPos = Coord1D(pos: height(view).toPoints(some(view.hImg)).val + margin.toPoints.val,
-                       length: some(view.wImg),
+    let yPos = Coord1D(pos: height(view).toPoints(some(view.hView)).val + margin.toPoints.val,
+                       length: some(view.hView),
                        kind: ukPoint) # Coord1D(pos: margin.pos,
                             # length: some(view.hImg),
                             # kind: ukCentimeter)
@@ -1746,16 +1746,13 @@ proc layout*(view: var Viewport,
       let xpos = c1(curColL)
       let width = quant(curColL + widths[j].val, ukRelative)
       let height = quant(curRowT + heights[i].val, ukRelative)
-      let ch = initViewport(
+      let ch = view.addViewport(
         origin = Coord(x: c1(curColL),
                        y: c1(curRowT)),
         width = widths[j], #width,
         height = heights[i], #height,
         xScale = some(view.xScale),
         yScale = some(view.yScale),
-        # TODO: make sure we want to hand (wImg, hImg)!!
-        wImg = view.wImg.val,
-        hImg = view.hImg.val,
         style = some(view.style) # inherit style of parent
       )
       view.children.add ch
@@ -2390,6 +2387,31 @@ when isMainModule:
     view1.addObj [line1, line2, xlabel, ylabel]
     img.children.add view1
     img.draw("debugAxes.pdf")
+
+  block testNestedAxes:
+    var img = initViewport(wImg = 1000,
+                           hImg = 400)
+
+    proc addChild(v: var Viewport, num: int) =
+      if num < 0:
+        return
+      var view1 = v.addViewport(left = 0.1,
+                                bottom = 0.1,
+                                width = 0.8,
+                                height = 0.5,
+                                xScale = some((low: 0.0, high: 2.0 * PI)),
+                                yScale = some((low: -1.0, high: 1.0)))
+      view1.background()
+      let line1 = view1.initAxis(akX)
+      let line2 = view1.initAxis(akY)
+      let xlabel = view1.xlabel("Energy")
+      let ylabel = view1.ylabel("Count")
+      view1.addObj [line1, line2, xlabel, ylabel]
+      view1.addChild(num - 1)
+      v.children.add view1
+    img.addChild(10)
+    img.draw("testNestedAxes.pdf")
+
 
 ## gogLayer
 ## implements the prototype GoG layer
