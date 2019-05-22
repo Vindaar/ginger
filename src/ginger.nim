@@ -2094,8 +2094,8 @@ proc draw(img: BImage, view: Viewport) =
     # was created, we may have already set the `wImg`, `hImg` fields in a scaled way!
     #mchView.wImg = quant(view.wImg.val * mchView.width.toRelative(view.wImg).val, ukPoint)
     #mchView.hImg = quant(view.hImg.val * mchView.height.toRelative(view.wImg).val, ukPoint)
-    mchView.wImg = view.wImg
-    mchView.hImg = view.hImg
+    doAssert mchView.wImg == view.wImg
+    doAssert mchView.hImg == view.hImg
     mchView.rotate = view.rotate
     img.draw(mchView)
 
