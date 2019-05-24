@@ -533,11 +533,8 @@ proc `+`*(c1, c2: Coord1D): Coord1D =
       result.pos = c1.toPoints.pos + c2.toPoints.pos
       result.kind = ukPoint
     else:
-      #debugecho "But is ", c1, " and ", c2
       result.pos = c1.pos + c2.pos
   else:
-    debugecho "But is ", c1, " and ", c2
-    debugecho "as rel ", c1.toRelative, " and ", c2.torelative, " \n\n"
     result = Coord1D(pos: c1.toRelative.pos + c2.toRelative.pos,
                      kind: ukRelative)
 
@@ -929,6 +926,8 @@ proc embedInto(c: Coord1D, axKind: AxisKind, view: Viewport): Coord1D =
       # echo "View is ", view.wImg
       let origAbs = view.origin.y.to(ukPoint, absLength = some(view.hImg))
       #pos = view.origin.y + c# * view.height
+      #var mc = c
+      #mc.length = some(view.hImg)
       pos = origAbs + c #* view.height
     else:
       pos = Coord1D(pos: bottom(view).pos + height(view).val * c.toRelative.pos,
@@ -1281,8 +1280,6 @@ proc initErrorBar(view: Viewport,
     )
     result.children = @[chDown, chUp]
 
-  #echo "Creation of error bar ", pt.ptPos.x, " and ", errorUp
-  #echo pt.ptPos.x + errorUp
   case ebKind
   of ebLines:
     case axKind
@@ -1382,19 +1379,13 @@ proc initAxisLabel(view: Viewport,
     # relatives?
     let yPos = Coord1D(pos: height(view).toPoints(some(view.hView)).val + margin.toPoints.val,
                        length: some(view.hView),
-                       kind: ukPoint) # Coord1D(pos: margin.pos,
-                            # length: some(view.hImg),
-                            # kind: ukCentimeter)
-    # echo "WADADA ", yPos
-    # echo margin
-    # echo margin.toRelative(view.hImg)
+                       kind: ukPoint)
     result.txtPos = Coord(x: initCoord1D(0.5),
                           y: ypos)
   of akY:
     let xPos = Coord1D(pos: -margin.toPoints.val,
                        length: some(view.wImg),
                        kind: ukPoint)
-    # echo "XAPAPA ", xPos.toRelative
     result.txtPos = Coord(x: xPos,
                           y: initCoord1D(0.5))
     result.rotate = some(-90.0)
@@ -1633,7 +1624,6 @@ func calcMinorTicks(ticks: seq[GraphObject], axKind: AxisKind): seq[Coord1D] =
   let cdiv2 = Coord1D(pos: 2.0, kind: ukData, scale: scale, axis: axKind)
   for i in 0 ..< ticks.high: # ignore last tick
     doAssert ticks[i].kind == goTick, "Elements for grid lines must be `goTick`!"
-    # debugecho "Current tick ", ticks[i]
     # calculate position between both ticks
     case axKind
     of akX:
@@ -1642,7 +1632,6 @@ func calcMinorTicks(ticks: seq[GraphObject], axKind: AxisKind): seq[Coord1D] =
     of akY:
       let midPos = (ticks[i].tkPos.y + ticks[i+1].tkPos.y) / cdiv2
       result[i] = midPos
-    # debugecho "Resulting pos ", result[i].pos
 
 proc initGridLines*(view: Viewport,
                     xticks: Option[seq[GraphObject]] = none[seq[GraphObject]](),
@@ -1772,7 +1761,6 @@ proc background*(view: var Viewport,
                       reHeight: quant(1.0, ukRelative))
   if style.isSome:
     r.style = style
-    # echo "APPLING STYLE ", style.get
   else:
     r.style = some(Style(color: color(0.0, 0.0, 0.0, 0.0),
                          fillColor: grey92))
@@ -1929,24 +1917,12 @@ proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
     result.lnStop = result.lnStop.toAbsImage(img)
   of goRect:
     result.reOrigin = result.reOrigin.toAbsImage(img)
-    # echo "reWidth is kind ", result.reWidth.unit
-    # echo "okaokokoko\n\n\n"
-    # echo result.reWidth
-    # echo result.reHeight
-    # echo "And now "
     result.reWidth = result.reWidth.toPoints(some(
       quant(img.width.float, ukPoint))
     )
     result.reHeight = result.reHeight.toPoints(some(
       quant(img.height.float, ukPoint))
     )
-    # echo result.reWidth
-    # echo result.reHeight
-    # echo "And now "
-    #Coord1D(pos: result.reWidth.toRelative.pos * img.width.float,
-                     #        kind: ukRelative)
-    #result.reHeight = Coord1D(pos: result.reHeight.toRelative.pos * img.height.float,
-    #                        kind: ukRelative)
 
   of goPoint:
     result.ptPos = gobj.ptPos.toAbsImage(img)
@@ -2007,27 +1983,16 @@ iterator mitems*(view: var Viewport): var Viewport =
   for ch in mitems(view.children):
     yield ch
 
-#proc translate(p: Point, view: Viewport): Point =
-#  result = (left(view) + p.x * (width(view)),
-#            bottom(view) + p.y * (height(view)))
-
 proc embedInto(gobj: GraphObject, view: Viewport): GraphObject =
   result = gobj
   case gobj.kind
   of goLine, goAxis:
-    #echo "Embedding line ", result.lnStart, "   ", result.lnStop
     result.lnStart = result.lnStart.embedInto(view)
     result.lnStop = result.lnStop.embedInto(view)
-    #echo "is now ", result.lnStart, "    ", result.lnStop
-    #echo "\n\n"
   of goRect:
     result.reOrigin = gobj.reOrigin.embedInto(view)
-    # echo "WID HEI\n", result.reWidth
-    result.reWidth = result.reWidth.embedInto(akX, view)#result.reWidth * view.width
-    result.reHeight = result.reHeight.embedInto(akY, view)#result.reHeight * view.height
-    # echo "WID HEI"
-    # echo result.reWidth, " of ", view.width
-    # echo result.reHeight, " of ", view.height
+    result.reWidth = result.reWidth.embedInto(akX, view)
+    result.reHeight = result.reHeight.embedInto(akY, view)
   of goPoint:
     result.ptPos = gobj.ptPos.embedInto(view)
   of goPolyLine:
@@ -2102,7 +2067,6 @@ proc draw(img: BImage, view: Viewport) =
 proc draw*(view: Viewport, filename: string, ftype = fkPdf) =
   ## draws the given viewport and all its children and stores it in the
   ## file `filename`
-  # echo view.backend
   var img = initBImage(filename,
                        width = view.wImg.val.round.int, height = view.hImg.val.round.int,
                        backend = view.backend,
@@ -2161,12 +2125,7 @@ when isMainModule:
       yticks = view1.yticks()
       xtickLabels = view1.tickLabels(xticks)
       ytickLabels = view1.tickLabels(yticks)
-    for x in yticks:
-      echo x.tkPos
-    #if true:
-    #  quit()
 
-    #img.drawRectangle(200.0, 100.0, 150.0, 100.0)
     let rect = view1.initRect(0.3, 0.3, 0.1, 0.2)
     let rect2 = view2.initRect(
       0.0, 0.0, 1.0, 1.0,
@@ -2302,7 +2261,6 @@ when isMainModule:
     for i in 0 .. num:
       let style = Style(color: cols[i],
                         fillColor: cols[i])
-      # echo "Color is ", cols[i]
       rects.add axisVp.initRect(initCoord(i.float * 0.1, i.float * 0.1),
                                 width = quant(1.0, ukCentimeter),
                                 height = quant(1.0, ukCentimeter),
