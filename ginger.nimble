@@ -2,7 +2,7 @@
 
 version       = "0.1.0"
 author        = "Vindaar"
-description   = "A Grid like package in Nim"
+description   = "A Grid (R) like package in Nim"
 license       = "MIT"
 srcDir        = "src"
 

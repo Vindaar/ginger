@@ -11,9 +11,39 @@ handling of different coordinate systems.
 The backend of this package currently uses =cairo=, but as long as a
 backend can provide a few primitives like =drawLine=, =drawPoint= and
 a few others, a new backend can be added quickly.
+Thanks to using =cairo=, we can easily output to =png=, =svg= and
+=pdf= among others.
 
 *NOTE:* Still under heavy development!
 
-** Examples
+** Test examples
 
-...
+The following examples are not supposed to be pretty, but rather
+display different aspects of the library. They are basically just the
+images constructed. The images below are saved as png so they can be
+embedded in this README.
+
+*** Setting axes
+
+[[file:media/axisCheck.png]]
+
+*** Axes and a background
+
+[[file:media/debugAxes.png]]
+
+*** Embed view into bottom right corner, rotate text
+
+[[file:media/testEmbed.png]]
+
+*** Test ggplot2 like colors
+
+[[file:media/testGGCols.png]]
+
+*** Testing nesting of axes
+
+[[file:media/testNestedAxes.png]]
+
+*** Constructing a whole "plot"
+
+[[file:media/testView.png]]
+
