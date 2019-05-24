@@ -1,0 +1,19 @@
+* Ginger - a Grid like package in Nim
+
+Ginger is a graphics package similar to R's [[https://www.rdocumentation.org/packages/grid/versions/3.6.0][Grid package]], which can be
+formed as a basis for a graphing library. It will be the foundation of
+[[https://github.com/Vindaar/ggplotnim][ggplotnim]] a "port" of ggplot2 for Nim.
+
+The basic idea is to provide basic primitives to draw on a canvas,
+while providing layering capabilities via =Viewports= and good
+handling of different coordinate systems.
+
+The backend of this package currently uses =cairo=, but as long as a
+backend can provide a few primitives like =drawLine=, =drawPoint= and
+a few others, a new backend can be added quickly.
+
+*NOTE:* Still under heavy development!
+
+** Examples
+
+...
