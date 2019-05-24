@@ -1532,7 +1532,7 @@ proc niceNumber(val: float, round: bool): float =
 
   result = niceFrac * pow(10, exponent.float)
 
-proc calcTickLocations(scale: Scale, numTicks: int): (Scale, float, int) =
+proc calcTickLocations*(scale: Scale, numTicks: int): (Scale, float, int) =
   # TODO: extend for log scale
   # Check for special cases
   if scale.low == scale.high:
