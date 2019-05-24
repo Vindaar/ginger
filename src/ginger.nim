@@ -234,19 +234,33 @@ func toCentimeter*(q: Quantity): Quantity {.raises: ValueError.} =
     raise newException(ValueError, "Cannot convert quantity with unit " &
       $q.unit & " to centimeter!")
 
-proc toRelative*(q: Quantity, length: Quantity): Quantity =
+proc toRelative*(q: Quantity,
+                 length: Option[Quantity] = none[Quantity](),
+                 scale: Option[Scale] = none[Scale]()): Quantity =
   ## returns a quantity as a relative length (typically) in a given viewport
-  doAssert length.unit in ukPoint .. ukInch, "length scale needed to convert " &
-    "quantity to relative value!"
-  if q.unit != ukRelative:
-    echo "[WARNING]: Converting quantity ", q, " to relative via ", length, "!"
+  if q.unit != ukRelative and q.unit != ukData:
+    doAssert((length.isSome and
+              length.get.unit in ukPoint .. ukInch),
+             "length scale needed to convert quantity to relative value!")
+    echo "[WARNING]: Converting quantity ", q, " to relative via ", length.get, "!"
+  elif q.unit != ukRelative and q.unit == ukData:
+    doAssert(scale.isSome,
+             "length scale needed to convert quantity to relative value!")
+    echo "[WARNING]: Converting quantity ", q, " to relative via ", scale.get, "!"
   case q.unit
   of ukRelative:
     result = q
   of ukPoint:
-    result = quant(q.val / length.toPoints.val, ukRelative)
+    result = quant(q.val / length.get.toPoints.val, ukRelative)
   of ukCentimeter, ukInch:
-    result = quant(q.toPoints.val / length.toPoints.val, ukRelative)
+    result = quant(q.toPoints.val / length.get.toPoints.val, ukRelative)
+  of ukData:
+    echo "[INFO]: conversion of ukData quant to relative. Assuming `length` is data scale!"
+    if scale.isSome:
+      result = quant(q.val / (scale.unsafeGet.high - scale.unsafeGet.low), ukRelative)
+    else:
+      raise newException(Exception, "Need a scale to convert quantity of kind " &
+        "`ukData` to relative!")
   else:
     raise newException(Exception, "Cannot convert quantity " & $q & " to " &
       "relative quantity!")
@@ -751,13 +765,13 @@ proc width(view: Viewport): Quantity =
   ## returns the width of the `Viewport` in `ukRelative`
   ## NOTE: this procedure is a no-op, if the width is already stored as a
   ## ukRelative!
-  result = view.width.toRelative(length = view.wView)
+  result = view.width.toRelative(length = some(view.wView))
 
 proc height(view: Viewport): Quantity =
   ## returns the height of the `Viewport` in `ukRelative`
   ## NOTE: this procedure is a no-op, if the height is already stored as a
   ## ukRelative!
-  result = view.height.toRelative(length = view.hView)
+  result = view.height.toRelative(length = some(view.hView))
 
 func updateScale(view: Viewport, c: var Coord1D) =
   ## update the scale coordinate of the 1D coordinate `c` in place
@@ -892,12 +906,27 @@ proc embedInto*(q: Quantity, axKind: AxisKind, view: Viewport): Quantity =
     case axKind
     of akX:
       result = quant(width(view).val * q.val, ukRelative)
+      # result = quant(view.wImg.toRelative(view.wImg).val * q.val, ukRelative)#
     of akY:
       result = quant(height(view).val * q.val, ukRelative)
   of ukPoint, ukCentimeter, ukInch:
     # do nothing, already an absolute value
     # TODO: Convert to points?
     result = q
+  of ukData:
+    case axKind
+    of akX:
+      result = quant(
+        width(view).val * q.toRelative(
+          scale = some(view.xScale)
+        ).val,
+        ukRelative)
+    of akY:
+      result = quant(
+        height(view).val * q.toRelative(
+          scale = some(view.yScale)
+        ).val,
+        ukRelative)
   else:
     raise newException(Exception, "Embedding not implemented for quantity of " &
       " kind: " & $q)
@@ -1013,7 +1042,7 @@ proc initViewport*(origin: Coord,
                     wImg: quant(wImg, ukPoint),
                     hImg: quant(hImg, ukPoint),
                     backend: backend)
-  echo "[DEBUG]: Initing viewport ", width.toRelative(result.wImg)
+  echo "[DEBUG]: Initing viewport ", width.toRelative(some(result.wImg))
   if wParentView.isSome and hParentView.isSome:
     doAssert wParentView.get.unit == ukPoint and
       hParentView.get.unit == ukPoint, "parent size must be given in `ukPoint`!"
@@ -1070,9 +1099,13 @@ proc addViewport*(view: var Viewport,
                                hImg = view.hImg.toPoints.val,
                                # TODO: clean this up
                                wParentView = some(
-                                 quant(view.wView.val * view.width.toRelative(view.wView).val, ukPoint)),
+                                 quant(view.wView.val *
+                                       view.width.toRelative(some(view.wView)).val,
+                                       ukPoint)),
                                hParentView = some(
-                                 quant(view.hView.val * view.height.toRelative(view.hView).val, ukPoint)),
+                                 quant(view.hView.val *
+                                       view.height.toRelative(some(view.hView)).val,
+                                       ukPoint)),
                                backend = view.backend)
   # override width and height
   ## echo "TODO: make sure we want to give child viewport scaled (wImg, hImg)!"
@@ -1676,18 +1709,18 @@ proc fillEmptySizesEvenly(s: seq[Quantity],
   ## evenly sized sizes filling up to a total of 1.0
   ## Length is the width / height of the viewport in which the layout
   ## will be set
-  let zeroNum = s.filterIt(it.toRelative(length).val == 0.0).len
+  let zeroNum = s.filterIt(it.toRelative(some(length)).val == 0.0).len
   if zeroNum == 0:
     result = s
   else:
-    let sumWidths = s.mapIt(it.toRelative(length).val).foldl(a + b)
+    let sumWidths = s.mapIt(it.toRelative(some(length)).val).foldl(a + b)
     let remainWidth = (1.0 - sumWidths) / zeroNum.float
     if remainWidth < 0:
       raise newException(ValueError, "Given layout sizes exceed the viewport " &
         "size. Remaining sizes cannot be filled! Total size: " & $sumWidths &
         " Remaining rows/cols: " & $zeroNum)
     for i in 0 ..< num:
-      if s[i].toRelative(length).val == 0:
+      if s[i].toRelative(some(length)).val == 0:
         result.add quant(remainWidth, ukRelative)
       else:
         result.add s[i]
@@ -1721,8 +1754,8 @@ proc layout*(view: var Viewport,
     heights = fillEmptySizesEvenly(rowHeights, view.hImg, rows)
 
   # convert all widhts and heights to relative values
-  widths = widths.mapIt(it.toRelative(view.wImg))
-  heights = heights.mapIt(it.toRelative(view.hImg))
+  widths = widths.mapIt(it.toRelative(some(view.wImg)))
+  heights = heights.mapIt(it.toRelative(some(view.hImg)))
 
   var curRowT = 0.0
   for i in 0 ..< rows:
