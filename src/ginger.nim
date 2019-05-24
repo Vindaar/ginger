@@ -29,6 +29,7 @@ export types, backends, macroUtils
 
 const
   grey92* = color(0.92, 0.92, 0.92)
+  grey20* = color(0.20, 0.20, 0.20)
   black* = color(0.0, 0.0, 0.0)
   white* = color(1.0, 1.0, 1.0)
   transparent* = color(0.0, 0.0, 0.0, 0.0)
