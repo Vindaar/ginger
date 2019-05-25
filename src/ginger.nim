@@ -335,10 +335,14 @@ template c*(view: Viewport, x, y: float, kind: UnitKind = ukRelative): Coord =
   initCoord(view, x, y, kind)
 
 
-func ggColorHue*(num: int): seq[Color] =
+func ggColorHue*(num: int,
+                 hueStart = 15.0,
+                 chroma = 100.0,
+                 luminance = 65.0
+                ): seq[Color] =
   ## returns the default ggplot2 color hue for `num` colors
-  let hues = linspace(15.0, 375.0, num + 1)
-  result = hues.mapIt(color(ColorHCL(h: it, l: 65.0, c: 100.0)))
+  let hues = linspace(hueStart, hueStart + 360.0, num + 1)
+  result = hues.mapIt(color(ColorHCL(h: it, c: chroma, l: luminance)))
 
 func eitherOrRaise[T](either: Option[T],
                       `or`: Option[T]): T {.raises: [ValueError,
