@@ -1380,9 +1380,9 @@ proc initErrorBar(view: Viewport,
       result.children.add @[chUp, chDown]
   #else: discard
 
-proc initPolyLine(view: Viewport,
-                  pos: seq[Point],
-                  style: Option[Style] = none[Style]()): GraphObject =
+proc initPolyLine*(view: Viewport,
+                   pos: seq[Point],
+                   style: Option[Style] = none[Style]()): GraphObject =
   result = GraphObject(kind: goPolyLine)
   if style.isSome:
     result.style = style
