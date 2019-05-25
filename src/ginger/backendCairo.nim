@@ -49,10 +49,15 @@ func getLineStyle(lineType: LineType, lineWidth: float): seq[float] =
   else: discard
 
 func setLineStyle(ctx: PContext, lineType: LineType, lineWidth: float) =
-  if lineType in ltDashed .. ltTwoDash:
+  case lineType
+  of ltDashed .. ltTwoDash:
     let lineStyle = getLineStyle(lineType, lineWidth)
     ctx.set_dash(lineStyle, lineStyle.len.float)
     ctx.set_line_cap(LINE_CAP_ROUND)
+  of ltNone:
+    # achieve no line, by setting line width to 0
+    ctx.set_line_width(0.0)
+  else: discard
 
 proc drawLine*(img: BImage, start, stop: Point,
                style: Style,
