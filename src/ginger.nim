@@ -1136,8 +1136,19 @@ proc addViewport*(view: var Viewport,
   let
     widthCoord = quant(width, ukRelative)
     heightCoord = quant(height, ukRelative)
-  result = view.addViewport(origin, widthCoord, heightCoord, style, xScale,
-                            yScale, rotate, scale)
+  var
+    xSc: Option[Scale]
+    ySc: Option[Scale]
+  if not xScale.isSome:
+    xSc = some(view.xScale)
+  else:
+    xSc = xScale
+  if not yScale.isSome:
+    ySc = some(view.yScale)
+  else:
+    ySc = yScale
+  result = view.addViewport(origin, widthCoord, heightCoord, style, xSc,
+                            ySc, rotate, scale)
 
 proc initAxis(view: Viewport,
               axKind: AxisKind,
