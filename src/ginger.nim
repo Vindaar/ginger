@@ -116,7 +116,7 @@ type
 
   UnitKind* = enum
     ukRelative, # relative to viewport (0.0, 1.0)
-    ukSqRelative, # squared relative coordinates. Use the smaller of the
+    #ukSqRelative, # squared relative coordinates. Use the smaller of the
                   # two relative coordinates in absolute terms as a basis
     ukData, # based on xScale, yScale of data
     ukStrWidth,#, # based on width of a string in a given fontsize
@@ -200,7 +200,7 @@ func toPoints*(q: Quantity,
   of ukPoint: result = q
   of ukCentimeter: result = quant(q.val.cmToInch.inchToAbs, ukPoint)
   of ukInch: result = quant(q.val.inchToAbs, ukPoint)
-  of ukRelative, ukSqRelative:
+  of ukRelative:#, ukSqRelative:
     # NOTE: for ukSqRelative the caller needs to make sure the given length corresponds to
     # the smaller length of the viewport
     if length.isSome:
