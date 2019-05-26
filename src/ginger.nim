@@ -1933,7 +1933,6 @@ proc drawGrid(img: BImage, gobj: GraphObject) =
   var style = gobj.style.get() # style *has* to exist
   # start with vertical lines
   for x in gobj.gdXPos:
-    echo "Drawing at ", x.pos
     let
       start = (x.pos, gobj.gdOrigin.y.pos)
       stop = (x.pos, gobj.gdOriginDiag.y.pos)
