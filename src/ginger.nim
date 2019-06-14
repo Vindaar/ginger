@@ -1744,7 +1744,8 @@ proc fillEmptySizesEvenly(s: seq[Quantity],
 proc layout*(view: var Viewport,
              cols, rows: int,
              colWidths: seq[Quantity] = @[],
-             rowHeights: seq[Quantity] = @[]) =
+             rowHeights: seq[Quantity] = @[],
+             margin: Quantity = quant(0.0, ukRelative)) =
   ## creates a layout of viewports within the given `view` of
   ## `cols` columns and `rows` rows. Optionally the widths and
   ## heights of the cols / rows may be set. If none are given,
@@ -1752,6 +1753,8 @@ proc layout*(view: var Viewport,
   ## Any width or height that has a relative size of 0.0, will be
   ## considered as unspecified. In this case we split the remaining
   ## space after the other sizes are summed between those.
+  ## If a `margin` is given, each viewport created will be surrounded
+  ## by that margin in all directions.
   # extend the seq of children to accomodate for layout
   #view.children.setLen(view.len + cols * rows)
   doAssert colWidths.len == cols or colWidths.len == 0, "there must be " &
@@ -1782,13 +1785,17 @@ proc layout*(view: var Viewport,
       doAssert widths[j].unit == ukRelative, "width must be relative!"
       # use widths / heights to create new viewports
       let xpos = c1(curColL)
-      let width = quant(curColL + widths[j].val, ukRelative)
-      let height = quant(curRowT + heights[i].val, ukRelative)
+      let marginX = margin.toRelative(length = some(view.wView),
+                                      scale = some(view.xScale))
+      let marginY = margin.toRelative(length = some(view.wView),
+                                      scale = some(view.yScale))
+      #let width = quant(curColL + widths[j].val, ukRelative)
+      #let height = quant(curRowT + heights[i].val, ukRelative)
       let ch = view.addViewport(
-        origin = Coord(x: c1(curColL),
-                       y: c1(curRowT)),
-        width = widths[j], #width,
-        height = heights[i], #height,
+        origin = Coord(x: c1(curColL + marginX.val),
+                       y: c1(curRowT + marginY.val)),
+        width = quant(widths[j].val - 2.0 * marginX.val, ukRelative), #width,
+        height = quant(heights[i].val - 2.0 * marginY.val, ukRelative), #height,
         xScale = some(view.xScale),
         yScale = some(view.yScale),
         style = some(view.style) # inherit style of parent
