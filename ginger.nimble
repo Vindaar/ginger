@@ -10,5 +10,5 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 0.19.9"
-requires "https://github.com/Vindaar/chroma#addMoreSpaces"
+# requires "https://github.com/Vindaar/chroma#addMoreSpaces"
 requires "cairo"
