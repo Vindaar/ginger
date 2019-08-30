@@ -1016,6 +1016,7 @@ proc embedInto(view: Viewport, into: Viewport): Viewport =
                                           #        kind: ukRelative)
   result.height = quant(height(result).val * height(into).val, ukRelative)
 
+
 proc point(c: Coord): Point =
   ## converts the given coordinate to `ukRelative` and returns the position as a
   ## `Point`
@@ -1188,10 +1189,12 @@ proc initAxis(view: Viewport,
   case axKind
   of akX:
     result = axis
+    result.name = "xAxis"
   of akY:
     result = replace(axis):
       lnStart = initCoord(0.0, 0.0)
       lnStop = initCoord(0.0, 1.0)
+    result.name = "yAxis"
 
 proc xaxis(view: Viewport,
            width = 1.0,
@@ -1207,8 +1210,10 @@ proc initRect*(view: Viewport,
                origin: Coord,
                width, height: Quantity,
                color = color(0.0, 0.0, 0.0),
-               style = none[Style]()): GraphObject =
+               style = none[Style](),
+               name = "rect"): GraphObject =
   result = GraphObject(kind: goRect,
+                       name: name,
                        reOrigin: origin.patchCoord(view),
                        reWidth: width,#.patchCoord(view.wImg),
                        reHeight: height)#.patchCoord(view.hImg))
@@ -1224,7 +1229,8 @@ proc initRect*(view: Viewport,
 proc initRect*(view: Viewport,
                left, bottom, width, height: float,
                color = color(0.0, 0.0, 0.0),
-               style = none[Style]()): GraphObject =
+               style = none[Style](),
+               name = "rect"): GraphObject =
   let origin = Coord(x: Coord1D(pos: left, kind: ukRelative),
                      y: Coord1D(pos: bottom, kind: ukRelative))
   let
@@ -1234,15 +1240,18 @@ proc initRect*(view: Viewport,
                          width = widthCoord,
                          height = heightCoord,
                          color = color,
-                         style = style)
+                         style = style,
+                         name = name)
 
 proc initText*(view: Viewport,
                origin: Coord,
                text: string,
                alignKind: TextAlignKind,
                font: Option[Font] = none[Font](),
-               rotate = none[float]()): GraphObject =
+               rotate = none[float](),
+               name = "text"): GraphObject =
   result = GraphObject(kind: goText,
+                       name: name,
                        txtText: text,
                        txtAlign: alignKind,
                        txtPos: origin.patchCoord(view))
@@ -1260,8 +1269,10 @@ proc scaleTo(p: Point, view: Viewport): Point =
 proc initLine(view: Viewport,
               start: Coord,
               stop: Coord,
-              style: Option[Style] = none[Style]()): GraphObject =
+              style: Option[Style] = none[Style](),
+              name = "line"): GraphObject =
   result = GraphObject(kind: goLine,
+                       name: name,
                        lnStart: start,
                        lnStop: stop)
   if style.isSome:
@@ -1276,8 +1287,10 @@ proc initPoint*(view: Viewport,
                 pos: Coord,
                 size = 3.0,
                 marker: MarkerKind = mkCircle,
-                color = color(0.0, 0.0, 0.0)): GraphObject =
+                color = color(0.0, 0.0, 0.0),
+                name = "point"): GraphObject =
   result = GraphObject(kind: goPoint,
+                       name: name,
                        ptMarker: marker,
                        ptSize: size,
                        ptColor: color,
@@ -1287,7 +1300,8 @@ proc initPoint*(view: Viewport,
                 pos: Point,
                 size = 3.0,
                 marker: MarkerKind = mkCircle,
-                color = color(0.0, 0.0, 0.0)): GraphObject =
+                color = color(0.0, 0.0, 0.0),
+                name = "point"): GraphObject =
   let pos = Coord(x: Coord1D(pos: pos.x,
                              scale: view.xScale,
                              axis: akX,
@@ -1296,7 +1310,8 @@ proc initPoint*(view: Viewport,
                              scale: view.yScale,
                              axis: akY,
                              kind: ukData))
-  result = view.initPoint(pos, size, marker, color)
+  result = view.initPoint(pos = pos, size = size, marker = marker,
+                          color = color, name = name)
 
 func isScaleNonTrivial(c: Coord1D): bool =
   doAssert c.kind == ukData, "coord must be of kind ukData!"
@@ -1311,14 +1326,15 @@ proc initErrorBar(view: Viewport,
                   errorDown: Coord1D,
                   axKind: AxisKind,
                   ebKind: ErrorBarKind,
-                  style: Option[Style] = none[Style]()): GraphObject =
+                  style: Option[Style] = none[Style](),
+                  name = "errorBar"): GraphObject =
   ## creates an error bar for the point `pt` of kind `ebKind` with the
   ## errors given by `errorUp`  and `errorDown` along the axis `axKind`.
   ## If the `axKind` is `akX`, `errorUp` will describe the increase along
   ## the X axis (to the right).
   ## NOTE: this proc assumes that if the errors are given as `ukData`, the
   ## scales associated are the same as for the data point!
-  result = GraphObject(kind: goComposite)
+  result = GraphObject(kind: goComposite, name: name)
   if style.isSome:
     result.style = style
   else:
@@ -1419,8 +1435,9 @@ proc initErrorBar(view: Viewport,
 
 proc initPolyLine*(view: Viewport,
                    pos: seq[Point],
-                   style: Option[Style] = none[Style]()): GraphObject =
-  result = GraphObject(kind: goPolyLine)
+                   style: Option[Style] = none[Style](),
+                   name = "polyLine"): GraphObject =
+  result = GraphObject(kind: goPolyLine, name: name)
   if style.isSome:
     result.style = style
   else:
@@ -1439,15 +1456,18 @@ proc initAxisLabel(view: Viewport,
                    label: string,
                    axKind: AxisKind,
                    margin: Quantity,
-                   font: Option[Font] = none[Font]()): GraphObject =
+                   font: Option[Font] = none[Font](),
+                   name = "AxisLabel"): GraphObject =
   ## margin is positive value!
   result = GraphObject(kind: goText,
+                       name: name,
                        txtText: label,
                        txtAlign: taCenter)
   if font.isSome:
     result.txtFont = font.get()
   else:
     result.txtFont = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0))
+  var gobjName = name
   case axKind
   of akX:
     # TODO: fix positions based on absolute unit (e.g. cm) instead of
@@ -1457,6 +1477,8 @@ proc initAxisLabel(view: Viewport,
                        kind: ukPoint)
     result.txtPos = Coord(x: initCoord1D(0.5),
                           y: ypos)
+    if gobjName == "AxisLabel":
+      gobjName = "x" & name
   of akY:
     let xPos = Coord1D(pos: -margin.toPoints.val,
                        length: some(view.wImg),
@@ -1464,32 +1486,42 @@ proc initAxisLabel(view: Viewport,
     result.txtPos = Coord(x: xPos,
                           y: initCoord1D(0.5))
     result.rotate = some(-90.0)
+    if gobjName == "AxisLabel":
+      gobjName = "y" & name
+  # set the name
+  result.name = gobjName
 
 proc xlabel*(view: Viewport,
              label: string,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
-             margin = 1.0): GraphObject =
+             margin = 1.0,
+             name = "xLabel"): GraphObject =
   result = view.initAxisLabel(label = label,
                               axKind = akX,
                               margin = quant(margin, ukCentimeter),
-                              font = some(font))
+                              font = some(font),
+                              name = name)
 
 proc ylabel*(view: Viewport,
              label: string,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
-             margin = 1.0): GraphObject =
+             margin = 1.0,
+             name = "yLabel"): GraphObject =
   result = view.initAxisLabel(label = label,
                               axKind = akY,
                               margin = quant(margin, ukCentimeter),
-                              font = some(font))
+                              font = some(font),
+                              name = name)
 
 proc initTickLabel(view: Viewport,
                    tick: GraphObject,
                    font: Font = Font(family: "sans-serif", size: 8.0, color: color(0.0, 0.0, 0.0)),
-                   rotate = none[float]()): GraphObject =
+                   rotate = none[float](),
+                   name = "tickLabel"): GraphObject =
   doAssert tick.kind == goTick, "object must be a `goTick` to create a `goTickLabel`!"
   var label: GraphObject
   var text: string
+  var gobjName = name
   var origin: Coord
   let loc = tick.tkPos
   case tick.tkAxis
@@ -1504,7 +1536,10 @@ proc initTickLabel(view: Viewport,
                      kind: ukCentimeter,
                      length: some(view.hImg)))
     text = &"{loc.x.pos:g}"
-    result = view.initText(origin, text, taCenter, some(font), rotate)
+    if gobjName == "tickLabel":
+      gobjName = "x" & name
+    result = view.initText(origin, text, taCenter, some(font), rotate,
+                           name = gobjName)
   of akY:
     let xCoord = Coord1D(pos: 0.0, kind: ukRelative)#pos: loc.x.scale.low, kind: ukData,
     #scale: loc.x.scale, axis: akX)
@@ -1515,7 +1550,10 @@ proc initTickLabel(view: Viewport,
                                        length: some(view.wImg)),
                    y: yCoord)
     text = &"{loc.y.pos:g}"
-    result = view.initText(origin, text, taRight, some(font), rotate)
+    if gobjName == "tickLabel":
+      gobjName = "y" & name
+    result = view.initText(origin, text, taRight, some(font), rotate,
+                           name = gobjName)
 
 proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                  font: Font = Font(
@@ -1531,8 +1569,10 @@ proc initTick(view: Viewport,
               major: bool,
               at: Coord,
               tickKind: TickKind = tkOneSide,
-              style: Option[Style] = none[Style]()): GraphObject =
+              style: Option[Style] = none[Style](),
+              name = "tick"): GraphObject =
   result = GraphObject(kind: goTick,
+                       name: name,
                        tkPos: at.patchCoord(view),
                        tkMajor: major,
                        tkAxis: axKind,
@@ -1712,7 +1752,8 @@ proc initGridLines*(view: Viewport,
                     xticks: Option[seq[GraphObject]] = none[seq[GraphObject]](),
                     yticks: Option[seq[GraphObject]] = none[seq[GraphObject]](),
                     major = true,
-                    style: Option[Style] = none[Style]()): GraphObject =
+                    style: Option[Style] = none[Style](),
+                    name = "GridLines"): GraphObject =
   doAssert xticks.isSome or yticks.isSome, "At least one of xticks, yticks " &
     "required for grid lines!"
   # TODO: could use `calcTickLocations` to calculate based on Viewport!?
@@ -1726,13 +1767,15 @@ proc initGridLines*(view: Viewport,
     result.style = some(Style(lineWidth: lineWidth,
                               color: white,
                               lineType: ltSolid))
-
+  var gobjName = name
   if major:
     # take tick positions directly
     if xticks.isSome:
       result.gdXPos = xticks.unsafeGet.mapIt(it.tkPos.x)
     if yticks.isSome:
       result.gdYPos = yticks.unsafeGet.mapIt(it.tkPos.y)
+    if gobjName == "GridLines":
+      gobjName = "x" & gobjName
   else:
     # if log scale, no minor
     #if not logScale:
@@ -1743,6 +1786,10 @@ proc initGridLines*(view: Viewport,
     if yticks.isSome:
       let ticks = yticks.get()
       result.gdYPos = calcMinorTicks(ticks, akY)
+    if gobjName == "GridLines":
+      gobjName = "y" & gobjName
+  # set the name
+  result.name = gobjName
 
 proc fillEmptySizesEvenly(s: seq[Quantity],
                           length: Quantity,
