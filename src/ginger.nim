@@ -7,6 +7,7 @@ export options
 import sequtils
 import strformat
 from seqmath import linspace
+import strutils
 
 import ginger / [macroUtils, backends, types]
 export types, backends, macroUtils
@@ -165,6 +166,8 @@ type
   Viewport* = object
     # parameters describing the embedding into the parent
     # given relative coords
+    name*: string # name of the viewport (useful for debugging)
+    parent*: string # name of viewport's parent (useful for debugging)
     style*: Style
     xScale*: Scale
     yScale*: Scale
@@ -1031,6 +1034,8 @@ proc initViewport*(origin: Coord,
                    yScale = none[Scale](),
                    rotate = none[float](),
                    scale = none[float](),
+                   name = "",
+                   parent = "",
                    wImg = 640.0,
                    hImg = 480.0,
                    wParentView: Option[Quantity] = none[Quantity](),
@@ -1039,7 +1044,9 @@ proc initViewport*(origin: Coord,
   ## initializes a `Viewport` with `origin` in any coordinate system
   ## with 1D coordinates providing width and height
   ## Uses Coord1D to allow to define sizes in arbitrary units
-  result = Viewport(origin: origin,
+  result = Viewport(name: name,
+                    parent: parent,
+                    origin: origin,
                     width: width,
                     height: height,
                     rotate: rotate,
@@ -1071,6 +1078,8 @@ proc initViewport*(left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
                    yScale = none[Scale](),
                    rotate = none[float](),
                    scale = none[float](),
+                   name = "",
+                   parent = "",
                    wImg = 640.0,
                    hImg = 480.0,
                    backend = bkCairo): Viewport =
@@ -1082,9 +1091,12 @@ proc initViewport*(left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
   let
     widthCoord = quant(width, ukRelative)
     heightCoord = quant(height, ukRelative)
-  result = initViewport(origin, widthCoord, heightCoord,
-                        style, xScale, yScale, rotate, scale,
-                        wImg, hImg, backend = backend)
+  result = initViewport(origin = origin, width = widthCoord, height = heightCoord,
+                        style = style, xScale = xScale, yScale = yScale,
+                        rotate = rotate, scale = scale,
+                        name = name, parent = parent,
+                        wImg = wImg, hImg = hImg,
+                        backend = backend)
 
 proc addViewport*(view: var Viewport,
                   origin: Coord,
@@ -1093,13 +1105,16 @@ proc addViewport*(view: var Viewport,
                   xScale = none[Scale](),
                   yScale = none[Scale](),
                   rotate = none[float](),
-                  scale = none[float]()): Viewport =
+                  scale = none[float](),
+                  name = ""): Viewport =
   ## add a new viewport with the given settings to the `view`
   ## TODO: do not return viewchild???
-  var viewChild = initViewport(origin.patchCoord(view),
-                               width,#.patchCoord(view.wImg),
-                               height,#.patchCoord(view.hImg),
-                               style, xScale, yScale, rotate, scale,
+  var viewChild = initViewport(origin = origin.patchCoord(view),
+                               width = width,#.patchCoord(view.wImg),
+                               height = height,#.patchCoord(view.hImg),
+                               style = style, xScale = xScale, yScale = yScale,
+                               rotate = rotate, scale = scale,
+                               name = name, parent = view.name,
                                wImg = view.wImg.toPoints.val,
                                hImg = view.hImg.toPoints.val,
                                # TODO: clean this up
@@ -1127,7 +1142,8 @@ proc addViewport*(view: var Viewport,
                   xScale = none[Scale](),
                   yScale = none[Scale](),
                   rotate = none[float](),
-                  scale = none[float]()): Viewport =
+                  scale = none[float](),
+                  name = ""): Viewport =
   ## add a new viewport with the given settings to the `view`, set at relative
   ## coordinates (left, bottom), (width, height)
   ## TODO: Do not return viewchild???
@@ -1147,8 +1163,10 @@ proc addViewport*(view: var Viewport,
     ySc = some(view.yScale)
   else:
     ySc = yScale
-  result = view.addViewport(origin, widthCoord, heightCoord, style, xSc,
-                            ySc, rotate, scale)
+  result = view.addViewport(origin = origin, width = widthCoord, height = heightCoord,
+                            style = style, xScale = xSc, yScale = ySc,
+                            rotate = rotate, scale = scale,
+                            name = name)
 
 proc initAxis(view: Viewport,
               axKind: AxisKind,
@@ -1195,10 +1213,10 @@ proc initRect*(view: Viewport,
                               lineType: ltSolid,
                               fillColor: color))
 
-proc initRect(view: Viewport,
-              left, bottom, width, height: float,
-              color = color(0.0, 0.0, 0.0),
-              style = none[Style]()): GraphObject =
+proc initRect*(view: Viewport,
+               left, bottom, width, height: float,
+               color = color(0.0, 0.0, 0.0),
+               style = none[Style]()): GraphObject =
   let origin = Coord(x: Coord1D(pos: left, kind: ukRelative),
                      y: Coord1D(pos: bottom, kind: ukRelative))
   let
@@ -1756,6 +1774,7 @@ proc layout*(view: var Viewport,
   ## If a `margin` is given, each viewport created will be surrounded
   ## by that margin in all directions.
   # extend the seq of children to accomodate for layout
+  const nameTmpl = "$#/layout_$#"
   #view.children.setLen(view.len + cols * rows)
   doAssert colWidths.len == cols or colWidths.len == 0, "there must be " &
     "one column width for each column!"
@@ -1798,7 +1817,8 @@ proc layout*(view: var Viewport,
         height = quant(heights[i].val - 2.0 * marginY.val, ukRelative), #height,
         xScale = some(view.xScale),
         yScale = some(view.yScale),
-        style = some(view.style) # inherit style of parent
+        style = some(view.style), # inherit style of parent,
+        name = nameTmpl % [view.name, $i]
       )
       view.children.add ch
       curColL = curColL + widths[j].val
