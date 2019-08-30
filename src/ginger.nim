@@ -748,6 +748,14 @@ proc `[]`*(view: Viewport, idx: int): Viewport =
     raise newException(IndexError, "`idx` is invalid for " & $view.children.len &
       " children viewports!")
 
+proc `[]`*(view: var Viewport, idx: int): var Viewport =
+  ## returns the `idx` child of `view` as a mutable object
+  if view.children.len > idx:
+    result = view.children[idx]
+  else:
+    raise newException(IndexError, "`idx` is invalid for " & $view.children.len &
+      " children viewports!")
+
 proc `[]=`*(view: var Viewport, idx: int, viewToSet: Viewport) =
   ## override the `idx` child of `view` with `viewToSet`
   if view.children.len > idx:
