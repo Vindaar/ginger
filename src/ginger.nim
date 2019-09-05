@@ -839,8 +839,8 @@ func updateDataScale(view: Viewport, obj: var GraphObject) =
   #else:
   #  raise newException(Exception, "updating of " & $(obj.kind) & " not yet implemented!")
 
-func updateDataScale(view: Viewport,
-                     objs: var seq[GraphObject]) =
+func updateDataScale*(view: Viewport,
+                      objs: var seq[GraphObject]) =
   ## updates the data scales associated to the `objs` to the current
   ## `view.(x|y)scale`. This is important, because due to calculation
   ## of tick locations (and thus new range scale) the associated scales
