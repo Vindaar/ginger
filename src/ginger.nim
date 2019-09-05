@@ -1655,7 +1655,13 @@ proc initTicks(view: var Viewport,
                tickLocs: seq[Coord] = @[],
                tickKind: TickKind = tkOneSide,
                major = true,
-               style: Option[Style] = none[Style]()): seq[GraphObject] =
+               style: Option[Style] = none[Style](),
+               updateScale = true): seq[GraphObject] =
+  ## Initializes the tick positions for the given `axKind` for either
+  ## `major` or `minor` (`major == false`) ticks.
+  ## If `updateScale` is true will recursively update all data scales
+  ## associated to the viewports children and objects. Set `updateScale`
+  ## to `false` only if you're certain that the update is unnecessary!
   # check whether there
   if numTicks == 0 and tickLocs.len == 0:
     raise newException(ValueError, "Either need a number of ticks or tick " &
@@ -1709,33 +1715,46 @@ proc initTicks(view: var Viewport,
       view.yScale = newScale
 
     # and update the scales of all objects owned by the viewport
-    view.updateDataScale()
+    if updateScale:
+      view.updateDataScale()
 
 proc xticks*(view: var Viewport,
              numTicks: int = 10,
              tickLocs: seq[Coord] = @[],
              major = true,
              tickKind: TickKind = tkOneSide,
-             style: Option[Style] = none[Style]()): seq[GraphObject] =
+             style: Option[Style] = none[Style](),
+             updateScale = true): seq[GraphObject] =
+  ## generates the ticks for the x axis. Note that this updates the data
+  ## scale of all children and objects of the given viewport. In order
+  ## for this to as inexpensive as possible make sure to call this
+  ## rather before all objects have been added.
   result = view.initTicks(akX,
                           numTicks = numTicks,
                           tickLocs = tickLocs,
                           tickKind = tickKind,
                           major = true,
-                          style = style)
+                          style = style,
+                          updateScale = updateScale)
 
 proc yticks*(view: var Viewport,
              numTicks: int = 10,
              tickLocs: seq[Coord] = @[],
              major = true,
              tickKind: TickKind = tkOneSide,
-             style: Option[Style] = none[Style]()): seq[GraphObject] =
+             style: Option[Style] = none[Style](),
+             updateScale = true): seq[GraphObject] =
+  ## generates the ticks for the y axis. Note that this updates the data
+  ## scale of all children and objects of the given viewport. In order
+  ## for this to as inexpensive as possible make sure to call this
+  ## rather before all objects have been added.
   result = view.initTicks(akY,
                           numTicks = numTicks,
                           tickLocs = tickLocs,
                           tickKind = tickKind,
                           major = true,
-                          style = style)
+                          style = style,
+                          updateScale = updateScale)
 
 func calcMinorTicks(ticks: seq[GraphObject], axKind: AxisKind): seq[Coord1D] =
   ## calculates the position in the middle between each tick and
