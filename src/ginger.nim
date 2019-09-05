@@ -851,6 +851,18 @@ func updateDataScale*(view: Viewport,
   for p in mitems(objs):
     view.updateDataScale(p)
 
+func updateDataScale*(view: var Viewport) =
+  ## Updates the data scales of all children viewports of `view` and their
+  ## objects recursively
+  ## Note that if `view` contains many children or children with many objects
+  ## this may potentially be quite expensive!
+  view.updateDataScale(view.objects)
+  for ch in mitems(view.children):
+    ch.xScale = view.xScale
+    ch.yScale = view.yScale
+    # and call for child itself
+    ch.updateDataScale()
+
 func addObj*(view: var Viewport, obj: GraphObject) =
   ## adds the given `obj` to the viewport's objects and makes
   ## sure it inherits all properties, e.g. Style and data scales
