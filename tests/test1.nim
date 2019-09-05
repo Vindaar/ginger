@@ -6,6 +6,7 @@
 # To run these tests, simply execute `nimble test`.
 
 import unittest
+import sequtils
 
 import ginger
 #suite "Coordinate transformations":
@@ -78,3 +79,96 @@ suite "Viewport":
     view.modChild(@["first", "second"])
     check view[0].name == "first"
     check view[1].name == "second"
+
+  test "ticks data scale update":
+    let x = toSeq(0 .. 958).mapIt(it.float)
+    let y = x.mapIt(it.float * it.float)
+    let points = zip(x, y)
+    var gobjPoints: seq[GraphObject]
+    var view = initViewport()
+    let xScale = (low: 0.0, high: x.max)
+    let yScale = (low: 0.0, high: y.max)
+    var view2 = initViewport(left = 0.25,
+                             bottom = 0.5,
+                             width = 0.75,
+                             height = 0.5,
+                             xScale = some(xScale),
+                             yScale = some(yScale))
+    for p in points:
+      gobjPoints.add initPoint(view2, (x: p.a, y: p.b),
+                               marker = mkCross)
+    view2.addObj gobjPoints
+    for p in view2.objects:
+      check p.ptPos.x.kind == ukData
+      check p.ptPos.y.kind == ukData
+      check p.ptPos.x.scale == xScale
+      check p.ptPos.y.scale == yScale
+    let xticks = view2.xticks()
+    let yticks = view2.yticks()
+    for p in view2.objects:
+      check p.ptPos.x.kind == ukData
+      check p.ptPos.y.kind == ukData
+      check p.ptPos.x.scale == (low: 0.0, high: 1000.0)
+      check p.ptPos.y.scale == (low: 0.0, high: 1000000.0)
+
+  test "ticks no data scale update":
+    let x = toSeq(0 .. 958).mapIt(it.float)
+    let y = x.mapIt(it.float * it.float)
+    let points = zip(x, y)
+    var gobjPoints: seq[GraphObject]
+    var view = initViewport()
+    let xScale = (low: 0.0, high: x.max)
+    let yScale = (low: 0.0, high: y.max)
+    var view2 = initViewport(left = 0.25,
+                             bottom = 0.5,
+                             width = 0.75,
+                             height = 0.5,
+                             xScale = some(xScale),
+                             yScale = some(yScale))
+    for p in points:
+      gobjPoints.add initPoint(view2, (x: p.a, y: p.b),
+                               marker = mkCross)
+    view2.addObj gobjPoints
+    for p in view2.objects:
+      check p.ptPos.x.kind == ukData
+      check p.ptPos.y.kind == ukData
+      check p.ptPos.x.scale == xScale
+      check p.ptPos.y.scale == yScale
+    let xticks = view2.xticks(updateScale = false)
+    let yticks = view2.yticks(updateScale = false)
+    for p in view2.objects:
+      check p.ptPos.x.kind == ukData
+      check p.ptPos.y.kind == ukData
+      check p.ptPos.x.scale == xScale
+      check p.ptPos.y.scale == yScale
+
+  test "ticks only data scale update once":
+    let x = toSeq(0 .. 958).mapIt(it.float)
+    let y = x.mapIt(it.float * it.float)
+    let points = zip(x, y)
+    var gobjPoints: seq[GraphObject]
+    var view = initViewport()
+    let xScale = (low: 0.0, high: x.max)
+    let yScale = (low: 0.0, high: y.max)
+    var view2 = initViewport(left = 0.25,
+                             bottom = 0.5,
+                             width = 0.75,
+                             height = 0.5,
+                             xScale = some(xScale),
+                             yScale = some(yScale))
+    for p in points:
+      gobjPoints.add initPoint(view2, (x: p.a, y: p.b),
+                               marker = mkCross)
+    view2.addObj gobjPoints
+    for p in view2.objects:
+      check p.ptPos.x.kind == ukData
+      check p.ptPos.y.kind == ukData
+      check p.ptPos.x.scale == xScale
+      check p.ptPos.y.scale == yScale
+    let xticks = view2.xticks()
+    let yticks = view2.yticks(updateScale = false)
+    for p in view2.objects:
+      check p.ptPos.x.kind == ukData
+      check p.ptPos.y.kind == ukData
+      check p.ptPos.x.scale == (low: 0.0, high: 1000.0)
+      check p.ptPos.y.scale == yScale
