@@ -1709,7 +1709,7 @@ proc initTicks(view: var Viewport,
       view.yScale = newScale
 
     # and update the scales of all objects owned by the viewport
-    view.updateDataScale(view.objects)
+    view.updateDataScale()
 
 proc xticks*(view: var Viewport,
              numTicks: int = 10,
