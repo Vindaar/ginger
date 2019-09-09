@@ -187,6 +187,20 @@ type
     hImg*: Quantity
     backend*: BackendKind
 
+template info(f: varargs[untyped]): untyped =
+  when declared(verbose):
+    echo(f)
+
+template warn(f: varargs[untyped]): untyped =
+  ## TODO: replace by some other log level
+  when declared(verbose):
+    echo(f)
+
+template debug(f: varargs[untyped]): untyped =
+  ## TODO: replace by some other log level
+  when declared(verbose):
+    echo(f)
+
 func quant*(val: float, unit: UnitKind): Quantity = (val: val, unit: unit)
 
 template cmToInch(x: float): float = x / 2.54
@@ -246,11 +260,11 @@ proc toRelative*(q: Quantity,
     doAssert((length.isSome and
               length.get.unit in ukPoint .. ukInch),
              "length scale needed to convert quantity to relative value!")
-    echo "[WARNING]: Converting quantity ", q, " to relative via ", length.get, "!"
+    warn "[WARNING]: Converting quantity ", q, " to relative via ", length.get, "!"
   elif q.unit != ukRelative and q.unit == ukData:
     doAssert(scale.isSome,
              "length scale needed to convert quantity to relative value!")
-    echo "[WARNING]: Converting quantity ", q, " to relative via ", scale.get, "!"
+    warn "[WARNING]: Converting quantity ", q, " to relative via ", scale.get, "!"
   case q.unit
   of ukRelative:
     result = q
@@ -259,7 +273,7 @@ proc toRelative*(q: Quantity,
   of ukCentimeter, ukInch:
     result = quant(q.toPoints.val / length.get.toPoints.val, ukRelative)
   of ukData:
-    echo "[INFO]: conversion of ukData quant to relative. Assuming `length` is data scale!"
+    info "[INFO]: conversion of ukData quant to relative. Assuming `length` is data scale!"
     if scale.isSome:
       result = quant(q.val / (scale.unsafeGet.high - scale.unsafeGet.low), ukRelative)
     else:
@@ -1075,14 +1089,14 @@ proc initViewport*(origin: Coord,
                     wImg: quant(wImg, ukPoint),
                     hImg: quant(hImg, ukPoint),
                     backend: backend)
-  echo "[DEBUG]: Initing viewport ", width.toRelative(some(result.wImg))
+  debug "[DEBUG]: Initing viewport ", width.toRelative(some(result.wImg))
   if wParentView.isSome and hParentView.isSome:
     doAssert wParentView.get.unit == ukPoint and
       hParentView.get.unit == ukPoint, "parent size must be given in `ukPoint`!"
     result.wView = wParentView.get#quant(wParentView.get.toRelative(result.wImg).val, ukPoint)
     result.hView = hParentView.get#quant(hParentView.get.toRelative(result.hImg).val, ukPoint)
   else:
-    echo "[WARNING]: initializing viewport at ", origin, " with absolute " &
+    warn "[WARNING]: initializing viewport at ", origin, " with absolute " &
       "sizes equal to image sizes!"
     result.wView = result.wImg#quant(wImg * width.toRelative(result.wImg).val, ukPoint)
     result.hView = result.hImg#quant(wImg * width.toRelative(result.hImg).val, ukPoint)#quant(hImg, ukPoint)
