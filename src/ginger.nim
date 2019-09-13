@@ -1541,12 +1541,15 @@ proc ylabel*(view: Viewport,
 
 proc initTickLabel(view: Viewport,
                    tick: GraphObject,
+                   labelTxt: Option[string] = none[string](),
                    font: Font = Font(family: "sans-serif", size: 8.0, color: color(0.0, 0.0, 0.0)),
                    rotate = none[float](),
                    name = "tickLabel"): GraphObject =
   doAssert tick.kind == goTick, "object must be a `goTick` to create a `goTickLabel`!"
   var label: GraphObject
-  var text: string
+  var text = ""
+  if labelTxt.isSome:
+    text = labelTxt.get
   var gobjName = name
   var origin: Coord
   let loc = tick.tkPos
@@ -1561,7 +1564,8 @@ proc initTickLabel(view: Viewport,
                      pos: 0.5,
                      kind: ukCentimeter,
                      length: some(view.hImg)))
-    text = &"{loc.x.pos:g}"
+    if labelTxt.isNone:
+      text = &"{loc.x.pos:g}"
     if gobjName == "tickLabel":
       gobjName = "x" & name
     result = view.initText(origin, text, taCenter, some(font), rotate,
@@ -1575,9 +1579,11 @@ proc initTickLabel(view: Viewport,
                                        kind: ukCentimeter,
                                        length: some(view.wImg)),
                    y: yCoord)
-    text = &"{loc.y.pos:g}"
+    if labelTxt.isNone:
+      text = &"{loc.y.pos:g}"
     if gobjName == "tickLabel":
       gobjName = "y" & name
+    echo "Adding at ", yCoord
     result = view.initText(origin, text, taRight, some(font), rotate,
                            name = gobjName)
 
@@ -1588,7 +1594,7 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                    color: color(0.0, 0.0, 0.0))
                 ): seq[GraphObject] =
   ## returns all tick labels for the given ticks
-  result = ticks.mapIt(view.initTickLabel(it, font))
+  result = ticks.mapIt(view.initTickLabel(tick = it, font = font))
 
 proc initTick(view: Viewport,
               axKind: AxisKind,
@@ -1621,6 +1627,29 @@ proc axisCoord*(c: Coord1D, axKind: AxisKind): Coord =
   of akY:
     result = Coord(x: Coord1D(pos: 0.0, kind: ukRelative),
                    y: c)
+
+proc tickLabels*(view: Viewport,
+                 tickPos: seq[Coord1D],
+                 tickLabels: seq[string],
+                 axKind: AxisKind,
+                 font: Font = Font(
+                   family: "sans-serif",
+                   size: 8.0,
+                   color: color(0.0, 0.0, 0.0))
+                ): (seq[GraphObject], seq[GraphObject]) =
+  ## Overload of `tickLabels`, which allows to define custom tick label
+  ## texts for ticks at positions `tickPos`
+  doAssert tickPos.len == tickLabels.len, "must have as many tick positions " &
+    "as label texts!"
+  result[0] = newSeq[GraphObject](tickPos.len)
+  result[1] = newSeq[GraphObject](tickPos.len)
+  for i in 0 ..< tickPos.len:
+    let tick = view.initTick(axKind = axKind,
+                             at = axisCoord(tickPos[i], axKind),
+                             major = true)
+    result[0][i] = tick
+    result[1][i] = view.initTickLabel(tick = tick, font = font,
+                                             labelTxt = some(tickLabels[i]))
 
 # taken straight from: *cough*
 # https://stackoverflow.com/questions/4947682/intelligently-calculating-chart-tick-positions
