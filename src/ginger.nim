@@ -1674,14 +1674,14 @@ proc calcTickLocations*(scale: Scale, numTicks: int): (Scale, float, int) =
             niceTick,
             ((newAxEnd - newAxStart) / niceTick).round.int)
 
-proc initTicks(view: var Viewport,
-               axKind: AxisKind,
-               numTicks: int = 0,
-               tickLocs: seq[Coord] = @[],
-               tickKind: TickKind = tkOneSide,
-               major = true,
-               style: Option[Style] = none[Style](),
-               updateScale = true): seq[GraphObject] =
+proc initTicks*(view: var Viewport,
+                axKind: AxisKind,
+                numTicks: int = 0,
+                tickLocs: seq[Coord] = @[],
+                tickKind: TickKind = tkOneSide,
+                major = true,
+                style: Option[Style] = none[Style](),
+                updateScale = true): seq[GraphObject] =
   ## Initializes the tick positions for the given `axKind` for either
   ## `major` or `minor` (`major == false`) ticks.
   ## If `updateScale` is true will recursively update all data scales
