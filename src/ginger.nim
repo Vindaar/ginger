@@ -1611,6 +1611,17 @@ proc initTick(view: Viewport,
                               size: 5.0, # total length of tick
                               lineType: ltSolid))
 
+proc axisCoord*(c: Coord1D, axKind: AxisKind): Coord =
+  ## A convenience proc, which returns a `Coord` on the given `axKind`.
+  ## `c` is the `Coord1D` along that axis.
+  case axKind
+  of akX:
+    result = Coord(x: c,
+                   y: Coord1D(pos: 1.0, kind: ukRelative))
+  of akY:
+    result = Coord(x: Coord1D(pos: 0.0, kind: ukRelative),
+                   y: c)
+
 # taken straight from: *cough*
 # https://stackoverflow.com/questions/4947682/intelligently-calculating-chart-tick-positions
 proc niceNumber(val: float, round: bool): float =
@@ -1695,28 +1706,19 @@ proc initTicks(view: var Viewport,
     var autoTickLocs: seq[Coord]
     if axKind == akX:
       autoTickLocs = linspace(newScale.low, newScale.high, newNumTicks + 1).mapIt(
-          Coord(
-            x: Coord1D(pos: it,
-                       kind: ukData,
-                       scale: newScale,
-                       axis: akX),
-            # non tick axis defined in relative coordinates to avoid problems when
-            # other axis is changed!
-            y: Coord1D(pos: 1.0, kind: ukRelative))
-                       # kind: ukData,
-                       # scale: view.yScale,
-                       # axis: akY),
-        )
+        axisCoord(Coord1D(pos: it,
+                          kind: ukData,
+                          scale: newScale,
+                          axis: akX),
+                  akX)
+      )
     else:
       autoTickLocs = linspace(newScale.low, newScale.high, newNumTicks + 1).mapIt(
-        Coord(x: Coord1D(pos: 0.0, kind: ukRelative), #pos: view.xScale.low,
-                         #kind: ukData,
-                         #scale: view.xScale,
-                         #axis: akX),
-              y: Coord1D(pos: it,
-                         kind: ukData,
-                         scale: newScale,
-                         axis: akY))
+        axisCoord(Coord1D(pos: it,
+                          kind: ukData,
+                          scale: newScale,
+                          axis: akY),
+                  akY)
       )
     result = view.initTicks(axKind, tickLocs = autoTickLocs,
                             tickKind = tickKind,
