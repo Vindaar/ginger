@@ -35,6 +35,8 @@ type
 
   #FontFamily = enum
   #  ffSerif, ffSans
+  # helper object to store text extent information
+  TextExtent* = TTextExtents
 
   Font* = object
     family*: string # serif, sans-serif...

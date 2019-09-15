@@ -83,7 +83,6 @@ proc drawPolyLine*(img: BImage, points: seq[Point],
     ctx.set_source_rgba(style.color.r, style.color.g, style.color.b, style.color.a)
     ctx.setLineStyle(style.lineType, style.lineWidth)
     ctx.set_line_width(style.lineWidth)
-    echo style
     let p0 = points[0]
     ctx.move_to(p0.x, p0.y)
     for i in 1 .. points.high:
@@ -128,6 +127,25 @@ func toCairoFontWeight(font: Font): TFontWeight =
   of false:
     result = FONT_WEIGHT_NORMAL
 
+proc getTextExtent*(ctx: PContext, text: string): TextExtent =
+  ## convenience wrapper around `text_extents` so user does not have to
+  ## bother with pointers
+  ctx.text_extents(text, addr result)
+
+proc getTextExtent*(text: string, font: Font): TextExtent =
+  ## creates a temporary cairo surface and evaluates the given string `text`
+  ## under the given `font` for the text extent.
+  # create small surface as user space to evaluate on
+  let width = text.len.float * font.size * 2.0
+  let height = font.size * 2.0
+  var surface = image_surface_create(FORMAT_ARGB32, width.int32, height.int32)
+  surface.withSurface:
+    ctx.select_font_face(font.family, font.toCairoFontSlant, font.toCairoFontWeight)
+    ctx.set_font_size(font.size)
+    ctx.set_source_rgba(font.color.r, font.color.g, font.color.b, font.color.a)
+    result = ctx.getTextExtent(text)
+  surface.destroy()
+
 proc drawText*(img: BImage, text: string, font: Font, at: Point,
                alignKind: TextAlignKind = taLeft,
                rotate: Option[float] = none[float](),
@@ -144,9 +162,8 @@ proc drawText*(img: BImage, text: string, font: Font, at: Point,
     var
       x = at.x
       y = at.y
-      extents: TTextExtents
 
-    ctx.text_extents(text, addr extents)
+    let extents = ctx.getTextExtent(text)
     # potentially rotate around specific point (location depends on where we align)
     if rotate.isSome:
       let
