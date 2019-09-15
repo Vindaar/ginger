@@ -1545,9 +1545,21 @@ proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
 
 proc xlabel*(view: Viewport,
              label: string,
+             margin: Coord1D,
+             font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
+             name = "xLabel"): GraphObject =
+  result = view.initAxisLabel(label = label,
+                              axKind = akX,
+                              margin = margin,
+                              font = some(font),
+                              name = name)
+
+proc xlabel*(view: Viewport,
+             label: string,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
              margin = 1.0,
              name = "xLabel"): GraphObject =
+  ## margin assumed to be in `cm`!
   result = view.initAxisLabel(label = label,
                               axKind = akX,
                               margin = quant(margin, ukCentimeter),
@@ -1556,9 +1568,21 @@ proc xlabel*(view: Viewport,
 
 proc ylabel*(view: Viewport,
              label: string,
+             margin: Coord1D,
+             font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
+             name = "yLabel"): GraphObject =
+  result = view.initAxisLabel(label = label,
+                              axKind = akY,
+                              margin = margin,
+                              font = some(font),
+                              name = name)
+
+proc ylabel*(view: Viewport,
+             label: string,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
              margin = 1.0,
              name = "yLabel"): GraphObject =
+  ## Margin assumed to be in `cm`!
   result = view.initAxisLabel(label = label,
                               axKind = akY,
                               margin = quant(margin, ukCentimeter),
