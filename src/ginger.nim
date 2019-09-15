@@ -1633,9 +1633,19 @@ proc initTickLabel(view: Viewport,
       text = &"{loc.y.pos:g}"
     if gobjName == "tickLabel":
       gobjName = "y" & name
-    echo "Adding at ", yCoord
     result = view.initText(origin, text, taRight, some(font), rotate,
                            name = gobjName)
+
+proc axisCoord*(c: Coord1D, axKind: AxisKind): Coord =
+  ## A convenience proc, which returns a `Coord` on the given `axKind`.
+  ## `c` is the `Coord1D` along that axis.
+  case axKind
+  of akX:
+    result = Coord(x: c,
+                   y: Coord1D(pos: 1.0, kind: ukRelative))
+  of akY:
+    result = Coord(x: Coord1D(pos: 0.0, kind: ukRelative),
+                   y: c)
 
 proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                  font: Font = Font(
@@ -1644,7 +1654,54 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                    color: color(0.0, 0.0, 0.0))
                 ): seq[GraphObject] =
   ## returns all tick labels for the given ticks
-  result = ticks.mapIt(view.initTickLabel(tick = it, font = font))
+  ## TODO: Clean up the auto subtraction code!
+  doAssert ticks[0].kind == goTick
+  let axKind = ticks[0].tkAxis
+
+  var pos: seq[float]
+  case axKind
+  of akX:
+    pos = ticks.mapIt(it.tkPos.x.pos)
+  of akY:
+    pos = ticks.mapIt(it.tkPos.y.pos)
+
+  # determine pretty if we have to modify values
+  let strs = pos.mapIt(&"{it:g}")
+  let strslen = strs.len
+  let strsunique = strs.deduplicate.len
+  var newpos: seq[float]
+  if strsunique < strslen:
+    # normal stringification loses information, fix
+    let min = pos.min
+    newpos = pos.mapIt(it - min)
+    # based on this, add an additional text in top left
+    let maxtick = ticks[^1]
+    var coord: Coord
+    var rotate: Option[float]
+    case axKind
+    of akX:
+      coord = axisCoord(maxTick.tkPos.x, akX)
+      coord.y = Coord1D(pos: coord.y.toPoints(length = some(view.hImg)).pos + quant(1.5, ukCentimeter).toPoints.val,
+                        kind: ukPoint)
+      rotate = none[float]()
+    of akY:
+      coord = axisCoord(maxTick.tkPos.y, akY)
+      coord.x = Coord1D(pos: coord.x.toPoints(length = some(view.wImg)).pos - quant(2.0, ukCentimeter).toPoints.val,
+                        kind: ukPoint)
+      rotate = some(-90.0)
+    # text that describes what was subtracted
+    result.add view.initText(coord,
+                             &"+{min:g}",
+                             taRight,
+                             font = some(font),
+                             rotate = rotate,
+                             name = "axisSubtraction")
+  for i in 0 ..< ticks.len:
+    var labelTxt = none[string]()
+    if newPos.len > 0:
+      labelTxt = some(&"{newPos[i]:g}")
+    result.add view.initTickLabel(tick = ticks[i], font = font,
+                                         labelTxt = labelTxt)
 
 proc initTick(view: Viewport,
               axKind: AxisKind,
@@ -1666,17 +1723,6 @@ proc initTick(view: Viewport,
                               color: color(0.0, 0.0, 0.0),
                               size: 5.0, # total length of tick
                               lineType: ltSolid))
-
-proc axisCoord*(c: Coord1D, axKind: AxisKind): Coord =
-  ## A convenience proc, which returns a `Coord` on the given `axKind`.
-  ## `c` is the `Coord1D` along that axis.
-  case axKind
-  of akX:
-    result = Coord(x: c,
-                   y: Coord1D(pos: 1.0, kind: ukRelative))
-  of akY:
-    result = Coord(x: Coord1D(pos: 0.0, kind: ukRelative),
-                   y: c)
 
 proc tickLabels*(view: Viewport,
                  tickPos: seq[Coord1D],
