@@ -1490,13 +1490,27 @@ proc initPolyLine*(view: Viewport,
       y: Coord1D(pos: p.y, scale: view.yScale, axis: akY, kind: ukData)
     )
 
-proc initAxisLabel(view: Viewport,
-                   label: string,
-                   axKind: AxisKind,
-                   margin: Quantity,
-                   font: Option[Font] = none[Font](),
-                   name = "AxisLabel"): GraphObject =
+proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
+                                          label: string,
+                                          axKind: AxisKind,
+                                          margin: T,
+                                          font: Option[Font] = none[Font](),
+                                          name = "AxisLabel"): GraphObject =
   ## margin is positive value!
+  # start with an offset of 0.5cm on top of the given `margin`
+  var marginVal = quant(0.5, ukCentimeter).toPoints.val
+  # the minimum, if `margin + marginVal` ends up being smaller is
+  # `1 cm`
+  let marginMin = quant(1.0, ukCentimeter).toPoints.val
+  when T is Quantity:
+    marginVal += margin.toPoints.val
+  else:
+    doAssert margin.kind == ukStrWidth, "if margin should not be string width " &
+      "based, use a `Quantity` instead!"
+    marginVal += margin.toPoints.pos
+  if marginVal < marginMin:
+    marginVal = marginMin
+
   result = GraphObject(kind: goText,
                        name: name,
                        txtText: label,
@@ -1510,7 +1524,7 @@ proc initAxisLabel(view: Viewport,
   of akX:
     # TODO: fix positions based on absolute unit (e.g. cm) instead of
     # relatives?
-    let yPos = Coord1D(pos: height(view).toPoints(some(view.hView)).val + margin.toPoints.val,
+    let yPos = Coord1D(pos: height(view).toPoints(some(view.hView)).val + marginVal,
                        length: some(view.hView),
                        kind: ukPoint)
     result.txtPos = Coord(x: initCoord1D(0.5),
@@ -1518,7 +1532,7 @@ proc initAxisLabel(view: Viewport,
     if gobjName == "AxisLabel":
       gobjName = "x" & name
   of akY:
-    let xPos = Coord1D(pos: -margin.toPoints.val,
+    let xPos = Coord1D(pos: -marginVal,
                        length: some(view.wImg),
                        kind: ukPoint)
     result.txtPos = Coord(x: xPos,
