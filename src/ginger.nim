@@ -150,6 +150,9 @@ type
       scale*: Scale
       axis*: AxisKind
     of ukStrWidth:
+      # NOTE: Coord1D of strWidth is not really a coordinate, but rather a
+      # quantity! It's `pos` field refers to how many times the `strWidth` is
+      # to be taken
       text*: string
       font*: Font
     #of ckMixed:
@@ -447,8 +450,14 @@ func toRelative*(p: Coord1D,
   of ukStrWidth:
     # can either use cairo's internals, e.g. get the extent of the string in a
     # given font, or assuming a font size in dots calculate from DPI?
+    # Do the former for now
+    let extents = getTextExtent(p.text, p.font)
+    # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
+    if length.isSome:
+      result = Coord1D(pos: (p.pos * (extents.width)) / length.unsafeGet.toPoints.val,
+                       kind: ukRelative)
     raise newException(Exception,
-                       "Conversion from StrWidth to relative currently not supported!")
+                       "Conversion from StrWidth to relative requires a length scale!")
 
 func toPoints*(p: Coord1D,
                length: Option[Quantity] = none[Quantity]()): Coord1D =
@@ -481,8 +490,11 @@ func toPoints*(p: Coord1D,
   of ukStrWidth:
     # can either use cairo's internals, e.g. get the extent of the string in a
     # given font, or assuming a font size in dots calculate from DPI?
-    raise newException(Exception,
-                       "Conversion from StrWidth to relative currently not supported!")
+    # Do the former for now
+    let extents = getTextExtent(p.text, p.font)
+    # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
+    result = Coord1D(pos: p.pos * extents.width,
+                     kind: ukPoint)
 
 func toRelative*(p: Coord): Coord =
   ## converts the given coordinate to a relative coordinate
