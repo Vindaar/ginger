@@ -377,41 +377,55 @@ func eitherOrRaise[T](either: Option[T],
   else:
     raise newException(ValueError, "Neither of the two optionals contains a value!")
 
-func `$`*(gobj: GraphObject): string =
+func pretty*(gobj: GraphObject, indent = 0): string =
   # string conversion function of `GraphObject`
-  result = &"(GraphObject.name: {gobj.name}, GraphObject.kind: {gobj.kind}, "
+  result = repeat(' ', indent) & &"(GraphObject.name: {gobj.name},\n"
+  result &= repeat(' ', indent) & &"GraphObject.kind: {gobj.kind},\n"
   case gobj.kind
   of goLine, goAxis:
-    result &= &"lnStart: {gobj.lnStart}, lnStop: {gobj.lnStop}"
+    result &= repeat(' ', indent) & &"lnStart: {gobj.lnStart},\n"
+    result &= repeat(' ', indent) & &"lnStop: {gobj.lnStop}\n"
   of goLabel, goText, goTickLabel:
-    result &= &"txtText: {gobj.txtText}, txtPos: {gobj.txtPos}, "
-    result &= &"txtAlign: {gobj.txtAlign}, txtRotate: {gobj.txtRotate}, "
-    result &= &"txtFont: {gobj.txtFont}"
+    result &= repeat(' ', indent) & &"txtText: {gobj.txtText},\n"
+    result &= repeat(' ', indent) & &"txtPos: {gobj.txtPos},\n"
+    result &= repeat(' ', indent) & &"txtAlign: {gobj.txtAlign},\n"
+    result &= repeat(' ', indent) & &"txtRotate: {gobj.txtRotate},\n"
+    result &= repeat(' ', indent) & &"txtFont: {gobj.txtFont}\n"
   of goGrid:
-    result &= &"gdXPos: {gobj.gdXPos}, gdYPos: {gobj.gdYPos}"
-    result &= &"gdOrigin: {gobj.gdOrigin}, gdOriginDiag: {gobj.gdOriginDiag}"
+    result &= repeat(' ', indent) & &"gdXPos: {gobj.gdXPos},\n"
+    result &= repeat(' ', indent) & &"gdYPos: {gobj.gdYPos}\n"
+    result &= repeat(' ', indent) & &"gdOrigin: {gobj.gdOrigin},\n"
+    result &= repeat(' ', indent) & &"gdOriginDiag: {gobj.gdOriginDiag}\n"
   of goTick:
-    result &= &"tkPos: {gobj.tkPos}, tkMajor: {gobj.tkMajor}, tkAxis: {gobj.tkAxis}"
+    result &= repeat(' ', indent) & &"tkPos: {gobj.tkPos},\n"
+    result &= repeat(' ', indent) & &"tkMajor: {gobj.tkMajor},\ntkAxis: {gobj.tkAxis}\n"
   of goPoint:
-    result &= &"ptPos: {gobj.ptPos}, ptMarker: {gobj.ptMarker}, "
-    result &= &"ptSize: {gobj.ptSize}, ptColor: {gobj.ptColor}"
+    result &= repeat(' ', indent) & &"ptPos: {gobj.ptPos},\n"
+    result &= repeat(' ', indent) & &"ptMarker: {gobj.ptMarker},\n"
+    result &= repeat(' ', indent) & &"ptSize: {gobj.ptSize},\n"
+    result &= repeat(' ', indent) & &"ptColor: {gobj.ptColor}\n"
   of goPolyLine:
-    result &= &"plPos: {gobj.plPos}"
+    result &= repeat(' ', indent) & &"plPos: {gobj.plPos}\n"
   of goRect:
-    result &= &"reOrigin: {gobj.reOrigin}, reWidth: {gobj.reWidth}, "
-    result &= &"reHeight: {gobj.reHeight}"
+    result &= repeat(' ', indent) & &"reOrigin: {gobj.reOrigin},\n"
+    result &= repeat(' ', indent) & &"reWidth: {gobj.reWidth},\n"
+    result &= repeat(' ', indent) & &"reHeight: {gobj.reHeight}\n"
   else:
-    result &= &"<no conversion for {gobj.kind}"
-  result &= &", style: {gobj.style}, rotate: {gobj.rotate}, "
-  result &= &"rotateInView: {gobj.rotateInView}"
-  result &= &", children: "
+    result &= repeat(' ', indent) & &"<no conversion for {gobj.kind}\n"
+  result &= repeat(' ', indent) & &"style: {gobj.style},\n"
+  result &= repeat(' ', indent) & &"rotate: {gobj.rotate},\n"
+  result &= repeat(' ', indent) & &"rotateInView: {gobj.rotateInView},\n"
+  result &= repeat(' ', indent) & &"children:\n"
   if gobj.children.len == 0:
-    result &= "@[])"
+    result &= repeat(' ', indent + 2) & "@[]\n"
   else:
     result &= "\n"
   for ch in gobj.children:
-    result = &"\t {ch}\n"
-  result &= ")"
+    result = pretty(ch, indent + 2)
+  result &= ")\n"
+
+func `$`*(gobj: GraphObject): string =
+  result = gobj.pretty
 
 func toRelative*(p: Coord1D,
                  length: Option[Quantity] = none[Quantity]()): Coord1D =
