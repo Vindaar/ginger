@@ -121,6 +121,7 @@ type
                   # two relative coordinates in absolute terms as a basis
     ukData, # based on xScale, yScale of data
     ukStrWidth,#, # based on width of a string in a given fontsize
+    ukStrHeight, # same as strWidth except for height
     # kinds requiring absolute scale
     ukPoint, # absolute size of image ~= points
     ukCentimeter, # absolute cm based on dpi of 72.27
@@ -149,7 +150,7 @@ type
     of ukData:
       scale*: Scale
       axis*: AxisKind
-    of ukStrWidth:
+    of ukStrWidth, ukStrHeight:
       # NOTE: Coord1D of strWidth is not really a coordinate, but rather a
       # quantity! It's `pos` field refers to how many times the `strWidth` is
       # to be taken
@@ -327,7 +328,7 @@ func initCoord1d*(view: Viewport, at: float,
     of akY:
       result.scale = view.yScale
     result.axis = axKind
-  of ukStrWidth:
+  of ukStrWidth, ukStrHeight:
     raise newException(Exception, "Strwidth not yet implemented!")
   else: discard
 
@@ -461,14 +462,15 @@ func toRelative*(p: Coord1D,
     of akY:
       result = Coord1D(pos: 1.0 - (p.pos - p.scale.low) / (p.scale.high - p.scale.low),
                        kind: ukRelative)
-  of ukStrWidth:
+  of ukStrWidth, ukStrHeight:
     # can either use cairo's internals, e.g. get the extent of the string in a
     # given font, or assuming a font size in dots calculate from DPI?
     # Do the former for now
     let extents = getTextExtent(p.text, p.font)
+    let relevantDim = if p.kind == ukStrWidth: extents.width else: extents.height
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
     if length.isSome:
-      result = Coord1D(pos: (p.pos * (extents.width)) / length.unsafeGet.toPoints.val,
+      result = Coord1D(pos: (p.pos * relevantDim) / length.unsafeGet.toPoints.val,
                        kind: ukRelative)
     raise newException(Exception,
                        "Conversion from StrWidth to relative requires a length scale!")
@@ -501,13 +503,14 @@ func toPoints*(p: Coord1D,
                      kind: ukPoint)
   of ukData:
     result = result.toRelative.toPoints(length = length)
-  of ukStrWidth:
+  of ukStrWidth, ukStrHeight:
     # can either use cairo's internals, e.g. get the extent of the string in a
     # given font, or assuming a font size in dots calculate from DPI?
     # Do the former for now
     let extents = getTextExtent(p.text, p.font)
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
-    result = Coord1D(pos: p.pos * extents.width,
+    let relevantDim = if p.kind == ukStrWidth: extents.width else: extents.height
+    result = Coord1D(pos: p.pos * relevantDim,
                      kind: ukPoint)
 
 func toRelative*(p: Coord): Coord =
@@ -724,7 +727,7 @@ proc to*(p: Coord1D, toKind: UnitKind,
       result = Coord1D(pos: (scale.high - scale.low) * pRel.pos + scale.low,
                        scale: scale,
                        kind: ukData)
-    of ukStrWidth:
+    of ukStrWidth, ukStrHeight:
       doAssert strText.isSome, "Conversion to string width requires an string!"
       doAssert strFont.isSome, "Conversion to string width requires a Font!"
       raise newException(Exception, "Conversion to string width not yet implemented!")
@@ -762,7 +765,7 @@ proc to*(p: Coord, toKind: UnitKind,
       yScale = datYScale.get()
     result = Coord(x: p.x.to(ukData, datScale = datXScale, datAxis = some(akX)),
                    y: p.y.to(ukData, datScale = datYScale, datAxis = some(akY)))
-  of ukStrWidth:
+  of ukStrWidth, ukStrHeight:
     doAssert strText.isSome, "Conversion to string width requires an string!"
     doAssert strFont.isSome, "Conversion to string width requires a Font!"
     raise newException(Exception, "Conversion to string width not yet implemented!")
