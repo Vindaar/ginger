@@ -820,13 +820,13 @@ proc bottom(view: Viewport): Coord1D =
   ## as a 1D coordinate
   result = view.origin.y.toRelative
 
-proc width(view: Viewport): Quantity =
+proc width*(view: Viewport): Quantity =
   ## returns the width of the `Viewport` in `ukRelative`
   ## NOTE: this procedure is a no-op, if the width is already stored as a
   ## ukRelative!
   result = view.width.toRelative(length = some(view.wView))
 
-proc height(view: Viewport): Quantity =
+proc height*(view: Viewport): Quantity =
   ## returns the height of the `Viewport` in `ukRelative`
   ## NOTE: this procedure is a no-op, if the height is already stored as a
   ## ukRelative!
