@@ -1512,20 +1512,26 @@ proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
                                           axKind: AxisKind,
                                           margin: T,
                                           font: Option[Font] = none[Font](),
-                                          name = "AxisLabel"): GraphObject =
+                                          name = "AxisLabel",
+                                          isCustomMargin = false): GraphObject =
+  ## If `isCustomMargin` is set, the raw `margin` value is used to set
+  ## the margin. Otherwise a 0.5cm offset is added to the margin, since that way
+  ## the margin is relative to the right/top edge of the tick label positions.
   ## margin is positive value!
   # start with an offset of 0.5cm on top of the given `margin`
-  var marginVal = quant(0.5, ukCentimeter).toPoints.val
+  var marginVal: float
+  if not isCustomMargin:
+    marginVal = quant(0.5, ukCentimeter).toPoints.val
   # the minimum, if `margin + marginVal` ends up being smaller is
   # `1 cm`
   let marginMin = quant(1.0, ukCentimeter).toPoints.val
   when T is Quantity:
     marginVal += margin.toPoints.val
   else:
-    doAssert margin.kind == ukStrWidth, "if margin should not be string width " &
-      "based, use a `Quantity` instead!"
+    doAssert margin.kind == ukStrWidth or margin.kind == ukStrHeight, "if " &
+      "margin should not be string width based, use a `Quantity` instead!"
     marginVal += margin.toPoints.pos
-  if marginVal < marginMin:
+  if marginVal < marginMin and not isCustomMargin:
     marginVal = marginMin
 
   result = GraphObject(kind: goText,
@@ -1575,13 +1581,15 @@ proc xlabel*(view: Viewport,
              label: string,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
              margin = 1.0,
-             name = "xLabel"): GraphObject =
+             name = "xLabel",
+             isCustomMargin = false): GraphObject =
   ## margin assumed to be in `cm`!
   result = view.initAxisLabel(label = label,
                               axKind = akX,
                               margin = quant(margin, ukCentimeter),
                               font = some(font),
-                              name = name)
+                              name = name,
+                              isCustomMargin = isCustomMargin)
 
 proc ylabel*(view: Viewport,
              label: string,
@@ -1598,13 +1606,15 @@ proc ylabel*(view: Viewport,
              label: string,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
              margin = 1.0,
-             name = "yLabel"): GraphObject =
+             name = "yLabel",
+             isCustomMargin = false): GraphObject =
   ## Margin assumed to be in `cm`!
   result = view.initAxisLabel(label = label,
                               axKind = akY,
                               margin = quant(margin, ukCentimeter),
                               font = some(font),
-                              name = name)
+                              name = name,
+                              isCustomMargin = isCustomMargin)
 
 proc initTickLabel(view: Viewport,
                    tick: GraphObject,
