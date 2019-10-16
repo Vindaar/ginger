@@ -12,6 +12,8 @@ import strutils
 import ginger / [macroUtils, backends, types]
 export types, backends, macroUtils
 
+from os import splitFile
+
 # TODO: think about renaming `Coord1D` to someting like Unit?
 
 # TODO: implement some more units so that we can use it to define
