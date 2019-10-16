@@ -1303,11 +1303,13 @@ proc initRect*(view: Viewport,
 proc initText*(view: Viewport,
                origin: Coord,
                text: string,
+               textKind: static GraphObjectKind,
                alignKind: TextAlignKind,
                font: Option[Font] = none[Font](),
                rotate = none[float](),
                name = "text"): GraphObject =
-  result = GraphObject(kind: goText,
+  assert textKind in {goText, goLabel, goTickLabel}
+  result = GraphObject(kind: textKind,
                        name: name,
                        txtText: text,
                        txtAlign: alignKind,
@@ -1536,7 +1538,7 @@ proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
   if marginVal < marginMin and not isCustomMargin:
     marginVal = marginMin
 
-  result = GraphObject(kind: goText,
+  result = GraphObject(kind: goLabel,
                        name: name,
                        txtText: label,
                        txtAlign: taCenter)
@@ -2527,6 +2529,7 @@ when isMainModule:
 
     let text = view2.initText(initCoord(0.5, 1.05),
                               "Hello",
+                              textKind = goText,
                               alignKind = taCenter,
                               font = some(Font(family: "serif",
                                    size: 12.0,
@@ -2535,6 +2538,7 @@ when isMainModule:
 
     let textRot = view2.initText(initCoord(-0.05, 0.5),
                                  "Counts",
+                                 textKind = goText,
                                  alignKind = taCenter,
                                  font = some(Font(family: "serif",
                                              size: 12.0,
