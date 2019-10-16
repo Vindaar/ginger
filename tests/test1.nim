@@ -188,3 +188,86 @@ suite "Viewport":
       check p.ptPos.y.kind == ukData
       check p.ptPos.x.scale == (low: 0.0, high: 1000.0)
       check p.ptPos.y.scale == yScale
+
+  test "Axes and labels":
+    var view = initViewport()
+    let x = toSeq(0 .. 958).mapIt(it.float)
+    let y = x.mapIt(it.float * it.float)
+    let xScale = (low: 0.0, high: x.max)
+    let yScale = (low: 0.0, high: y.max)
+    var child = initViewport(left = 0.15,
+                             bottom = 0.4,
+                             width = 0.75,
+                             height = 0.5,
+                             xScale = some(xScale),
+                             yScale = some(yScale))
+    var oldChild = child
+    block:
+      # x ticks and labels
+      var mch = oldChild
+      let xTicks = child.xticks()
+      let xLabel = child.xlabel("X label")
+      mch.addObj concat(xticks, @[xlabel])
+      child.addObj concat(xticks, @[xlabel])
+      for ch in mch.objects:
+        case ch.kind:
+        of goTick:
+          check ch.tkAxis == akX
+          check ch.tkPos.y == XAxisYPos()
+        of goLabel:
+          check ch.txtText == "X label"
+          check ch.txtPos.y.pos.round.int == 283
+        else: check false
+
+    block:
+      # x ticks and labels
+      var mch = oldChild
+      let yTicks = child.yticks()
+      let yLabel = child.ylabel("Y label")
+      mch.addObj concat(yticks, @[ylabel])
+      child.addObj concat(yticks, @[ylabel])
+      for ch in mch.objects:
+        case ch.kind:
+        of goTick:
+          check ch.tkAxis == akY
+          check ch.tkPos.x == YAxisXPos()
+        of goLabel:
+          check ch.txtText == "Y label"
+          check ch.txtPos.x.pos.round.int == -43
+        else: check false
+    block:
+      # x ticks and labels
+      var mch = oldChild
+      let xTicks = child.xticks(isSecondary = true)
+      let xLabel = child.xlabel("X label sec", isSecondary = true)
+      mch.addObj concat(xticks, @[xlabel])
+      child.addObj concat(xticks, @[xlabel])
+      for ch in mch.objects:
+        case ch.kind:
+        of goTick:
+          check ch.tkAxis == akX
+          check ch.tkPos.y == XAxisYPos(isSecondary = true)
+          check ch.tkSecondary == true
+        of goLabel:
+          check ch.txtText == "X label sec"
+          check ch.txtPos.y.pos.round.int == -43
+        else: check false
+    block:
+      # x ticks and labels
+      var mch = oldChild
+      let yTicks = child.yticks(isSecondary =  true)
+      let yLabel = child.ylabel("Y label sec", isSecondary = true)
+      mch.addObj concat(yticks, @[ylabel])
+      child.addObj concat(yticks, @[ylabel])
+      for ch in mch.objects:
+        case ch.kind:
+        of goTick:
+          check ch.tkAxis == akY
+          check ch.tkPos.x == YAxisXPos(isSecondary = true)
+          check ch.tkSecondary == true
+        of goLabel:
+          check ch.txtText == "Y label sec"
+          check ch.txtPos.x.pos.round.int == 523
+        else: check false
+    view.children.add child
+    view.draw("testAxes.pdf")
