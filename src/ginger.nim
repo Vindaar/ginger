@@ -2285,8 +2285,8 @@ proc drawPolyLine(img: BImage, gobj: GraphObject) =
 
 proc drawText(img: BImage, gobj: GraphObject) =
   doAssert(
-    (gobj.kind == goText or gobj.kind == goLabel),
-    "object must be a `goText` or `goLabel`!"
+    (gobj.kind == goText or gobj.kind == goLabel or gobj.kind == goTickLabel),
+    "object must be a `goText`, `goLabel` or `goTickLabel`!"
   )
   img.drawText(gobj.txtText, gobj.txtFont, gobj.txtPos.point, gobj.txtAlign,
                gobj.rotate)
@@ -2385,7 +2385,7 @@ proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
     result.ptPos = gobj.ptPos.toAbsImage(img)
   of goPolyLine:
     result.plPos = gobj.plPos.mapIt(it.toAbsImage(img))
-  of goText, goLabel:
+  of goText, goLabel, goTickLabel:
     result.txtPos = gobj.txtPos.toAbsImage(img)
   of goTick:
     result.tkPos = gobj.tkPos.toAbsImage(img)
@@ -2400,8 +2400,6 @@ proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
   of goComposite:
     # composite has nothing to be drawn, only children, which are handled individually
     discard
-  else:
-    raise newException(Exception, "Not yet implemented!")
 
 proc draw*(img: BImage, gobj: GraphObject) =
   ## draws the given graph object on the image
@@ -2412,25 +2410,19 @@ proc draw*(img: BImage, gobj: GraphObject) =
     img.drawLine(globalObj)
   of goRect:
     img.drawRect(globalObj)
-  #of goLabel:
-  #  img.drawLabel(gobj)
   of goPoint:
     img.drawPoint(globalObj)
   of goPolyLine:
     img.drawPolyLine(globalObj)
-  of goLabel, goText:
+  of goLabel, goText, goTickLabel:
     img.drawText(globalObj)
   of goTick:
     img.drawTick(globalObj)
   of goGrid:
     img.drawGrid(globalObj)
-  #of goLine:
-  #  img.drawLine(gobj)
   of goComposite:
     # composite itself has nothing to be drawn, only children handled individually
     discard
-  else:
-    raise newException(Exception, "Not implemented yet!")
 
 iterator items*(view: Viewport): Viewport =
   for ch in view.children:
@@ -2454,7 +2446,7 @@ proc embedInto(gobj: GraphObject, view: Viewport): GraphObject =
     result.ptPos = gobj.ptPos.embedInto(view)
   of goPolyLine:
     result.plPos = gobj.plPos.mapIt(it.embedInto(view))
-  of goLabel, goText:
+  of goLabel, goText, goTickLabel:
     result.txtPos = gobj.txtPos.embedInto(view)
   of goTick:
     result.tkPos = gobj.tkPos.embedInto(view)
@@ -2469,8 +2461,9 @@ proc embedInto(gobj: GraphObject, view: Viewport): GraphObject =
     # composite itself contains nothing to draw, only children.
     # children will be drawn and embedded individually
     discard
-  else:
-    raise newException(Exception, "embedInto not implemented yet!")
+  #else:
+  #  raise newException(Exception, "embedInto not implemented yet for " &
+  #    $gobj.kind & "!")
 
 proc getCenter*(view: Viewport): (float, float) =
   ## returns the center position of the given viewport in relative coordinates
