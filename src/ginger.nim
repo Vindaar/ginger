@@ -2393,9 +2393,22 @@ proc draw(img: BImage, view: Viewport) =
     mchView.rotate = view.rotate
     img.draw(mchView)
 
-proc draw*(view: Viewport, filename: string, ftype = fkPdf) =
+proc parseFilename(fname: string): FiletypeKind =
+  let (_, _, ext) = fname.splitFile
+  case ext.normalize
+  of ".pdf":
+    result = fkPdf
+  of ".svg":
+    result = fkSvg
+  of ".png":
+    result = fkPng
+  else:
+    result = fkPdf
+
+proc draw*(view: Viewport, filename: string) =
   ## draws the given viewport and all its children and stores it in the
   ## file `filename`
+  let ftype = parseFilename(filename)
   var img = initBImage(filename,
                        width = view.wImg.val.round.int, height = view.hImg.val.round.int,
                        backend = view.backend,
