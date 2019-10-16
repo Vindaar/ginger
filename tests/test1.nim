@@ -84,6 +84,7 @@ suite "Embeddings":
   test "Dummy":
     # TODO: have to write a lot more test, which test coordinatees under embeddings!
     # As far as I'm aware there are still some bugs lurking here :/
+    discard
 
 suite "Viewport":
   test "Mutable children":

@@ -11,6 +11,7 @@ srcDir        = "src"
 
 requires "nim >= 0.19.9"
 # requires "https://github.com/Vindaar/chroma#addMoreSpaces"
+requires "https://github.com/vindaar/seqmath#head"
 requires "cairo"
 
 task test, "Run tests":
