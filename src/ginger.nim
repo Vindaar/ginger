@@ -93,6 +93,7 @@ type
       tkPos*: Coord
       tkAxis*: AxisKind
       tkKind*: TickKind
+      tkSecondary*: bool
     of goPoint:
       ptMarker*: MarkerKind
       ptSize*: float # can be removed, due to style
@@ -192,6 +193,67 @@ type
     wImg*: Quantity # absolute width, height in points (pixels) of image
     hImg*: Quantity
     backend*: BackendKind
+
+template XAxisYPos*(view: Option[Viewport] = none[Viewport](),
+                    margin = 0.0,
+                    isSecondary = false): untyped =
+  ## Y position of the X axis.
+  if view.isSome:
+    if not isSecondary:
+      let viewEl = view.get
+      Coord1D(pos: height(viewEl).toPoints(some(viewEl.hView)).val + margin,
+              length: some(viewEl.hView),
+              kind: ukPoint)
+    else:
+      Coord1D(pos: -margin,
+              length: some(view.get.hView),
+              kind: ukPoint)
+  else:
+    if not isSecondary:
+      Coord1D(pos: 1.0, kind: ukRelative)
+    else:
+      Coord1D(pos: 0.0, kind: ukRelative)
+
+template YAxisXPos*(view: Option[Viewport] = none[Viewport](),
+                    margin = 0.0,
+                    isSecondary = false): untyped =
+  ## X position of the Y axis.
+  if view.isSome:
+    if not isSecondary:
+      Coord1D(pos: -margin,
+              length: some(view.get.wImg),
+              kind: ukPoint)
+    else:
+      let viewEl = view.get
+      Coord1D(pos: width(viewEl).toPoints(some(viewEl.wView)).val + margin,
+              length: some(viewEl.wImg),
+              kind: ukPoint)
+  else:
+    if not isSecondary:
+      Coord1D(pos: 0.0, kind: ukRelative)
+    else:
+      Coord1D(pos: 1.0, kind: ukRelative)
+
+#template XAxis2YPos*(view: Option[Viewport] = none[Viewport](),
+#                     margin = 0.0): untyped =
+#  ## Y position of the secondary X axis.
+#  if view.isSome:
+#    Coord1D(pos: -margin,
+#            length: some(view.get.hView),
+#            kind: ukPoint)
+#  else:
+#    Coord1D(pos: 0.0, kind: ukRelative)
+#
+#template YAxis2XPos*(view: Option[Viewport] = none[Viewport](),
+#                     margin = 0.0): untyped =
+#  ## X position of the secondary Y axis.
+#  if view.isSome:
+#    let viewEl = view.get
+#    Coord1D(pos: width(viewEl).toPoints(some(viewEl.wView)).val + margin,
+#            length: some(viewEl.wImg),
+#            kind: ukPoint)
+#  else:
+#    Coord1D(pos: 1.0, kind: ukRelative)
 
 template info(f: varargs[untyped]): untyped =
   when declared(verbose):
@@ -1517,7 +1579,8 @@ proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
                                           margin: T,
                                           font: Option[Font] = none[Font](),
                                           name = "AxisLabel",
-                                          isCustomMargin = false): GraphObject =
+                                          isCustomMargin = false,
+                                          isSecondary = false): GraphObject =
   ## If `isCustomMargin` is set, the raw `margin` value is used to set
   ## the margin. Otherwise a 0.5cm offset is added to the margin, since that way
   ## the margin is relative to the right/top edge of the tick label positions.
@@ -1551,17 +1614,13 @@ proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
   of akX:
     # TODO: fix positions based on absolute unit (e.g. cm) instead of
     # relatives?
-    let yPos = Coord1D(pos: height(view).toPoints(some(view.hView)).val + marginVal,
-                       length: some(view.hView),
-                       kind: ukPoint)
+    let yPos = XAxisYPos(some(view), marginVal, isSecondary = isSecondary)
     result.txtPos = Coord(x: initCoord1D(0.5),
                           y: ypos)
     if gobjName == "AxisLabel":
       gobjName = "x" & name
   of akY:
-    let xPos = Coord1D(pos: -marginVal,
-                       length: some(view.wImg),
-                       kind: ukPoint)
+    let xPos = YAxisXPos(some(view), marginVal, isSecondary = isSecondary)
     result.txtPos = Coord(x: xPos,
                           y: initCoord1D(0.5))
     result.rotate = some(-90.0)
@@ -1574,58 +1633,88 @@ proc xlabel*(view: Viewport,
              label: string,
              margin: Coord1D,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
-             name = "xLabel"): GraphObject =
+             name = "xLabel",
+             isSecondary = false): GraphObject =
   result = view.initAxisLabel(label = label,
                               axKind = akX,
                               margin = margin,
                               font = some(font),
-                              name = name)
+                              name = name,
+                              isSecondary = isSecondary)
 
 proc xlabel*(view: Viewport,
              label: string,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
              margin = 1.0,
              name = "xLabel",
-             isCustomMargin = false): GraphObject =
+             isCustomMargin = false,
+             isSecondary = false): GraphObject =
   ## margin assumed to be in `cm`!
   result = view.initAxisLabel(label = label,
                               axKind = akX,
                               margin = quant(margin, ukCentimeter),
                               font = some(font),
                               name = name,
-                              isCustomMargin = isCustomMargin)
+                              isCustomMargin = isCustomMargin,
+                              isSecondary = isSecondary)
 
 proc ylabel*(view: Viewport,
              label: string,
              margin: Coord1D,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
-             name = "yLabel"): GraphObject =
+             name = "yLabel",
+             isSecondary = false): GraphObject =
   result = view.initAxisLabel(label = label,
                               axKind = akY,
                               margin = margin,
                               font = some(font),
-                              name = name)
+                              name = name,
+                              isSecondary = isSecondary)
 
 proc ylabel*(view: Viewport,
              label: string,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
              margin = 1.0,
              name = "yLabel",
-             isCustomMargin = false): GraphObject =
+             isCustomMargin = false,
+             isSecondary = false): GraphObject =
   ## Margin assumed to be in `cm`!
   result = view.initAxisLabel(label = label,
                               axKind = akY,
                               margin = quant(margin, ukCentimeter),
                               font = some(font),
                               name = name,
-                              isCustomMargin = isCustomMargin)
+                              isCustomMargin = isCustomMargin,
+                              isSecondary = isSecondary)
+
+template xLabelOriginOffset(isSecondary = false): untyped =
+  if not isSecondary:
+    Coord1D(pos: -0.5,
+            kind: ukCentimeter,
+            length: some(view.wImg))
+  else:
+    Coord1D(pos: 0.5,
+            kind: ukCentimeter,
+            length: some(view.wImg))
+
+template yLabelOriginOffset(isSecondary = false): untyped =
+  if not isSecondary:
+    Coord1D(pos: 0.5,
+            kind: ukCentimeter,
+            length: some(view.hImg))
+  else:
+    # TODO: check if value good!
+    Coord1D(pos: -0.5,
+            kind: ukCentimeter,
+            length: some(view.wImg))
 
 proc initTickLabel(view: Viewport,
                    tick: GraphObject,
                    labelTxt: Option[string] = none[string](),
                    font: Font = Font(family: "sans-serif", size: 8.0, color: color(0.0, 0.0, 0.0)),
                    rotate = none[float](),
-                   name = "tickLabel"): GraphObject =
+                   name = "tickLabel",
+                   isSecondary = false): GraphObject =
   doAssert tick.kind == goTick, "object must be a `goTick` to create a `goTickLabel`!"
   var label: GraphObject
   var text = ""
@@ -1634,55 +1723,69 @@ proc initTickLabel(view: Viewport,
   var gobjName = name
   var origin: Coord
   let loc = tick.tkPos
+
+  var alignTo: TextAlignKind
   case tick.tkAxis
   of akX:
+    alignTo = taCenter
     let xCoord = Coord1D(pos: loc.x.pos, kind: ukData,
                          scale: loc.x.scale, axis: akX)
-    let yCoord = Coord1D(pos: 1.0, kind: ukRelative) #loc.y.scale.low, kind: ukData,
+    # TODO: if we don't convert to relative here, the result (while being 1.0 effectively)
+    # will not line up with the correct location! Problem with embedding?
+    let yCoord = XAxisYPos(isSecondary = isSecondary) # Coord1D(pos: 1.0, kind: ukRelative) #loc.y.scale.low, kind: ukData,
     #scale: loc.y.scale, axis: akY)
     origin = Coord(x: xCoord,
-                   y: yCoord + Coord1D(
-                     pos: 0.5,
-                     kind: ukCentimeter,
-                     length: some(view.hImg)))
+                   y: yCoord + yLabelOriginOffset(isSecondary))
     if labelTxt.isNone:
       text = &"{loc.x.pos:g}"
     if gobjName == "tickLabel":
       gobjName = "x" & name
-    result = view.initText(origin, text, taCenter, some(font), rotate,
+    result = view.initText(origin, text, textKind = goTickLabel,
+                           alignKind = alignTo,
+                           font = some(font),
+                           rotate = rotate,
                            name = gobjName)
   of akY:
-    let xCoord = Coord1D(pos: 0.0, kind: ukRelative)#pos: loc.x.scale.low, kind: ukData,
-    #scale: loc.x.scale, axis: akX)
+    if not isSecondary:
+      alignTo = taRight
+    else:
+      alignTo = taLeft
+    # TODO: if we don't convert to relative here, the result (while being 0.0 effectively)
+    # will not line up with the correct location! Problem with embedding?
+    let xCoord = YAxisXPos(isSecondary = isSecondary)
     let yCoord = Coord1D(pos: loc.y.pos, kind: ukData,
                          scale: loc.y.scale, axis: akY)
-    origin = Coord(x: xCoord - Coord1D(pos: 0.5,
-                                       kind: ukCentimeter,
-                                       length: some(view.wImg)),
+    origin = Coord(x: xCoord + xLabelOriginOffset(isSecondary),
                    y: yCoord)
     if labelTxt.isNone:
       text = &"{loc.y.pos:g}"
     if gobjName == "tickLabel":
       gobjName = "y" & name
-    result = view.initText(origin, text, taRight, some(font), rotate,
+    result = view.initText(origin, text,
+                           textKind = goTickLabel,
+                           alignKind = alignTo,
+                           font = some(font),
+                           rotate = rotate,
                            name = gobjName)
 
-proc axisCoord*(c: Coord1D, axKind: AxisKind): Coord =
+proc axisCoord*(c: Coord1D, axKind: AxisKind,
+                isSecondary = false): Coord =
   ## A convenience proc, which returns a `Coord` on the given `axKind`.
   ## `c` is the `Coord1D` along that axis.
   case axKind
   of akX:
     result = Coord(x: c,
-                   y: Coord1D(pos: 1.0, kind: ukRelative))
+                   y: XAxisYPos(isSecondary = isSecondary))
   of akY:
-    result = Coord(x: Coord1D(pos: 0.0, kind: ukRelative),
+    result = Coord(x: YAxisXPos(isSecondary = isSecondary),
                    y: c)
 
 proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                  font: Font = Font(
                    family: "sans-serif",
                    size: 8.0,
-                   color: color(0.0, 0.0, 0.0))
+                   color: color(0.0, 0.0, 0.0)),
+                  isSecondary = false,
                 ): seq[GraphObject] =
   ## returns all tick labels for the given ticks
   ## TODO: Clean up the auto subtraction code!
@@ -1711,19 +1814,20 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
     var rotate: Option[float]
     case axKind
     of akX:
-      coord = axisCoord(maxTick.tkPos.x, akX)
+      coord = axisCoord(maxTick.tkPos.x, akX, isSecondary)
       coord.y = Coord1D(pos: coord.y.toPoints(length = some(view.hImg)).pos + quant(1.5, ukCentimeter).toPoints.val,
                         kind: ukPoint)
       rotate = none[float]()
     of akY:
-      coord = axisCoord(maxTick.tkPos.y, akY)
+      coord = axisCoord(maxTick.tkPos.y, akY, isSecondary)
       coord.x = Coord1D(pos: coord.x.toPoints(length = some(view.wImg)).pos - quant(2.0, ukCentimeter).toPoints.val,
                         kind: ukPoint)
       rotate = some(-90.0)
     # text that describes what was subtracted
     result.add view.initText(coord,
                              &"+{min:g}",
-                             taRight,
+                             textKind = goText,
+                             alignKind = taRight,
                              font = some(font),
                              rotate = rotate,
                              name = "axisSubtraction")
@@ -1732,7 +1836,8 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
     if newPos.len > 0:
       labelTxt = some(&"{newPos[i]:g}")
     result.add view.initTickLabel(tick = ticks[i], font = font,
-                                         labelTxt = labelTxt)
+                                  labelTxt = labelTxt,
+                                  isSecondary = isSecondary)
 
 proc initTick(view: Viewport,
               axKind: AxisKind,
@@ -1740,13 +1845,15 @@ proc initTick(view: Viewport,
               at: Coord,
               tickKind: TickKind = tkOneSide,
               style: Option[Style] = none[Style](),
-              name = "tick"): GraphObject =
+              name = "tick",
+              isSecondary = false): GraphObject =
   result = GraphObject(kind: goTick,
                        name: name,
                        tkPos: at.patchCoord(view),
                        tkMajor: major,
                        tkAxis: axKind,
-                       tkKind: tickKind)
+                       tkKind: tickKind,
+                       tkSecondary: isSecondary)
   if style.isSome:
     result.style = style
   else:
@@ -1762,7 +1869,8 @@ proc tickLabels*(view: Viewport,
                  font: Font = Font(
                    family: "sans-serif",
                    size: 8.0,
-                   color: color(0.0, 0.0, 0.0))
+                   color: color(0.0, 0.0, 0.0)),
+                 isSecondary = false
                 ): (seq[GraphObject], seq[GraphObject]) =
   ## Overload of `tickLabels`, which allows to define custom tick label
   ## texts for ticks at positions `tickPos`
@@ -1772,11 +1880,13 @@ proc tickLabels*(view: Viewport,
   result[1] = newSeq[GraphObject](tickPos.len)
   for i in 0 ..< tickPos.len:
     let tick = view.initTick(axKind = axKind,
-                             at = axisCoord(tickPos[i], axKind),
-                             major = true)
+                             at = axisCoord(tickPos[i], axKind, isSecondary),
+                             major = true,
+                             isSecondary = isSecondary)
     result[0][i] = tick
     result[1][i] = view.initTickLabel(tick = tick, font = font,
-                                             labelTxt = some(tickLabels[i]))
+                                      labelTxt = some(tickLabels[i]),
+                                      isSecondary = isSecondary)
 
 # taken straight from: *cough*
 # https://stackoverflow.com/questions/4947682/intelligently-calculating-chart-tick-positions
@@ -1837,7 +1947,8 @@ proc initTicks*(view: var Viewport,
                 tickKind: TickKind = tkOneSide,
                 major = true,
                 style: Option[Style] = none[Style](),
-                updateScale = true): seq[GraphObject] =
+                updateScale = true,
+                isSecondary = false): seq[GraphObject] =
   ## Initializes the tick positions for the given `axKind` for either
   ## `major` or `minor` (`major == false`) ticks.
   ## If `updateScale` is true will recursively update all data scales
@@ -1850,7 +1961,8 @@ proc initTicks*(view: var Viewport,
   if numTicks == 0 and tickLocs.len > 0:
     for loc in tickLocs:
       result.add initTick(view, axKind = axKind, major = major, at = loc,
-                          tickKind = tickKind, style = style)
+                          tickKind = tickKind, style = style,
+                          isSecondary = isSecondary)
   elif numTicks > 0:
     var scale: Scale
     if axKind == akX:
@@ -1866,7 +1978,8 @@ proc initTicks*(view: var Viewport,
                           kind: ukData,
                           scale: newScale,
                           axis: akX),
-                  akX)
+                  akX,
+                  isSecondary)
       )
     else:
       autoTickLocs = linspace(newScale.low, newScale.high, newNumTicks + 1).mapIt(
@@ -1874,11 +1987,13 @@ proc initTicks*(view: var Viewport,
                           kind: ukData,
                           scale: newScale,
                           axis: akY),
-                  akY)
+                  akY,
+                  isSecondary)
       )
     result = view.initTicks(axKind, tickLocs = autoTickLocs,
                             tickKind = tickKind,
-                            major = major, style = style)
+                            major = major, style = style,
+                            isSecondary = isSecondary)
     # finally update the scale associated to the view
     case axKind
     of akX:
@@ -1896,7 +2011,9 @@ proc xticks*(view: var Viewport,
              major = true,
              tickKind: TickKind = tkOneSide,
              style: Option[Style] = none[Style](),
-             updateScale = true): seq[GraphObject] =
+             updateScale = true,
+             isSecondary = false
+            ): seq[GraphObject] =
   ## generates the ticks for the x axis. Note that this updates the data
   ## scale of all children and objects of the given viewport. In order
   ## for this to as inexpensive as possible make sure to call this
@@ -1907,7 +2024,8 @@ proc xticks*(view: var Viewport,
                           tickKind = tickKind,
                           major = true,
                           style = style,
-                          updateScale = updateScale)
+                          updateScale = updateScale,
+                          isSecondary = isSecondary)
 
 proc yticks*(view: var Viewport,
              numTicks: int = 10,
@@ -1915,7 +2033,8 @@ proc yticks*(view: var Viewport,
              major = true,
              tickKind: TickKind = tkOneSide,
              style: Option[Style] = none[Style](),
-             updateScale = true): seq[GraphObject] =
+             updateScale = true,
+             isSecondary = false): seq[GraphObject] =
   ## generates the ticks for the y axis. Note that this updates the data
   ## scale of all children and objects of the given viewport. In order
   ## for this to as inexpensive as possible make sure to call this
@@ -1926,7 +2045,8 @@ proc yticks*(view: var Viewport,
                           tickKind = tickKind,
                           major = true,
                           style = style,
-                          updateScale = updateScale)
+                          updateScale = updateScale,
+                          isSecondary = isSecondary)
 
 func calcMinorTicks(ticks: seq[GraphObject], axKind: AxisKind): seq[Coord1D] =
   ## calculates the position in the middle between each tick and
@@ -2180,6 +2300,10 @@ proc drawTick(img: BImage, gobj: GraphObject) =
     # minor ticks use half the width of normal ticks
     style.lineWidth = style.lineWidth / 2.0
     length = length / 2.0
+
+  if gobj.tkSecondary:
+    # if secondary, invert the direction of length
+    length = -length
 
   var
     tkStart: float
