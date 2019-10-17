@@ -660,12 +660,15 @@ proc `+`*(c1, c2: Coord1D): Coord1D =
   ## as the input. Otherwise this will be a lossy conversion to relative
   ## coordinates
   if c1.compatibleKindAndScale(c2):
-    # assign to c1 to keep correct scale
-    result = c1
     if c1.isAbsolute and c2.isAbsolute:
-      result.pos = c1.toPoints.pos + c2.toPoints.pos
-      result.kind = ukPoint
+      result = Coord1D(kind: ukPoint)
+      # assign to var so we can extract `length` if any
+      let c1Pts = c1.toPoints
+      result.pos = c1Pts.pos + c2.toPoints.pos
+      result.length = c1Pts.length
     else:
+      # assign to c1 to keep the scales
+      result = c1
       result.pos = c1.pos + c2.pos
   else:
     result = Coord1D(pos: c1.toRelative.pos + c2.toRelative.pos,
