@@ -1785,6 +1785,17 @@ proc axisCoord*(c: Coord1D, axKind: AxisKind,
     result = Coord(x: YAxisXPos(isSecondary = isSecondary),
                    y: c)
 
+func formatTickValue*(f: float): string =
+  ## performs the formatting of tick labels from the given values
+  ## Uses fixed point notation for values < 1e5 and > 1e-5. Otherwise
+  ## exponential notation with precision 4, zeros are trimmed.
+  if f >= 1e5 or f <= 1e-5:
+    result = f.formatBiggestFloat(format = ffScientific,
+                                precision = 4)
+  else:
+    result = f.formatBiggestFloat(format = ffDefault)
+  result.trimZeros()
+
 proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                  font: Font = Font(
                    family: "sans-serif",
@@ -1805,7 +1816,7 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
     pos = ticks.mapIt(it.tkPos.y.pos)
 
   # determine pretty if we have to modify values
-  let strs = pos.mapIt(&"{it:g}")
+  let strs = pos.mapIt(formatTickValue(it))
   let strslen = strs.len
   let strsunique = strs.deduplicate.len
   var newpos: seq[float]
