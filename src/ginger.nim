@@ -627,7 +627,8 @@ func equalKindAndScale(c1, c2: Coord1D): bool =
     else:
       raise newException(Exception, "strwidth comparison not implemented yet!")
 
-func isAbsolute(c: Coord1D): bool = c.kind in ukPoint .. ukInch
+func isAbsolute(c: Coord1D): bool =
+  c.kind in {ukStrWidth, ukStrHeight, ukPoint, ukCentimeter, ukInch}
 
 func compatibleKindAndScale(c1, c2: Coord1D): bool =
   ## checks whether c1 and c2 are of the same kind and if it's an
