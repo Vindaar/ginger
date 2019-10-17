@@ -1602,8 +1602,6 @@ proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
   when T is Quantity:
     marginVal += margin.toPoints.val
   else:
-    doAssert margin.kind == ukStrWidth or margin.kind == ukStrHeight, "if " &
-      "margin should not be string width based, use a `Quantity` instead!"
     marginVal += margin.toPoints.pos
   if marginVal < marginMin and not isCustomMargin:
     marginVal = marginMin
