@@ -562,8 +562,11 @@ func toPoints*(p: Coord1D,
     of ukInch:
       newPos = p.pos.inchToAbs
     else: raise newException(Exception, "UnitKind is invalid!")
+    var resLength: Option[Quantity]
+    if p.length.isSome:
+      resLength = some(p.length.get.toPoints)
     result = Coord1D(pos: newPos,
-                     length: some(p.length.get.toPoints),
+                     length: resLength,
                      kind: ukPoint)
   of ukData:
     result = result.toRelative.toPoints(length = length)
