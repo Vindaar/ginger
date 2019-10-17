@@ -80,6 +80,17 @@ suite "Coordinate transformations":
     check almostEqual(c1cm.toRelative(length = some(quant(722.7 / 2.54, ukPoint))), c1Rel)
     check almostEqual(c1in.toRelative(length = some(quant(722.7, ukPoint))), c1Rel)
 
+  test "Math with ukStrWidth":
+    # Adding to a ukStrWidth can be useful
+    let c1 = Coord1D(pos: 1.0, kind: ukStrWidth,
+                     text: "Test text", font: Font(family: "sans-serif",
+                                                   size: 16.0,
+                                                   color: black))
+    let c2 = Coord1D(pos: 0.3, kind: ukCentimeter)
+    let c3 = c1 + c2
+    check c3.kind == ukPoint
+    check abs(c3.pos - 79.5358267) < 1e-4
+
 suite "Embeddings":
   test "Dummy":
     # TODO: have to write a lot more test, which test coordinatees under embeddings!

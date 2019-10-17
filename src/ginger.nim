@@ -562,8 +562,11 @@ func toPoints*(p: Coord1D,
     of ukInch:
       newPos = p.pos.inchToAbs
     else: raise newException(Exception, "UnitKind is invalid!")
+    var resLength: Option[Quantity]
+    if p.length.isSome:
+      resLength = some(p.length.get.toPoints)
     result = Coord1D(pos: newPos,
-                     length: some(p.length.get.toPoints),
+                     length: resLength,
                      kind: ukPoint)
   of ukData:
     result = result.toRelative.toPoints(length = length)
@@ -624,7 +627,8 @@ func equalKindAndScale(c1, c2: Coord1D): bool =
     else:
       raise newException(Exception, "strwidth comparison not implemented yet!")
 
-func isAbsolute(c: Coord1D): bool = c.kind in ukPoint .. ukInch
+func isAbsolute(c: Coord1D): bool =
+  c.kind in {ukStrWidth, ukStrHeight, ukPoint, ukCentimeter, ukInch}
 
 func compatibleKindAndScale(c1, c2: Coord1D): bool =
   ## checks whether c1 and c2 are of the same kind and if it's an
@@ -656,12 +660,15 @@ proc `+`*(c1, c2: Coord1D): Coord1D =
   ## as the input. Otherwise this will be a lossy conversion to relative
   ## coordinates
   if c1.compatibleKindAndScale(c2):
-    # assign to c1 to keep correct scale
-    result = c1
     if c1.isAbsolute and c2.isAbsolute:
-      result.pos = c1.toPoints.pos + c2.toPoints.pos
-      result.kind = ukPoint
+      result = Coord1D(kind: ukPoint)
+      # assign to var so we can extract `length` if any
+      let c1Pts = c1.toPoints
+      result.pos = c1Pts.pos + c2.toPoints.pos
+      result.length = c1Pts.length
     else:
+      # assign to c1 to keep the scales
+      result = c1
       result.pos = c1.pos + c2.pos
   else:
     result = Coord1D(pos: c1.toRelative.pos + c2.toRelative.pos,
@@ -1595,8 +1602,6 @@ proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
   when T is Quantity:
     marginVal += margin.toPoints.val
   else:
-    doAssert margin.kind == ukStrWidth or margin.kind == ukStrHeight, "if " &
-      "margin should not be string width based, use a `Quantity` instead!"
     marginVal += margin.toPoints.pos
   if marginVal < marginMin and not isCustomMargin:
     marginVal = marginMin
@@ -1780,6 +1785,17 @@ proc axisCoord*(c: Coord1D, axKind: AxisKind,
     result = Coord(x: YAxisXPos(isSecondary = isSecondary),
                    y: c)
 
+func formatTickValue*(f: float): string =
+  ## performs the formatting of tick labels from the given values
+  ## Uses fixed point notation for values < 1e5 and > 1e-5. Otherwise
+  ## exponential notation with precision 4, zeros are trimmed.
+  if f >= 1e5 or f <= 1e-5:
+    result = f.formatBiggestFloat(format = ffScientific,
+                                precision = 4)
+  else:
+    result = f.formatBiggestFloat(format = ffDefault)
+  result.trimZeros()
+
 proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                  font: Font = Font(
                    family: "sans-serif",
@@ -1800,7 +1816,7 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
     pos = ticks.mapIt(it.tkPos.y.pos)
 
   # determine pretty if we have to modify values
-  let strs = pos.mapIt(&"{it:g}")
+  let strs = pos.mapIt(formatTickValue(it))
   let strslen = strs.len
   let strsunique = strs.deduplicate.len
   var newpos: seq[float]
