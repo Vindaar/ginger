@@ -234,6 +234,29 @@ template YAxisXPos*(view: Option[Viewport] = none[Viewport](),
     else:
       Coord1D(pos: 1.0, kind: ukRelative)
 
+func formatTickValue*(f: float, scale = 0.0): string =
+  ## performs the formatting of tick labels from the given values
+  ## Uses fixed point notation for values < 1e5 and > 1e-5. Otherwise
+  ## exponential notation with precision 4, zeros are trimmed.
+  ## A `scale`, which is (if possible) just the diff of two tick places
+  ## is used to determine whether the given value `f` is supposed to be
+  ## the zero value on the scale. From e.g. `linspace` we might end up
+  ## with `5.1234e-17` for the string representation of zero. The scale
+  ## is required to know whether the values aren't inherently this small.
+  if abs(f) < scale / 10.0:
+    # IMPORTANT: we make a big assumption here! Namely that our tick positions
+    # are "reasonably" placed. If we find a value that's smaller than a
+    # `1/10` of the scale it's probably supposed to be a `"0"`. For some weird
+    # asymmetric tick posisionts this might actually be wrong!
+    result = "0"
+  elif abs(f) >= 1e5 or abs(f) <= 1e-5:
+    result = f.formatBiggestFloat(format = ffScientific,
+                                  precision = 4)
+  else:
+    result = f.formatBiggestFloat(format = ffDefault,
+                                  precision = 4)
+  result.trimZeros()
+
 #template XAxis2YPos*(view: Option[Viewport] = none[Viewport](),
 #                     margin = 0.0): untyped =
 #  ## Y position of the secondary X axis.
@@ -1733,8 +1756,9 @@ proc initTickLabel(view: Viewport,
   case tick.tkAxis
   of akX:
     alignTo = taCenter
+    let scale = loc.x.scale
     let xCoord = Coord1D(pos: loc.x.pos, kind: ukData,
-                         scale: loc.x.scale, axis: akX)
+                         scale: scale, axis: akX)
     # TODO: if we don't convert to relative here, the result (while being 1.0 effectively)
     # will not line up with the correct location! Problem with embedding?
     let yCoord = XAxisYPos(isSecondary = isSecondary) # Coord1D(pos: 1.0, kind: ukRelative) #loc.y.scale.low, kind: ukData,
@@ -1742,7 +1766,11 @@ proc initTickLabel(view: Viewport,
     origin = Coord(x: xCoord,
                    y: yCoord + yLabelOriginOffset(isSecondary))
     if labelTxt.isNone:
-      text = &"{loc.x.pos:g}"
+      # NOTE: for the `tickScale` required for `formatTickValue` we will use the `scale` attached
+      # to the tick position `/ 10.0`. (`10` from the default number of ticks). Since we divide
+      # by 10.0 in `formatTickValue` and users won't be using 1 or 100 ticks, we expect to be able
+      # to detect zero values.
+      text = &"{formatTickValue(loc.x.pos, (scale.high - scale.low) / 10.0)}"
     if gobjName == "tickLabel":
       gobjName = "x" & name
     result = view.initText(origin, text, textKind = goTickLabel,
@@ -1755,15 +1783,20 @@ proc initTickLabel(view: Viewport,
       alignTo = taRight
     else:
       alignTo = taLeft
+    let scale = loc.y.scale
     # TODO: if we don't convert to relative here, the result (while being 0.0 effectively)
     # will not line up with the correct location! Problem with embedding?
     let xCoord = YAxisXPos(isSecondary = isSecondary)
     let yCoord = Coord1D(pos: loc.y.pos, kind: ukData,
-                         scale: loc.y.scale, axis: akY)
+                         scale: scale, axis: akY)
     origin = Coord(x: xCoord + xLabelOriginOffset(isSecondary),
                    y: yCoord)
     if labelTxt.isNone:
-      text = &"{loc.y.pos:g}"
+      # NOTE: for the `tickScale` required for `formatTickValue` we will use the `scale` attached
+      # to the tick position `/ 10.0`. (`10` from the default number of ticks). Since we divide
+      # by 10.0 in `formatTickValue` and users won't be using 1 or 100 ticks, we expect to be able
+      # to detect zero values.
+      text = &"{formatTickValue(loc.y.pos, (scale.high - scale.low) / 10.0)}"
     if gobjName == "tickLabel":
       gobjName = "y" & name
     result = view.initText(origin, text,
@@ -1785,17 +1818,6 @@ proc axisCoord*(c: Coord1D, axKind: AxisKind,
     result = Coord(x: YAxisXPos(isSecondary = isSecondary),
                    y: c)
 
-func formatTickValue*(f: float): string =
-  ## performs the formatting of tick labels from the given values
-  ## Uses fixed point notation for values < 1e5 and > 1e-5. Otherwise
-  ## exponential notation with precision 4, zeros are trimmed.
-  if f >= 1e5 or f <= 1e-5:
-    result = f.formatBiggestFloat(format = ffScientific,
-                                precision = 4)
-  else:
-    result = f.formatBiggestFloat(format = ffDefault)
-  result.trimZeros()
-
 proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                  font: Font = Font(
                    family: "sans-serif",
@@ -1815,15 +1837,18 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
   of akY:
     pos = ticks.mapIt(it.tkPos.y.pos)
 
+  # tick scale (= tick difference) is used to determine if a value is supposed to
+  # be exactly 0
+  let tickScale = (pos.max - pos.min) / (pos.len - 1).float
   # determine pretty if we have to modify values
-  let strs = pos.mapIt(formatTickValue(it))
+  let strs = pos.mapIt(formatTickValue(it, tickScale))
   let strslen = strs.len
   let strsunique = strs.deduplicate.len
-  var newpos: seq[float]
+  var newPos: seq[float]
   if strsunique < strslen:
     # normal stringification loses information, fix
     let min = pos.min
-    newpos = pos.mapIt(it - min)
+    newPos = pos.mapIt(it - min)
     # based on this, add an additional text in top left
     let maxtick = ticks[^1]
     var coord: Coord
@@ -1841,7 +1866,7 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
       rotate = some(-90.0)
     # text that describes what was subtracted
     result.add view.initText(coord,
-                             &"+{min:g}",
+                             &"+{formatTickValue(min)}",
                              textKind = goText,
                              alignKind = taRight,
                              font = some(font),
@@ -1850,7 +1875,7 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
   for i in 0 ..< ticks.len:
     var labelTxt = none[string]()
     if newPos.len > 0:
-      labelTxt = some(&"{newPos[i]:g}")
+      labelTxt = some(&"{formatTickValue(newPos[i], tickScale)}")
     result.add view.initTickLabel(tick = ticks[i], font = font,
                                   labelTxt = labelTxt,
                                   isSecondary = isSecondary)
