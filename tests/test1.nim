@@ -6,7 +6,7 @@
 # To run these tests, simply execute `nimble test`.
 
 import unittest
-import sequtils, math
+import sequtils, math, seqmath
 
 import ginger
 
@@ -283,3 +283,33 @@ suite "Viewport":
         else: check false
     view.children.add child
     view.draw("testAxes.pdf")
+
+  test "Format tick value - zero is \"0\"":
+    # bug: https://github.com/Vindaar/ggplotnim/issues/3
+    # For certain (typically symmetric) scales, we may end up
+    # with zero tick values calculated from e.g. `linspace`, which
+    # were not the start value, e.g.
+    let pos = linspace(-1.0, 1.0, 11)
+    #[
+      in this case the 0 tick position pos[5] will be `O(1e-17)`, due to
+      floating point inaccuracies.
+      We detect this in `formatTickValue` by comparing with the "scale" of
+      the axis, that is the difference between two ticks. We use a heuristic
+      rule to determine if the given tick value is the zero value or not,
+      namely we divide by 10. At least from our automatic tick calculations
+      we will never end up with ticks that go -0.1005, 0.005, 0.0995, where this
+      would fail, due to 0.1 / 10 = 0.01 > 0.005
+      If a user sets custom tick labels this is a non issue; formatTickValue will
+      never be called
+    ]#
+    let expected = ["-1", "-0.8", "-0.6", "-0.4", "-0.2", "0", "0.2",
+                    "0.4", "0.6", "0.8", "1"]
+    for i in 0 .. 10:
+      check expected[i] == formatTickValue(pos[i], 0.2) # `0.2` is the tick difference
+    # on the other hand very small values should still produce the desired result
+    let pos2 = linspace(-1e-12, 1e-12, 11)
+    let expected2 = @["-1e-12", "-8e-13", "-6e-13", "-4e-13", "-2e-13",
+                      "0", "2e-13", "4e-13", "6e-13", "8e-13", "1e-12"]
+    let diff2 = (pos2.max - pos2.min) / 10.0
+    for i in 0 .. 10:
+      check expected2[i] == formatTickValue(pos2[i], diff2) # `0.2` is the tick difference
