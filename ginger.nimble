@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.2"
+version       = "0.1.3"
 author        = "Vindaar"
 description   = "A Grid (R) like package in Nim"
 license       = "MIT"
@@ -10,7 +10,7 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 1.0.0"
-requires "chroma#head"
+requires "chroma >= 0.1.0"
 requires "https://github.com/vindaar/seqmath >= 0.1.3"
 requires "cairo"
 
