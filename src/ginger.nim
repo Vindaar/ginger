@@ -52,9 +52,6 @@ type
     goPolyLine, # a line connecting several points
     goComposite # an object consisting of several other GraphObjects
 
-  MarkerKind* = enum
-    mkCircle, mkCross, mkRotCross, mkStar
-
   CompositeKind* = enum
     cmpErrorBar # an error bar consisting of potentially several lines
 
