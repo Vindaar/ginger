@@ -4,7 +4,7 @@ import types
 
 export types
 export chroma
-export cairo
+#export cairo
 
 import backendCairo
 export backendCairo
