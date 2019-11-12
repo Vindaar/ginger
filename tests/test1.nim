@@ -123,7 +123,7 @@ suite "Viewport":
                              xScale = some(xScale),
                              yScale = some(yScale))
     for p in points:
-      gobjPoints.add initPoint(view2, (x: p.a, y: p.b),
+      gobjPoints.add initPoint(view2, (x: p[0], y: p[0]),
                                marker = mkCross)
     view2.addObj gobjPoints
     for p in view2.objects:
@@ -154,7 +154,7 @@ suite "Viewport":
                              xScale = some(xScale),
                              yScale = some(yScale))
     for p in points:
-      gobjPoints.add initPoint(view2, (x: p.a, y: p.b),
+      gobjPoints.add initPoint(view2, (x: p[0], y: p[0]),
                                marker = mkCross)
     view2.addObj gobjPoints
     for p in view2.objects:
@@ -185,7 +185,7 @@ suite "Viewport":
                              xScale = some(xScale),
                              yScale = some(yScale))
     for p in points:
-      gobjPoints.add initPoint(view2, (x: p.a, y: p.b),
+      gobjPoints.add initPoint(view2, (x: p[0], y: p[0]),
                                marker = mkCross)
     view2.addObj gobjPoints
     for p in view2.objects:
