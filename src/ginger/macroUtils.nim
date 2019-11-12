@@ -60,4 +60,3 @@ macro replace*(c: typed, x: untyped): untyped =
   for ch in x:
     cImpl = findReplace(cImpl, ch)
   result = cImpl
-  echo result.repr

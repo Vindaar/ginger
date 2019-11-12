@@ -45,9 +45,13 @@ type
     slant*: FontSlant
     color*: Color
 
+  MarkerKind* = enum
+    mkCircle, mkCross, mkRotCross, mkStar
+
   Style* = object
     color*: Color
     size*: float
     lineType*: LineType
     lineWidth*: float
     fillColor*: Color
+    marker*: MarkerKind
