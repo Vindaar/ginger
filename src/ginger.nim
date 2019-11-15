@@ -2555,7 +2555,10 @@ proc draw(img: BImage, view: Viewport) =
     #mchView.hImg = quant(view.hImg.val * mchView.height.toRelative(view.wImg).val, ukPoint)
     doAssert mchView.wImg == view.wImg
     doAssert mchView.hImg == view.hImg
-    mchView.rotate = view.rotate
+    if view.rotate.isSome and mchView.rotate.isNone:
+      # only propagate if rotation of parent is set but child has no
+      # rotation itself
+      mchView.rotate = view.rotate
     img.draw(mchView)
 
 proc parseFilename(fname: string): FiletypeKind =
