@@ -1753,21 +1753,23 @@ proc initTickLabel(view: Viewport,
   case tick.tkAxis
   of akX:
     alignTo = taCenter
-    let scale = loc.x.scale
-    let xCoord = Coord1D(pos: loc.x.pos, kind: ukData,
-                         scale: scale, axis: akX)
-    # TODO: if we don't convert to relative here, the result (while being 1.0 effectively)
-    # will not line up with the correct location! Problem with embedding?
-    let yCoord = XAxisYPos(isSecondary = isSecondary) # Coord1D(pos: 1.0, kind: ukRelative) #loc.y.scale.low, kind: ukData,
-    #scale: loc.y.scale, axis: akY)
-    origin = Coord(x: xCoord,
-                   y: yCoord + yLabelOriginOffset(isSecondary))
-    if labelTxt.isNone:
-      # NOTE: for the `tickScale` required for `formatTickValue` we will use the `scale` attached
-      # to the tick position `/ 10.0`. (`10` from the default number of ticks). Since we divide
-      # by 10.0 in `formatTickValue` and users won't be using 1 or 100 ticks, we expect to be able
-      # to detect zero values.
-      text = &"{formatTickValue(loc.x.pos, (scale.high - scale.low) / 10.0)}"
+    let yCoord = XAxisYPos(isSecondary = isSecondary)
+    case loc.x.kind
+    of ukData:
+      let scale = loc.x.scale
+      origin = Coord(x: loc.x,
+                     y: yCoord + yLabelOriginOffset(isSecondary))
+      if labelTxt.isNone:
+        # NOTE: for the `tickScale` required for `formatTickValue` we will use the `scale` attached
+        # to the tick position `/ 10.0`. (`10` from the default number of ticks). Since we divide
+        # by 10.0 in `formatTickValue` and users won't be using 1 or 100 ticks, we expect to be able
+        # to detect zero values.
+        text = &"{formatTickValue(loc.x.pos, (scale.high - scale.low) / 10.0)}"
+    else:
+      doAssert labelTxt.isSome, "if tick contains `tkPos.kind != ukData` a label text " &
+        "must be provided!"
+      origin = Coord(x: loc.x,
+                     y: yCoord + yLabelOriginOffset(isSecondary))
     if gobjName == "tickLabel":
       gobjName = "x" & name
     result = view.initText(origin, text, textKind = goTickLabel,
@@ -1780,20 +1782,24 @@ proc initTickLabel(view: Viewport,
       alignTo = taRight
     else:
       alignTo = taLeft
-    let scale = loc.y.scale
-    # TODO: if we don't convert to relative here, the result (while being 0.0 effectively)
-    # will not line up with the correct location! Problem with embedding?
     let xCoord = YAxisXPos(isSecondary = isSecondary)
-    let yCoord = Coord1D(pos: loc.y.pos, kind: ukData,
-                         scale: scale, axis: akY)
-    origin = Coord(x: xCoord + xLabelOriginOffset(isSecondary),
-                   y: yCoord)
-    if labelTxt.isNone:
-      # NOTE: for the `tickScale` required for `formatTickValue` we will use the `scale` attached
-      # to the tick position `/ 10.0`. (`10` from the default number of ticks). Since we divide
-      # by 10.0 in `formatTickValue` and users won't be using 1 or 100 ticks, we expect to be able
-      # to detect zero values.
-      text = &"{formatTickValue(loc.y.pos, (scale.high - scale.low) / 10.0)}"
+    case loc.y.kind
+    of ukData:
+      let scale = loc.y.scale
+      origin = Coord(x: xCoord + xLabelOriginOffset(isSecondary),
+                     y: loc.y)
+      if labelTxt.isNone:
+        # NOTE: for the `tickScale` required for `formatTickValue` we will use the `scale` attached
+        # to the tick position `/ 10.0`. (`10` from the default number of ticks). Since we divide
+        # by 10.0 in `formatTickValue` and users won't be using 1 or 100 ticks, we expect to be able
+        # to detect zero values.
+        text = &"{formatTickValue(loc.y.pos, (scale.high - scale.low) / 10.0)}"
+    else:
+      doAssert labelTxt.isSome, "if tick contains `tkPos.kind != ukData` a label text " &
+        "must be provided!"
+      origin = Coord(x: xCoord,
+                     y: loc.y + yLabelOriginOffset(isSecondary))
+
     if gobjName == "tickLabel":
       gobjName = "y" & name
     result = view.initText(origin, text,
