@@ -1607,7 +1607,8 @@ proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
                                           font: Option[Font] = none[Font](),
                                           name = "AxisLabel",
                                           isCustomMargin = false,
-                                          isSecondary = false): GraphObject =
+                                          isSecondary = false,
+                                          rotate: Option[float] = none[float]()): GraphObject =
   ## If `isCustomMargin` is set, the raw `margin` value is used to set
   ## the margin. Otherwise a 0.5cm offset is added to the margin, since that way
   ## the margin is relative to the right/top edge of the tick label positions.
@@ -1651,6 +1652,11 @@ proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
     result.rotate = some(-90.0)
     if gobjName == "AxisLabel":
       gobjName = "y" & name
+  # apply given rotation
+  if rotate.isSome:
+    var rot = if result.rotate.isSome: result.rotate.get else: 0.0
+    rot = rotate.get + rot
+    result.rotate = some(rot)
   # set the name
   result.name = gobjName
 
@@ -1659,13 +1665,15 @@ proc xlabel*(view: Viewport,
              margin: Coord1D,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
              name = "xLabel",
-             isSecondary = false): GraphObject =
+             isSecondary = false,
+             rotate = none[float]()): GraphObject =
   result = view.initAxisLabel(label = label,
                               axKind = akX,
                               margin = margin,
                               font = some(font),
                               name = name,
-                              isSecondary = isSecondary)
+                              isSecondary = isSecondary,
+                              rotate = rotate)
 
 proc xlabel*(view: Viewport,
              label: string,
@@ -1673,7 +1681,8 @@ proc xlabel*(view: Viewport,
              margin = 1.0,
              name = "xLabel",
              isCustomMargin = false,
-             isSecondary = false): GraphObject =
+             isSecondary = false,
+             rotate = none[float]()): GraphObject =
   ## margin assumed to be in `cm`!
   result = view.initAxisLabel(label = label,
                               axKind = akX,
@@ -1681,20 +1690,23 @@ proc xlabel*(view: Viewport,
                               font = some(font),
                               name = name,
                               isCustomMargin = isCustomMargin,
-                              isSecondary = isSecondary)
+                              isSecondary = isSecondary,
+                              rotate = rotate)
 
 proc ylabel*(view: Viewport,
              label: string,
              margin: Coord1D,
              font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
              name = "yLabel",
-             isSecondary = false): GraphObject =
+             isSecondary = false,
+             rotate = none[float]()): GraphObject =
   result = view.initAxisLabel(label = label,
                               axKind = akY,
                               margin = margin,
                               font = some(font),
                               name = name,
-                              isSecondary = isSecondary)
+                              isSecondary = isSecondary,
+                              rotate = rotate)
 
 proc ylabel*(view: Viewport,
              label: string,
@@ -1702,7 +1714,8 @@ proc ylabel*(view: Viewport,
              margin = 1.0,
              name = "yLabel",
              isCustomMargin = false,
-             isSecondary = false): GraphObject =
+             isSecondary = false,
+             rotate = none[float]()): GraphObject =
   ## Margin assumed to be in `cm`!
   result = view.initAxisLabel(label = label,
                               axKind = akY,
@@ -1710,7 +1723,8 @@ proc ylabel*(view: Viewport,
                               font = some(font),
                               name = name,
                               isCustomMargin = isCustomMargin,
-                              isSecondary = isSecondary)
+                              isSecondary = isSecondary,
+                              rotate = rotate)
 
 template xLabelOriginOffset(isSecondary = false): untyped =
   if not isSecondary:
@@ -1733,13 +1747,30 @@ template yLabelOriginOffset(isSecondary = false): untyped =
             kind: ukCentimeter,
             length: some(view.wImg))
 
+proc setTextAlignKind(axKind: AxisKind,
+                      isSecondary = false,
+                      alignOverride = none[TextAlignKind]()): TextAlignKind =
+  ## sets the `TextAlignKind` correctly taking into account both the
+  ## axis we're considering and whether an override is available
+  if alignOverride.isSome:
+    result = alignOverride.get
+  else:
+    case axKind
+    of akX: result = taCenter
+    of akY:
+      if not isSecondary:
+        result = taRight
+      else:
+        result = taLeft
+
 proc initTickLabel(view: Viewport,
                    tick: GraphObject,
                    labelTxt: Option[string] = none[string](),
                    font: Font = Font(family: "sans-serif", size: 8.0, color: color(0.0, 0.0, 0.0)),
                    rotate = none[float](),
                    name = "tickLabel",
-                   isSecondary = false): GraphObject =
+                   isSecondary = false,
+                   alignToOverride = none[TextAlignKind]()): GraphObject =
   doAssert tick.kind == goTick, "object must be a `goTick` to create a `goTickLabel`!"
   var label: GraphObject
   var text = ""
@@ -1749,10 +1780,9 @@ proc initTickLabel(view: Viewport,
   var origin: Coord
   let loc = tick.tkPos
 
-  var alignTo: TextAlignKind
+  let alignTo = setTextAlignKind(tick.tkAxis, isSecondary, alignToOverride)
   case tick.tkAxis
   of akX:
-    alignTo = taCenter
     let yCoord = XAxisYPos(isSecondary = isSecondary)
     case loc.x.kind
     of ukData:
@@ -1778,10 +1808,6 @@ proc initTickLabel(view: Viewport,
                            rotate = rotate,
                            name = gobjName)
   of akY:
-    if not isSecondary:
-      alignTo = taRight
-    else:
-      alignTo = taLeft
     let xCoord = YAxisXPos(isSecondary = isSecondary)
     case loc.y.kind
     of ukData:
@@ -1914,7 +1940,9 @@ proc tickLabels*(view: Viewport,
                    family: "sans-serif",
                    size: 8.0,
                    color: color(0.0, 0.0, 0.0)),
-                 isSecondary = false
+                 isSecondary = false,
+                 rotate = none[float](),
+                 alignToOverride = none[TextAlignKind]()
                 ): (seq[GraphObject], seq[GraphObject]) =
   ## Overload of `tickLabels`, which allows to define custom tick label
   ## texts for ticks at positions `tickPos`
@@ -1930,7 +1958,9 @@ proc tickLabels*(view: Viewport,
     result[0][i] = tick
     result[1][i] = view.initTickLabel(tick = tick, font = font,
                                       labelTxt = some(tickLabels[i]),
-                                      isSecondary = isSecondary)
+                                      isSecondary = isSecondary,
+                                      rotate = rotate,
+                                      alignToOverride = alignToOverride)
 
 # taken straight from: *cough*
 # https://stackoverflow.com/questions/4947682/intelligently-calculating-chart-tick-positions
