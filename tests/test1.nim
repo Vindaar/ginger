@@ -232,7 +232,34 @@ suite "Viewport":
         else: check false
 
     block:
-      # x ticks and labels
+      # rotated tick labels and labels, X axis
+      var mch = oldChild
+      let ticksLabs = block:
+                    var locsC: seq[Coord1D]
+                    let locs = linspace(0.1, 0.9, 5)
+                    for i in 0 ..< 5:
+                      locsC.add Coord1D(pos: locs[i], kind: ukRelative)
+                    (locsC, locs.mapIt($it))
+      let (tickObjs, labObjs) = child.tickLabels(ticksLabs[0], ticksLabs[1], akX, rotate = some(-45.0))
+      # rotating the label is probably not that useful most of the time
+      let xLabel = child.xlabel("X label", rotate = some(-30.0))
+      mch.addObj concat(tickObjs, labObjs, @[xlabel])
+      for ch in mch.objects:
+        case ch.kind:
+        of goTick:
+          check ch.tkAxis == akX
+          check ch.tkPos.y == XAxisYPos()
+        of goLabel:
+          check ch.txtText == "X label"
+          check ch.rotate.isSome
+          check ch.rotate.get == -30.0
+        of goTickLabel:
+          check ch.rotate.isSome
+          check ch.rotate.get == -45.0
+        else: check false
+
+    block:
+      # y ticks and labels
       var mch = oldChild
       let yTicks = child.yticks()
       let yLabel = child.ylabel("Y label")
@@ -247,8 +274,36 @@ suite "Viewport":
           check ch.txtText == "Y label"
           check ch.txtPos.x.pos.round.int == -43
         else: check false
+
     block:
-      # x ticks and labels
+      # rotated tick labels and labels, Y axis
+      var mch = oldChild
+      let ticksLabs = block:
+                    var locsC: seq[Coord1D]
+                    let locs = linspace(0.1, 0.9, 5)
+                    for i in 0 ..< 5:
+                      locsC.add Coord1D(pos: locs[i], kind: ukRelative)
+                    (locsC, locs.mapIt($it))
+      let (tickObjs, labObjs) = child.tickLabels(ticksLabs[0], ticksLabs[1], akY, rotate = some(-45.0))
+      # rotating the label is probably not that useful most of the time
+      let yLabel = child.xlabel("Y label", rotate = some(-30.0))
+      mch.addObj concat(tickObjs, labObjs, @[ylabel])
+      for ch in mch.objects:
+        case ch.kind:
+        of goTick:
+          check ch.tkAxis == akY
+          check ch.tkPos.x == YAxisXPos()
+        of goLabel:
+          check ch.txtText == "Y label"
+          check ch.rotate.isSome
+          check ch.rotate.get == -30.0
+        of goTickLabel:
+          check ch.rotate.isSome
+          check ch.rotate.get == -45.0
+        else: check false
+
+    block:
+      # x ticks and labels, secondary
       var mch = oldChild
       let xTicks = child.xticks(isSecondary = true)
       let xLabel = child.xlabel("X label sec", isSecondary = true)
@@ -265,7 +320,7 @@ suite "Viewport":
           check ch.txtPos.y.pos.round.int == -43
         else: check false
     block:
-      # x ticks and labels
+      # y ticks and labels
       var mch = oldChild
       let yTicks = child.yticks(isSecondary =  true)
       let yLabel = child.ylabel("Y label sec", isSecondary = true)

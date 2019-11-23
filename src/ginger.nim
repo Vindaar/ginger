@@ -78,6 +78,7 @@ type
       txtFont*: Font
       txtPos*: Coord
       txtAlign*: TextAlignKind
+      # NOTE: do we need this really?
       txtRotate*: float # possible additional rotation
     of goGrid:
       gdOrigin: Coord     # Coordinate of origin of plot viewport
