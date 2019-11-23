@@ -240,7 +240,8 @@ suite "Viewport":
                     for i in 0 ..< 5:
                       locsC.add Coord1D(pos: locs[i], kind: ukRelative)
                     (locsC, locs.mapIt($it))
-      let (tickObjs, labObjs) = child.tickLabels(ticksLabs[0], ticksLabs[1], akX, rotate = some(-45.0))
+      let (tickObjs, labObjs) = child.tickLabels(ticksLabs[0], ticksLabs[1], akX, rotate = some(-45.0),
+                                                 alignToOverride = some(taRight))
       # rotating the label is probably not that useful most of the time
       let xLabel = child.xlabel("X label", rotate = some(-30.0))
       mch.addObj concat(tickObjs, labObjs, @[xlabel])
@@ -256,6 +257,7 @@ suite "Viewport":
         of goTickLabel:
           check ch.rotate.isSome
           check ch.rotate.get == -45.0
+          check ch.txtAlign == taRight
         else: check false
 
     block:
@@ -284,7 +286,8 @@ suite "Viewport":
                     for i in 0 ..< 5:
                       locsC.add Coord1D(pos: locs[i], kind: ukRelative)
                     (locsC, locs.mapIt($it))
-      let (tickObjs, labObjs) = child.tickLabels(ticksLabs[0], ticksLabs[1], akY, rotate = some(-45.0))
+      let (tickObjs, labObjs) = child.tickLabels(ticksLabs[0], ticksLabs[1], akY, rotate = some(-45.0),
+                                                 alignToOverride = some(taRight))
       # rotating the label is probably not that useful most of the time
       let yLabel = child.xlabel("Y label", rotate = some(-30.0))
       mch.addObj concat(tickObjs, labObjs, @[ylabel])
@@ -300,6 +303,7 @@ suite "Viewport":
         of goTickLabel:
           check ch.rotate.isSome
           check ch.rotate.get == -45.0
+          check ch.txtAlign == taRight
         else: check false
 
     block:
