@@ -192,6 +192,8 @@ type
     hImg*: Quantity
     backend*: BackendKind
 
+const DPI = 72.27
+
 template defaultFont(pts = 12.0): untyped = Font(family: "sans-serif", size: pts, color: color(0.0, 0.0, 0.0))
 
 template setFontOrDefault(setTo, fontArg: untyped): untyped =
@@ -303,8 +305,8 @@ template debug(f: varargs[untyped]): untyped =
 func quant*(val: float, unit: UnitKind): Quantity = (val: val, unit: unit)
 
 template cmToInch(x: float): float = x / 2.54
-template inchToAbs(x: float): float = x * 72.27
-template absToInch(x: float): float = x / 72.27
+template inchToAbs(x: float): float = x * DPI
+template absToInch(x: float): float = x / DPI
 template inchToCm(x: float): float = x * 2.54
 
 func toPoints*(q: Quantity,
@@ -810,16 +812,14 @@ proc to*(p: Coord1D, toKind: UnitKind,
     of ukInch:
       doAssert absLength.isSome, "Conversion to inches requires an absolute length scale!"
       # assumes absLength is size in points!
-      const dpi = 72.27
-      result = Coord1D(pos: pRel.pos * absLength.get().toPoints.val / dpi,
+      result = Coord1D(pos: pRel.pos * absLength.get().toPoints.val / DPI,
                        length: some(absLength.get.toInch),
                        kind: ukInch)
     of ukCentimeter:
       doAssert absLength.isSome, "Conversion to inches requires an absolute length scale!"
       # assumes absLength is size in points!
-      const dpi = 72.27
       const inch = 2.54
-      result = Coord1D(pos: pRel.pos * absLength.get().toPoints.val / dpi * inch,
+      result = Coord1D(pos: pRel.pos * absLength.get().toPoints.val / DPI * inch,
                        length: some(absLength.get.toCentimeter),
                        kind: ukCentimeter)
     of ukData:
