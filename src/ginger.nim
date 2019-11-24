@@ -192,6 +192,16 @@ type
     hImg*: Quantity
     backend*: BackendKind
 
+template defaultFont(pts = 12.0): untyped = Font(family: "sans-serif", size: pts, color: color(0.0, 0.0, 0.0))
+
+template setFontOrDefault(setTo, fontArg: untyped): untyped =
+  ## Helper tempalte to set the `txtFont` field of `setTo` given an option
+  ## `fontArg` or use the default above
+  if fontArg.isSome:
+    setTo.txtFont = fontArg.get
+  else:
+    setTo.txtFont = defaultFont()
+
 template XAxisYPos*(view: Option[Viewport] = none[Viewport](),
                     margin = 0.0,
                     isSecondary = false): untyped =
@@ -1406,10 +1416,7 @@ proc initText*(view: Viewport,
                        txtPos: origin.patchCoord(view))
   if rotate.isSome:
     result.rotate = some(rotate.get())
-  if font.isSome:
-    result.txtFont = font.get()
-  else:
-    result.txtFont = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0))
+  setFontOrDefault(result, font)
 
 proc scaleTo(p: Point, view: Viewport): Point =
   ## scales the point from data coordinates to viewport coordinates
@@ -1632,10 +1639,8 @@ proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
                        name: name,
                        txtText: label,
                        txtAlign: taCenter)
-  if font.isSome:
-    result.txtFont = font.get()
-  else:
-    result.txtFont = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0))
+  # set font or use default
+  setFontOrDefault(result, font)
   var gobjName = name
   case axKind
   of akX:
@@ -1664,7 +1669,7 @@ proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
 proc xlabel*(view: Viewport,
              label: string,
              margin: Coord1D,
-             font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
+             font = defaultFont(),
              name = "xLabel",
              isSecondary = false,
              rotate = none[float]()): GraphObject =
@@ -1678,7 +1683,7 @@ proc xlabel*(view: Viewport,
 
 proc xlabel*(view: Viewport,
              label: string,
-             font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
+             font = defaultFont(),
              margin = 1.0,
              name = "xLabel",
              isCustomMargin = false,
@@ -1697,7 +1702,7 @@ proc xlabel*(view: Viewport,
 proc ylabel*(view: Viewport,
              label: string,
              margin: Coord1D,
-             font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
+             font = defaultFont(),
              name = "yLabel",
              isSecondary = false,
              rotate = none[float]()): GraphObject =
@@ -1711,7 +1716,7 @@ proc ylabel*(view: Viewport,
 
 proc ylabel*(view: Viewport,
              label: string,
-             font = Font(family: "sans-serif", size: 12.0, color: color(0.0, 0.0, 0.0)),
+             font = defaultFont(),
              margin = 1.0,
              name = "yLabel",
              isCustomMargin = false,
@@ -1767,12 +1772,13 @@ proc setTextAlignKind(axKind: AxisKind,
 proc initTickLabel(view: Viewport,
                    tick: GraphObject,
                    labelTxt: Option[string] = none[string](),
-                   font: Font = Font(family: "sans-serif", size: 8.0, color: color(0.0, 0.0, 0.0)),
+                   font: Option[Font] = none[Font](),
                    rotate = none[float](),
                    name = "tickLabel",
                    isSecondary = false,
                    alignToOverride = none[TextAlignKind]()): GraphObject =
   doAssert tick.kind == goTick, "object must be a `goTick` to create a `goTickLabel`!"
+  let mfont = if font.isNone: some(defaultFont(8.0)) else: font
   var label: GraphObject
   var text = ""
   if labelTxt.isSome:
@@ -1805,7 +1811,7 @@ proc initTickLabel(view: Viewport,
       gobjName = "x" & name
     result = view.initText(origin, text, textKind = goTickLabel,
                            alignKind = alignTo,
-                           font = some(font),
+                           font = mfont,
                            rotate = rotate,
                            name = gobjName)
   of akY:
@@ -1832,7 +1838,7 @@ proc initTickLabel(view: Viewport,
     result = view.initText(origin, text,
                            textKind = goTickLabel,
                            alignKind = alignTo,
-                           font = some(font),
+                           font = mfont,
                            rotate = rotate,
                            name = gobjName)
 
@@ -1849,17 +1855,14 @@ proc axisCoord*(c: Coord1D, axKind: AxisKind,
                    y: c)
 
 proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
-                 font: Font = Font(
-                   family: "sans-serif",
-                   size: 8.0,
-                   color: color(0.0, 0.0, 0.0)),
-                  isSecondary = false,
+                 font: Option[Font] = none[Font](),
+                 isSecondary = false,
                 ): seq[GraphObject] =
   ## returns all tick labels for the given ticks
   ## TODO: Clean up the auto subtraction code!
   doAssert ticks[0].kind == goTick
   let axKind = ticks[0].tkAxis
-
+  let mfont = if font.isNone: some(defaultFont(8.0)) else: font
   var pos: seq[float]
   case axKind
   of akX:
@@ -1899,7 +1902,7 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                              &"+{formatTickValue(min)}",
                              textKind = goText,
                              alignKind = taRight,
-                             font = some(font),
+                             font = font,
                              rotate = rotate,
                              name = "axisSubtraction")
   for i in 0 ..< ticks.len:
@@ -1937,10 +1940,7 @@ proc tickLabels*(view: Viewport,
                  tickPos: seq[Coord1D],
                  tickLabels: seq[string],
                  axKind: AxisKind,
-                 font: Font = Font(
-                   family: "sans-serif",
-                   size: 8.0,
-                   color: color(0.0, 0.0, 0.0)),
+                 font: Option[Font] = none[Font](),
                  isSecondary = false,
                  rotate = none[float](),
                  alignToOverride = none[TextAlignKind]()
@@ -1949,6 +1949,7 @@ proc tickLabels*(view: Viewport,
   ## texts for ticks at positions `tickPos`
   doAssert tickPos.len == tickLabels.len, "must have as many tick positions " &
     "as label texts!"
+  let mfont = if font.isNone: some(defaultFont(8.0)) else: font
   result[0] = newSeq[GraphObject](tickPos.len)
   result[1] = newSeq[GraphObject](tickPos.len)
   for i in 0 ..< tickPos.len:
@@ -1957,7 +1958,7 @@ proc tickLabels*(view: Viewport,
                              major = true,
                              isSecondary = isSecondary)
     result[0][i] = tick
-    result[1][i] = view.initTickLabel(tick = tick, font = font,
+    result[1][i] = view.initTickLabel(tick = tick, font = mfont,
                                       labelTxt = some(tickLabels[i]),
                                       isSecondary = isSecondary,
                                       rotate = rotate,
@@ -2726,18 +2727,14 @@ when isMainModule:
                               "Hello",
                               textKind = goText,
                               alignKind = taCenter,
-                              font = some(Font(family: "serif",
-                                   size: 12.0,
-                                   color: color(0.0, 0.0, 0.0))))
+                              font = defaultFont())
 
 
     let textRot = view2.initText(initCoord(-0.05, 0.5),
                                  "Counts",
                                  textKind = goText,
                                  alignKind = taCenter,
-                                 font = some(Font(family: "serif",
-                                             size: 12.0,
-                                             color: color(0.0, 0.0, 0.0))),
+                                 font = some(defaultFont()),
                                  rotate = some(90.0))
     var textRot2 = textRot
     textRot2.txtAlign = taLeft
