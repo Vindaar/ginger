@@ -2477,29 +2477,6 @@ proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
     # composite has nothing to be drawn, only children, which are handled individually
     discard
 
-proc draw*(img: BImage, gobj: GraphObject) =
-  ## draws the given graph object on the image
-  let globalObj = gobj.toGlobalCoords(img)
-
-  case gobj.kind
-  of goLine, goAxis:
-    img.drawLine(globalObj)
-  of goRect:
-    img.drawRect(globalObj)
-  of goPoint:
-    img.drawPoint(globalObj)
-  of goPolyLine:
-    img.drawPolyLine(globalObj)
-  of goLabel, goText, goTickLabel:
-    img.drawText(globalObj)
-  of goTick:
-    img.drawTick(globalObj)
-  of goGrid:
-    img.drawGrid(globalObj)
-  of goComposite:
-    # composite itself has nothing to be drawn, only children handled individually
-    discard
-
 iterator items*(view: Viewport): Viewport =
   for ch in view.children:
     yield ch
@@ -2550,6 +2527,41 @@ proc getCenter*(view: Viewport): (float, float) =
     centerY = bottom(view).pos + height(view).val / 2.0
   result = (centerX, centerY)
 
+proc parseFilename(fname: string): FiletypeKind =
+  let (_, _, ext) = fname.splitFile
+  case ext.normalize
+  of ".pdf":
+    result = fkPdf
+  of ".svg":
+    result = fkSvg
+  of ".png":
+    result = fkPng
+  else:
+    result = fkPdf
+
+proc draw*(img: BImage, gobj: GraphObject) =
+  ## draws the given graph object on the image
+  let globalObj = gobj.toGlobalCoords(img)
+
+  case gobj.kind
+  of goLine, goAxis:
+    img.drawLine(globalObj)
+  of goRect:
+    img.drawRect(globalObj)
+  of goPoint:
+    img.drawPoint(globalObj)
+  of goPolyLine:
+    img.drawPolyLine(globalObj)
+  of goLabel, goText, goTickLabel:
+    img.drawText(globalObj)
+  of goTick:
+    img.drawTick(globalObj)
+  of goGrid:
+    img.drawGrid(globalObj)
+  of goComposite:
+    # composite itself has nothing to be drawn, only children handled individually
+    discard
+
 proc draw(img: BImage, view: Viewport) =
   ## draws the full viewport including all objects and all
   ## children onto the image
@@ -2593,28 +2605,22 @@ proc draw(img: BImage, view: Viewport) =
       mchView.rotate = view.rotate
     img.draw(mchView)
 
-proc parseFilename(fname: string): FiletypeKind =
-  let (_, _, ext) = fname.splitFile
-  case ext.normalize
-  of ".pdf":
-    result = fkPdf
-  of ".svg":
-    result = fkSvg
-  of ".png":
-    result = fkPng
-  else:
-    result = fkPdf
-
-proc draw*(view: Viewport, filename: string) =
-  ## draws the given viewport and all its children and stores it in the
-  ## file `filename`
-  let ftype = parseFilename(filename)
-  var img = initBImage(filename,
-                       width = view.wImg.val.round.int, height = view.hImg.val.round.int,
-                       backend = view.backend,
-                       ftype = ftype)
-  img.draw(view)
-  img.destroy()
+when not defined(noCairo):
+  proc draw*(view: Viewport, filename: string) =
+    ## draws the given viewport and all its children and stores it in the
+    ## file `filename`
+    let ftype = parseFilename(filename)
+    var img = initBImage(filename,
+                         width = view.wImg.val.round.int, height = view.hImg.val.round.int,
+                         backend = view.backend,
+                         ftype = ftype)
+    img.draw(view)
+    img.destroy()
+else:
+  proc draw*(view: Viewport, filename: string) =
+    static: echo "Compiling draw as a dummy proc"
+    echo "WARNING: Compiled with `-d:noCairo`. `draw` does not do anything " &
+      "in this compilation mode!"
 
 when isMainModule:
 

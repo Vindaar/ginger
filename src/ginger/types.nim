@@ -1,5 +1,20 @@
-import cairo
 import chroma
+
+when not defined(noCairo):
+  import cairo
+else:
+  type
+    TSurface = object
+      discard
+    PSurface = ptr TSurface
+
+    TTextExtents = object
+      x_bearing*: float64
+      y_bearing*: float64
+      width*: float64
+      height*: float64
+      x_advance*: float64
+      y_advance*: float64
 
 type
   BackendKind* = enum
