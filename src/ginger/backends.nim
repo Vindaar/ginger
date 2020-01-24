@@ -1,26 +1,32 @@
-import cairo
 import chroma
 import types
 
 export types
 export chroma
-#export cairo
 
-import backendCairo
-export backendCairo
 
-proc destroy*(img: var BImage) =
-  case img.backend
-  of bkCairo:
-    case img.fType
-    of fkPng:
-      let err = img.cCanvas.write_to_png(img.fname)
-      echo err, " output of write_to_png"
-    else: discard # not needed for SVG, PDF
-    img.cCanvas.destroy()
-  of bkVega:
-    discard
+when not defined(noCairo):
+  import cairo
+  import backendCairo
+  export backendCairo
 
+  proc destroy*(img: var BImage) =
+    case img.backend
+    of bkCairo:
+      case img.fType
+      of fkPng:
+        let err = img.cCanvas.write_to_png(img.fname)
+        echo err, " output of write_to_png"
+      else: discard # not needed for SVG, PDF
+      img.cCanvas.destroy()
+    of bkVega:
+      discard
+else:
+  proc destroy*(img: var BImage) =
+    echo "Nothing to destroy when compiled without backend."
+
+  import backendDummy
+  export backendDummy
 
 when isMainModule:
   # backend layer cairo code
