@@ -89,7 +89,7 @@ suite "Coordinate transformations":
     let c2 = Coord1D(pos: 0.3, kind: ukCentimeter)
     let c3 = c1 + c2
     check c3.kind == ukPoint
-    check abs(c3.pos - 79.5358267) < 1e-4
+    check abs(c3.pos - 77.5358267) < 1e-4
 
 suite "Embeddings":
   test "Dummy":
