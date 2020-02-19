@@ -1423,6 +1423,9 @@ proc initText*(view: Viewport,
                font: Option[Font] = none[Font](),
                rotate = none[float](),
                name = "text"): GraphObject =
+  ## Creates a text based `GraphObject` of kind `textKind`.
+  ## This proc does ``not`` support multiple lines! Use `initMultiText`
+  ## instead if that is required.
   assert textKind in {goText, goLabel, goTickLabel}
   result = GraphObject(kind: textKind,
                        name: name,
@@ -1432,6 +1435,87 @@ proc initText*(view: Viewport,
   if rotate.isSome:
     result.rotate = some(rotate.get())
   setFontOrDefault(result, font)
+
+proc strHeight*(val: float, font: Font): Coord1D =
+  ## returns a Coord1D of kind `ukStrHeight` for the given
+  ## number of times the string height `val` for font `font`.
+  ## We use `'W'` to determine the height of the given font
+  result = Coord1D(pos: val, kind: ukStrHeight,
+                   text: "W",
+                   font: font)
+
+proc getStrHeight*(text: string, font: Font): Quantity =
+  ## returns a quantity of the height of the given `text` under
+  ## the given `font`, taking into account multiple lines. The
+  ## result is of kind `ukPoint`.
+  ## NOTE: This currently uses a hardcoded line spacing, which is
+  ## the same as the one used in `initMultiLineText` below!
+  let numLines = text.splitLines.len
+  # ``N lines + (N - 1) * (LineSpacing - 1.0)``
+  result = quant(
+    val = toPoints(
+      strHeight(numLines.float * 1.75, font),
+      #strHeight((numLines).float + (numLines - 1).float * 0.75, font)
+      #strHeight((numLines.float - 1.0) * 1.75, font)
+    ).pos,
+    unit = ukPoint
+  )
+
+proc getStrWidth*(text: string, font: Font): Quantity =
+  ## returns a Quantity of kind `ukStrWidth` for the given
+  ## string under the font `font` of unit kind `ukPoint`
+  result = quant(
+    val = toPoints(
+      Coord1D(pos: 1.0, kind: ukStrWidth,
+              text: text,
+              font: font)
+    ).pos,
+    unit = ukPoint
+  )
+
+proc initMultiLineText*(view: Viewport,
+                        origin: Coord,
+                        text: string,
+                        textKind: static GraphObjectKind,
+                        alignKind: TextAlignKind,
+                        fontOpt: Option[Font] = none[Font](),
+                        rotate = none[float](),
+                        name = "multiLineText"): seq[GraphObject] =
+  ## Creates a text based `GraphObject` of kind `textKind`.
+  ## This proc will split the input `text` by lines and return
+  ## a properly spaced sequence of text objects, which conform to
+  ## the desired text alignment and font while keeping a spacing
+  ## of 0.75 of the text height.
+  ## NOTE: The current spacing of 0.75 seems excessive to me. As far
+  ## as I'm aware typical spacings range from 0.2 to 0.45
+  ## Maybe our calculation for the string height or the addition of
+  ## those coordinates is off! Thus for the time being, we leave this
+  ## hardcoded, since this works for now.
+  assert textKind in {goText, goLabel, goTickLabel}
+  let font = if fontOpt.isSome: fontOpt.unsafeGet else: defaultFont()
+  let lines = text.splitLines
+  let totalHeight = getStrHeight(text, font)
+  let numLines = lines.len
+  for idx, line in lines:
+    # calculate new y position based on previous position and
+    # number of lines
+    # we subtract -1.0 * height for (N - 1) spacings
+    # and an additional (-0.5 * height) to account for current text being
+    # centered on center of line, not bottom
+    let newY = origin.y - toRelative(
+      strHeight((numLines.float - idx.float - 0.5).float * 1.75, font),
+      length = some(view.hImg)
+    )
+    let newOrigin = Coord(x: origin.x,
+                          y: newY)
+    result.add view.initText(origin = newOrigin,
+                             text = line,
+                             textKind = textKind,
+                             alignKind = alignKind,
+                             font = some(font),
+                             rotate = rotate,
+                             name = $name & $idx
+    )
 
 proc scaleTo(p: Point, view: Viewport): Point =
   ## scales the point from data coordinates to viewport coordinates
