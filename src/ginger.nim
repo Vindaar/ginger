@@ -570,8 +570,9 @@ func toRelative*(p: Coord1D,
     if length.isSome:
       result = Coord1D(pos: (p.pos * relevantDim) / length.unsafeGet.toPoints.val,
                        kind: ukRelative)
-    raise newException(Exception,
-                       "Conversion from StrWidth to relative requires a length scale!")
+    else:
+      raise newException(Exception,
+                         "Conversion from StrWidth to relative requires a length scale!")
 
 func toPoints*(p: Coord1D,
                length: Option[Quantity] = none[Quantity]()): Coord1D =
