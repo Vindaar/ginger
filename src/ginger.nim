@@ -937,6 +937,18 @@ proc height*(view: Viewport): Quantity =
   ## ukRelative!
   result = view.height.toRelative(length = some(view.hView))
 
+proc pointWidth*(view: Viewport): Quantity =
+  ## returns the width of the given viewport in absolute points
+  doAssert view.wView.unit == ukPoint
+  doAssert view.width.unit == ukRelative
+  result = quant(view.wView.val * view.width.val, unit = ukPoint)
+
+proc pointHeight*(view: Viewport): Quantity =
+  ## returns the height of the given viewport in absolute points
+  doAssert view.hView.unit == ukPoint
+  doAssert view.height.unit == ukRelative
+  result = quant(view.hView.val * view.height.val, unit = ukPoint)
+
 func updateScale(view: Viewport, c: var Coord1D) =
   ## update the scale coordinate of the 1D coordinate `c` in place
   if c.kind == ukData:
