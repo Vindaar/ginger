@@ -2115,6 +2115,20 @@ proc calcTickLocations*(scale: Scale, numTicks: int): (Scale, float, int) =
             niceTick,
             ((newAxEnd - newAxStart) / niceTick).round.int)
 
+proc filterByBoundScale(tickPos: var seq[Coord], axKind: AxisKind,
+                        boundScale: Option[Scale]) =
+  ## performs the filtering of the tick positions given an optional
+  ## `boundScale`. Only those tick positions inside the bound scale
+  ## will remain
+  proc getAx(c: Coord, axKind: AxisKind): float =
+    case axKind
+    of akX: c.x.pos
+    of akY: c.y.pos
+  if boundScale.isSome:
+    let bscale = boundScale.unsafeGet
+    tickPos = tickPos.filterIt(getAx(it, axKind) >= bscale.low and
+                               getAx(it, axKind) <= bscale.high)
+
 proc initTicks*(view: var Viewport,
                 axKind: AxisKind,
                 numTicks: int = 0,
@@ -2123,12 +2137,20 @@ proc initTicks*(view: var Viewport,
                 major = true,
                 style: Option[Style] = none[Style](),
                 updateScale = true,
-                isSecondary = false): seq[GraphObject] =
+                isSecondary = false,
+                boundScale = none[Scale]()): seq[GraphObject] =
   ## Initializes the tick positions for the given `axKind` for either
   ## `major` or `minor` (`major == false`) ticks.
   ## If `updateScale` is true will recursively update all data scales
   ## associated to the viewports children and objects. Set `updateScale`
   ## to `false` only if you're certain that the update is unnecessary!
+  ## `boundScale` can be used to bound the possible range of the range
+  ## in which any ticks will be created.
+  ## The algorithm will run as it does without, but only those ticks inside
+  ## of the bounds will actually be added.
+  ## This however does ``not`` affect the result if called with `tickLocs`! In
+  ## that case the caller is responsible for selecting the ticks. Also the
+  ## updated data scale of the viewport may lie outside the `boundScale`!
   # check whether there
   if numTicks == 0 and tickLocs.len == 0:
     raise newException(ValueError, "Either need a number of ticks or tick " &
@@ -2147,7 +2169,8 @@ proc initTicks*(view: var Viewport,
 
     let (newScale, newWidth, newNumTicks) = calcTickLocations(scale, numTicks)
     var autoTickLocs: seq[Coord]
-    if axKind == akX:
+    case axKind
+    of akX:
       autoTickLocs = linspace(newScale.low, newScale.high, newNumTicks + 1).mapIt(
         axisCoord(Coord1D(pos: it,
                           kind: ukData,
@@ -2156,7 +2179,7 @@ proc initTicks*(view: var Viewport,
                   akX,
                   isSecondary)
       )
-    else:
+    of akY:
       autoTickLocs = linspace(newScale.low, newScale.high, newNumTicks + 1).mapIt(
         axisCoord(Coord1D(pos: it,
                           kind: ukData,
@@ -2165,6 +2188,8 @@ proc initTicks*(view: var Viewport,
                   akY,
                   isSecondary)
       )
+    # if there is a `boundScale` filter by it
+    autoTickLocs.filterByBoundScale(axKind, boundScale)
     result = view.initTicks(axKind, tickLocs = autoTickLocs,
                             tickKind = tickKind,
                             major = major, style = style,
