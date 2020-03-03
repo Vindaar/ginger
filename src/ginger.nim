@@ -904,10 +904,35 @@ proc `[]`*(view: var Viewport, idx: int): var Viewport =
     raise newException(IndexError, "`idx` is invalid for " & $view.children.len &
       " children viewports!")
 
+proc embedInto(view: Viewport, into: Viewport): Viewport
+proc updateSizeNewRoot(view: var Viewport) =
+  ## recursively updates all children viewports to the (possibly) new
+  ## size of the new root `view`.
+  ## This is useful when creating a new viewport, which is to emcompass two
+  ## fully fledged viewports (e.g. two ggplotnim plots).
+  for ch in mitems(view.children):
+    ch.wImg = view.wImg
+    ch.hImg = view.hImg
+    # TODO: also update the `wView`, `hView` fields!
+    ch.updateSizeNewRoot()
+
 proc `[]=`*(view: var Viewport, idx: int, viewToSet: Viewport) =
   ## override the `idx` child of `view` with `viewToSet`
   if view.children.len > idx:
     view.children[idx] = viewToSet
+  else:
+    raise newException(IndexError, "`idx` is invalid for " & $view.children.len &
+      " children viewports!")
+
+proc embedAt*(view: var Viewport, idx: int, viewToEmbed: Viewport) =
+  ## embeds the `viewToEmbed` into `view` at child index `idx`. This proc
+  ## updates the widths and heights to the `view.wImg`, `view.hImg` of all
+  ## `viewToEmbed` children. This proc is to be used if one wishes to assign
+  ## to `viewToEmbed` to a child of `view`, which have different sizes.
+  ## Useful to combine two or more finished views to e.g. a grid.
+  if view.children.len > idx:
+    view[idx] = embedInto(viewToEmbed, view[idx])
+    view.updateSizeNewRoot()
   else:
     raise newException(IndexError, "`idx` is invalid for " & $view.children.len &
       " children viewports!")

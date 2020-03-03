@@ -372,3 +372,40 @@ suite "Viewport":
     let diff2 = (pos2.max - pos2.min) / 10.0
     for i in 0 .. 10:
       check expected2[i] == formatTickValue(pos2[i], diff2) # `0.2` is the tick difference
+
+  test "Embed two finished plots into new root viewport":
+    var plt1 = initViewport(name = "root1", wImg = 640.0, hImg = 480.0)
+    # generate some children of `plt1`
+    plt1.layout(2, 2)
+    let plt2 = initViewport(name = "root2", wImg = 640.0, hImg = 480.0)
+
+    check plt1.wImg == quant(640.0, ukPoint)
+    check plt1.hImg == quant(480.0, ukPoint)
+    check plt2.wImg == quant(640.0, ukPoint)
+    check plt2.hImg == quant(480.0, ukPoint)
+    for ch in plt1:
+      check ch.wImg == quant(640.0, ukPoint)
+      check ch.hImg == quant(480.0, ukPoint)
+
+    # create new root viewport
+    var plt = initViewport(name = "newRoot", wImg = 640.0, hImg = 480.0 * 2.0)
+    # layout of 2 rows
+    plt.layout(1, rows = 2)
+
+    # embed via `embedInto`
+    # NOTE: Assigning via `[]=` does not work correctly, because the two
+    # viewports do not have the same `wImg`, `hImg`!
+    # We need to use a proc which updates the `wImg` and `hImg` of the children
+    plt.embedAt(0, plt1)
+    plt.embedAt(1, plt2)
+
+    check plt[0].name == "root1"
+    check plt[1].name == "root2"
+
+    proc checkRecurse(view: var Viewport) =
+      for ch in mitems(view):
+        check ch.wImg == quant(640.0, ukPoint)
+        check ch.hImg == quant(480.0 * 2.0, ukPoint)
+        ch.checkRecurse()
+
+    plt.checkRecurse()
