@@ -42,6 +42,10 @@ type
   LineType* = enum
     ltNone, ltSolid, ltDashed, ltDotted, ltDotDash, ltLongDash, ltTwoDash
 
+  ErrorBarKind* = enum
+    ebLines, # simple lines extending the error
+    ebLinesT # lines with an orthogonal line at ends, like a `T`
+
   TextAlignKind* = enum
     taLeft, taCenter, taRight
 
@@ -70,3 +74,4 @@ type
     lineWidth*: float
     fillColor*: Color
     marker*: MarkerKind
+    errorBarKind*: ErrorBarKind

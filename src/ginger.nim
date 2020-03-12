@@ -55,10 +55,6 @@ type
   CompositeKind* = enum
     cmpErrorBar # an error bar consisting of potentially several lines
 
-  ErrorBarKind* = enum
-    ebLines, # simple lines extending the error
-    ebLinesT # lines with an orthogonal line at ends, like a `T`
-
   TickKind* = enum
     tkOneSide, # only outside the plot
     tkBothSides # inside and outside the plot
@@ -1600,14 +1596,14 @@ func isScaleNonTrivial(c: Coord1D): bool =
 func isScaleNonTrivial(c: Coord): bool =
   result = c.x.isScaleNonTrivial and c.y.isScaleNonTrivial
 
-proc initErrorBar(view: Viewport,
-                  pt: GraphObject,
-                  errorUp: Coord1D,
-                  errorDown: Coord1D,
-                  axKind: AxisKind,
-                  ebKind: ErrorBarKind,
-                  style: Option[Style] = none[Style](),
-                  name = "errorBar"): GraphObject =
+proc initErrorBar*(view: Viewport,
+                   pt: Coord,
+                   errorUp: Coord1D,
+                   errorDown: Coord1D,
+                   axKind: AxisKind,
+                   ebKind: ErrorBarKind,
+                   style: Option[Style] = none[Style](),
+                   name = "errorBar"): GraphObject =
   ## creates an error bar for the point `pt` of kind `ebKind` with the
   ## errors given by `errorUp`  and `errorDown` along the axis `axKind`.
   ## If the `axKind` is `akX`, `errorUp` will describe the increase along
@@ -1624,17 +1620,16 @@ proc initErrorBar(view: Viewport,
             size: 10.0) # describes length of orthogonal line of `ebLinesT`
     )
   # in case the user hands the errors as `ukData`, update the scale
-  doAssert pt.ptPos.isScaleNonTrivial, "Data scale must be non trivial!"
-  var
-    # error variables with appropriate scales, if `ukData`
-    errUp: Coord1D
-    errDown: Coord1D
-
+  #doAssert pt.ptPos.isScaleNonTrivial, "Data scale must be non trivial!"
+  #var
+  #  # error variables with appropriate scales, if `ukData`
+  #  errUp: Coord1D
+  #  errDown: Coord1D
+  #errUp = view.updateScale(errorUp)
+  #errDown = view.updateScale(errorDown)
   template createLines(axKind, x1, x2, y1, y2: untyped): untyped =
-    errUp = view.updateScale(errorUp)
-    errDown = view.updateScale(errorUp)
     let chUp = view.initLine(
-      start = pt.ptPos,
+      start = pt,
       stop = Coord(
         x: x1,
         y: y1
@@ -1642,7 +1637,7 @@ proc initErrorBar(view: Viewport,
       style = style
     )
     let chDown = view.initLine(
-      start = pt.ptPos,
+      start = pt,
       stop = Coord(
         x: x2,
         y: y2,
@@ -1656,62 +1651,101 @@ proc initErrorBar(view: Viewport,
     case axKind
     of akX:
       createLines(akX,
-                  x1 = pt.ptPos.x + errUp,
-                  x2 = pt.ptPos.x - errDown,
-                  y1 = pt.ptPos.y,
-                  y2 = pt.ptPos.y)
+                  x1 = errorUp,
+                  x2 = errorDown,
+                  y1 = pt.y,
+                  y2 = pt.y)
     of akY:
       createLines(akY,
-                  x1 = pt.ptPos.x,
-                  x2 = pt.ptPos.x,
-                  y1 = pt.ptPos.y + errUp,
-                  y2 = pt.ptPos.y - errDown)
+                  x1 = pt.x,
+                  x2 = pt.x,
+                  y1 = errorUp,
+                  y2 = errorDown)
   of ebLinesT:
+    echo "EB LINES T"
     let locStyle = result.style.get()
     case axKind
     of akX:
       createLines(akX,
-                  x1 = pt.ptPos.x + errUp,
-                  x2 = pt.ptPos.x - errDown,
-                  y1 = pt.ptPos.y,
-                  y2 = pt.ptPos.y)
+                  x1 = errorUp,
+                  x2 = errorDown,
+                  y1 = pt.y,
+                  y2 = pt.y)
       let chRight = view.initLine(
-        start = Coord(x: pt.ptPos.x + errUp,
-                      y: pt.ptPos.y - view.c1(locStyle.size, akY, ukPoint)),
-        stop = Coord(x: pt.ptPos.x + errUp,
-                     y: pt.ptPos.y + view.c1(locStyle.size, akY, ukPoint)),
+        start = Coord(x: errorUp,
+                      y: pt.y - view.c1(locStyle.size, akY, ukPoint)),
+        stop = Coord(x: errorUp,
+                     y: pt.y + view.c1(locStyle.size, akY, ukPoint)),
         style = style
       )
       let chLeft = view.initLine(
-        start = Coord(x: pt.ptPos.x - errDown,
-                      y: pt.ptPos.y - view.c1(locStyle.size, akY, ukPoint)),
-        stop = Coord(x: pt.ptPos.x - errDown,
-                     y: pt.ptPos.y + view.c1(locStyle.size, akY, ukPoint)),
+        start = Coord(x: errorDown,
+                      y: pt.y - view.c1(locStyle.size, akY, ukPoint)),
+        stop = Coord(x: errorDown,
+                     y: pt.y + view.c1(locStyle.size, akY, ukPoint)),
         style = style
       )
       result.children.add @[chRight, chLeft]
     of akY:
       createLines(akY,
-                  x1 = pt.ptPos.x,
-                  x2 = pt.ptPos.x,
-                  y1 = pt.ptPos.y + errUp,
-                  y2 = pt.ptPos.y - errDown)
+                  x1 = pt.x,
+                  x2 = pt.x,
+                  y1 = errorUp,
+                  y2 = errorDown)
+      echo "! ", view.c1(locStyle.size, akY, ukPoint)
+
       let chUp = view.initLine(
-        start = Coord(x: pt.ptPos.x - view.c1(locStyle.size, akX, ukPoint),
-                      y: pt.ptPos.y - errUp),
-        stop = Coord(x: pt.ptPos.x + view.c1(locStyle.size, akX, ukPoint),
-                     y: pt.ptPos.y - errUp),
+        start = Coord(x: pt.x - view.c1(locStyle.size, akX, ukPoint),
+                      y: errorUp),
+        stop = Coord(x: pt.x + view.c1(locStyle.size, akX, ukPoint),
+                     y: errorUp),
         style = style
       )
       let chDown = view.initLine(
-        start = Coord(x: pt.ptPos.x - view.c1(locStyle.size, akX, ukPoint),
-                      y: pt.ptPos.y + errDown),
-        stop = Coord(x: pt.ptPos.x + view.c1(locStyle.size, akX, ukPoint),
-                     y: pt.ptPos.y + errDown),
+        start = Coord(x: pt.x - view.c1(locStyle.size, akX, ukPoint),
+                      y: errorDown),
+        stop = Coord(x: pt.x + view.c1(locStyle.size, akX, ukPoint),
+                     y: errorDown),
         style = style
       )
       result.children.add @[chUp, chDown]
   #else: discard
+
+proc initErrorBar*(view: Viewport,
+                   pt: Point,
+                   errorUp: Coord1D,
+                   errorDown: Coord1D,
+                   axKind: AxisKind,
+                   ebKind: ErrorBarKind,
+                   style: Option[Style] = none[Style](),
+                   name = "errorBar"): GraphObject =
+  ## This version of `initErrorBar` uses the `errorUp` and `errorDown`
+  ## values as absolute values. There is no reference point. The
+  ## given `pt` is used to determine the x or y value of the
+  ## orthogonal axis.
+  var pos: Coord
+  case axKind
+  of akX:
+    pos = Coord(x: Coord1D(pos: pt.x,
+                           scale: view.xScale,
+                           axis: akX,
+                           kind: ukData),
+                y: Coord1D(pos: pt.y,
+                           scale: view.yScale,
+                           axis: akY,
+                           kind: ukData))
+  of akY:
+    pos = Coord(x: Coord1D(pos: pt.x,
+                           scale: view.xScale,
+                           axis: akX,
+                           kind: ukData),
+                y: Coord1D(pos: pt.y,
+                           scale: view.yScale,
+                           axis: akY,
+                           kind: ukData))
+  result = view.initErrorBar(pos, errorUp, errorDown,
+                             axKind, ebKind, style, name)
+
 
 proc initPolyLine*(view: Viewport,
                    pos: seq[Point],
