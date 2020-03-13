@@ -1662,7 +1662,6 @@ proc initErrorBar*(view: Viewport,
                   y1 = errorUp,
                   y2 = errorDown)
   of ebLinesT:
-    echo "EB LINES T"
     let locStyle = result.style.get()
     case axKind
     of akX:
@@ -1692,7 +1691,6 @@ proc initErrorBar*(view: Viewport,
                   x2 = pt.x,
                   y1 = errorUp,
                   y2 = errorDown)
-      echo "! ", view.c1(locStyle.size, akY, ukPoint)
 
       let chUp = view.initLine(
         start = Coord(x: pt.x - view.c1(locStyle.size, akX, ukPoint),
