@@ -1776,7 +1776,7 @@ proc initPolyLine*(view: Viewport,
       x: Coord1D(pos: p.x, scale: view.xScale, axis: akX, kind: ukData),
       y: Coord1D(pos: p.y, scale: view.yScale, axis: akY, kind: ukData)
     )
-  result = initPolyLine(view, pos = pos, style = style, name = name)
+  result = initPolyLine(view, pos = posCoords, style = style, name = name)
 
 
 proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
