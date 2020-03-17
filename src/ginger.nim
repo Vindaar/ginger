@@ -1753,7 +1753,7 @@ proc initErrorBar*(view: Viewport,
 
 
 proc initPolyLine*(view: Viewport,
-                   pos: seq[Point],
+                   pos: seq[Coord],
                    style: Option[Style] = none[Style](),
                    name = "polyLine"): GraphObject =
   result = GraphObject(kind: goPolyLine, name: name)
@@ -1764,12 +1764,20 @@ proc initPolyLine*(view: Viewport,
                               lineType: ltSolid,
                               color: black,
                               fillColor: transparent))
-  result.plPos = newSeqOfCap[Coord](pos.len)
-  for p in pos:
-    result.plPos.add Coord(
+  result.plPos = pos
+
+proc initPolyLine*(view: Viewport,
+                   pos: seq[Point],
+                   style: Option[Style] = none[Style](),
+                   name = "polyLine"): GraphObject =
+  var posCoords = newSeq[Coord](pos.len)
+  for i, p in pos:
+    posCoords[i] = Coord(
       x: Coord1D(pos: p.x, scale: view.xScale, axis: akX, kind: ukData),
       y: Coord1D(pos: p.y, scale: view.yScale, axis: akY, kind: ukData)
     )
+  result = initPolyLine(view, pos = pos, style = style, name = name)
+
 
 proc initAxisLabel[T: Quantity | Coord1D](view: Viewport,
                                           label: string,
