@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.13"
+version       = "0.1.14"
 author        = "Vindaar"
 description   = "A Grid (R) like package in Nim"
 license       = "MIT"
