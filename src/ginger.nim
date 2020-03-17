@@ -2425,7 +2425,6 @@ proc layout*(view: var Viewport,
   ## by that margin in all directions.
   # extend the seq of children to accomodate for layout
   const nameTmpl = "$#/layout_$#"
-  #view.children.setLen(view.len + cols * rows)
   doAssert colWidths.len == cols or colWidths.len == 0, "there must be " &
     "one column width for each column!"
   doAssert rowHeights.len == rows or rowHeights.len == 0, "there must be " &
@@ -2468,7 +2467,7 @@ proc layout*(view: var Viewport,
         xScale = some(view.xScale),
         yScale = some(view.yScale),
         style = some(view.style), # inherit style of parent,
-        name = nameTmpl % [view.name, $i]
+        name = nameTmpl % [view.name, $(i * cols + j)]
       )
       view.children.add ch
       curColL = curColL + widths[j].val
