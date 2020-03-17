@@ -1559,25 +1559,33 @@ proc initLine(view: Viewport,
             color: black)
     )
 
+func initPoint*(view: Viewport,
+                pos: Coord,
+                style: Style,
+                name = "point"): GraphObject =
+  result = GraphObject(kind: goPoint,
+                       name: name,
+                       ptMarker: style.marker,
+                       ptSize: style.size,
+                       ptColor: style.color,
+                       ptPos: pos)
+
 proc initPoint*(view: Viewport,
                 pos: Coord,
                 size = 3.0,
                 marker: MarkerKind = mkCircle,
                 color = color(0.0, 0.0, 0.0),
-                name = "point"): GraphObject =
-  result = GraphObject(kind: goPoint,
-                       name: name,
-                       ptMarker: marker,
-                       ptSize: size,
-                       ptColor: color,
-                       ptPos: pos)
+                name = "point"): GraphObject {.inline.} =
+  let style = Style(marker: marker, size: size, color: color)
+  result = view.initPoint(pos = pos, style = style, name = name)
 
 proc initPoint*(view: Viewport,
                 pos: Point,
                 size = 3.0,
                 marker: MarkerKind = mkCircle,
                 color = color(0.0, 0.0, 0.0),
-                name = "point"): GraphObject =
+                name = "point"): GraphObject {.inline.} =
+  let style = Style(marker: marker, size: size, color: color)
   let pos = Coord(x: Coord1D(pos: pos.x,
                              scale: view.xScale,
                              axis: akX,
@@ -1586,8 +1594,7 @@ proc initPoint*(view: Viewport,
                              scale: view.yScale,
                              axis: akY,
                              kind: ukData))
-  result = view.initPoint(pos = pos, size = size, marker = marker,
-                          color = color, name = name)
+  result = view.initPoint(pos = pos, style = style, name = name)
 
 func isScaleNonTrivial(c: Coord1D): bool =
   doAssert c.kind == ukData, "coord must be of kind ukData!"
