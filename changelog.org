@@ -1,0 +1,35 @@
+* v0.1.15
+- fix =pointWidth= and =pointHeight= to return real width and height
+  of viewport
+- add arithmetic procs for =Quantity=.
+  These respect absolute units and try to remain them. If both are
+  absolute, result is absolute. If only one is absolute the result
+  will also be absolute. Only relative returned if both are relative.
+- fix arithmetic for =Coord1D= to effectively follow the same rules as
+  the ones for =Quantity= mentioned above
+- fixes many wrong scales used for conversions / embeddings
+  -> This and the above means adding an absolute distance to some
+  quantity or coordinate will now result in that distance on the final
+  plot, no matter how embedded the current viewport is!
+- add =drawBoundary= proc to highlight different viewports (including
+  writing its name / a number into the center with different colors)
+- =initLine= is now public
+- tick label related procs now allow custom margin to be set (by
+  default it's 0.4 cm for y labels / ticks and 0.5 cm for x labels / ticks)
+- tick calculations now fully respect =boundScale= if given (that is
+  the resulting's objects (and view's) data scale is =boundScale=
+  instead of the new scale
+- =layout= is significantly improved. It allows absolute units and
+  does not convert these to relative. However, margins are not allowed
+  (have no effect) at the moment. But they were broken.
+- add support for gradients. So far only on rectangles, but that's an
+  easy fix.
+
+
+
+
+
+
+
+
+
