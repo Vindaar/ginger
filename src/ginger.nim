@@ -2506,13 +2506,15 @@ proc initTicks*(view: var Viewport,
       scale = view.yScale
 
     let (newScale, newWidth, newNumTicks) = calcTickLocations(scale, numTicks)
+    let tickScale = if boundScale.isSome: boundScale.unsafeGet
+                    else: newScale
     var autoTickLocs: seq[Coord]
     case axKind
     of akX:
       autoTickLocs = linspace(newScale.low, newScale.high, newNumTicks + 1).mapIt(
         axisCoord(Coord1D(pos: it,
                           kind: ukData,
-                          scale: newScale,
+                          scale: tickScale,
                           axis: akX),
                   akX,
                   isSecondary)
@@ -2521,7 +2523,7 @@ proc initTicks*(view: var Viewport,
       autoTickLocs = linspace(newScale.low, newScale.high, newNumTicks + 1).mapIt(
         axisCoord(Coord1D(pos: it,
                           kind: ukData,
-                          scale: newScale,
+                          scale: tickScale,
                           axis: akY),
                   akY,
                   isSecondary)
@@ -2535,9 +2537,9 @@ proc initTicks*(view: var Viewport,
     # finally update the scale associated to the view
     case axKind
     of akX:
-      view.xScale = newScale
+      view.xScale = tickScale
     of akY:
-      view.yScale = newScale
+      view.yScale = tickScale
 
     # and update the scales of all objects owned by the viewport
     if updateScale:
