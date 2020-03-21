@@ -2702,49 +2702,46 @@ proc layout*(view: var Viewport,
   if colWidths.len == 0:
     widths = newSeqWith(cols, quant(1.0 / cols.float, ukRelative))
   else:
-    widths = fillEmptySizesEvenly(colWidths, view.wImg, cols)
+    widths = fillEmptySizesEvenly(colWidths, pointWidth(view), cols)
   if rowHeights.len == 0:
     heights = newSeqWith(rows, quant(1.0 / rows.float, ukRelative))
   else:
-    heights = fillEmptySizesEvenly(rowHeights, view.hImg, rows)
+    heights = fillEmptySizesEvenly(rowHeights, pointHeight(view), rows)
 
-  # convert all widhts and heights to relative values
-  widths = widths.mapIt(it.toRelative(some(view.wImg)))
-  heights = heights.mapIt(it.toRelative(some(view.hImg)))
-
-  var curRowT = 0.0
+  var curRowT = c1(0.0)
   for i in 0 ..< rows:
-    doAssert heights[i].unit == ukRelative, "height must be relative!"
-    var curColL = 0.0
-    let ypos = c1(curRowT)
+    #doAssert heights[i].unit == ukRelative, "height must be relative!"
+    var curColL = c1(0.0)
     for j in 0 ..< cols:
-      doAssert widths[j].unit == ukRelative, "width must be relative!"
+      #doAssert widths[j].unit == ukRelative, "width must be relative!"
       # use widths / heights to create new viewports
-      let xpos = c1(curColL)
-      let marginX = margin.toRelative(length = some(view.wView),
+      let marginX = margin.toRelative(length = some(pointWidth(view)),
                                       scale = some(view.xScale))
-      let marginY = margin.toRelative(length = some(view.wView),
+      let marginY = margin.toRelative(length = some(pointHeight(view)),
                                       scale = some(view.yScale))
-      #let width = quant(curColL + widths[j].val, ukRelative)
-      #let height = quant(curRowT + heights[i].val, ukRelative)
+      let width = sub(widths[j],
+                      times(quant(2.0, ukRelative), marginX,
+                            length = some(pointWidth(view))),
+                      length = some(pointWidth(view)))
+      let height = sub(heights[i], times(quant(2.0, ukRelative), marginY,
+                                         length = some(pointHeight(view))),
+                       length = some(pointHeight(view)))
+      ## TODO: fix margin. Currently cannot work, since we do not apply the margin
+      ## in the `curColL` and `curRowT` vars after each iteration!
       let ch = view.addViewport(
-        origin = Coord(x: c1(curColL + marginX.val),
-                       y: c1(curRowT + marginY.val)),
-        width = quant(widths[j].val - 2.0 * marginX.val, ukRelative), #width,
-        height = quant(heights[i].val - 2.0 * marginY.val, ukRelative), #height,
+        origin = Coord(x: curColL, #c1(curColL + marginX.val),
+                       y: curRowT),#c1(curRowT + marginY.val)),
+        width = width,
+        height = height,
         xScale = some(view.xScale),
         yScale = some(view.yScale),
         style = some(view.style), # inherit style of parent,
         name = nameTmpl % [view.name, $(i * cols + j)]
       )
       view.children.add ch
-      curColL = curColL + widths[j].val
-    curRowT = curRowT + heights[i].val
-
-  # echo "Children: ", view.children.mapIt($(it.origin))
-  # echo "width ", view.children.mapIt($(it.width))
-  # echo "height ", view.children.mapIt($(it.height))
-
+      curColL = curColL + view.c1(widths[j].val, akX, widths[j].unit)
+    curRowT = curRowT + view.c1(heights[i].val, akY, heights[i].unit)
+  ## TODO: update width and height of the parent viewport
 
 proc background*(view: var Viewport,
                  style: Option[Style] = none[Style]()) =
