@@ -584,9 +584,9 @@ proc initCoord1d*(view: Viewport, at: float,
   var optLength: Option[Quantity]
   case axKind
   of akX:
-    length = view.wImg
+    length = pointWidth(view) #view.wImg
   of akY:
-    length = view.hImg
+    length = pointHeight(view) #view.hImg
   case kind
   of ukPoint:
     result.length = some(length.toPoints)
@@ -1227,25 +1227,25 @@ proc width*(view: Viewport): Quantity =
   ## returns the width of the `Viewport` in `ukRelative`
   ## NOTE: this procedure is a no-op, if the width is already stored as a
   ## ukRelative!
-  result = view.width.toRelative(length = some(view.wView))
+  result = view.width.toRelative(length = some(view.wImg))
 
 proc height*(view: Viewport): Quantity =
   ## returns the height of the `Viewport` in `ukRelative`
   ## NOTE: this procedure is a no-op, if the height is already stored as a
   ## ukRelative!
-  result = view.height.toRelative(length = some(view.hView))
+  result = view.height.toRelative(length = some(view.hImg))
 
 proc pointWidth*(view: Viewport): Quantity =
   ## returns the width of the given viewport in absolute points
   doAssert view.wView.unit == ukPoint
-  doAssert view.width.unit == ukRelative
-  result = quant(view.wView.val * view.width.val, unit = ukPoint)
+  result = times(view.wView, view.width.toRelative(length = some(view.wView)),
+                 length = some(view.wView))
 
 proc pointHeight*(view: Viewport): Quantity =
   ## returns the height of the given viewport in absolute points
   doAssert view.hView.unit == ukPoint
-  doAssert view.height.unit == ukRelative
-  result = quant(view.hView.val * view.height.val, unit = ukPoint)
+  result = times(view.hView, view.height.toRelative(length = some(view.hView)),
+                 length = some(view.hView))
 
 func updateScale(view: Viewport, c: var Coord1D) =
   ## update the scale coordinate of the 1D coordinate `c` in place
@@ -1380,13 +1380,11 @@ proc embedInto*(q: Quantity, axKind: AxisKind, view: Viewport): Quantity =
   of ukRelative:
     case axKind
     of akX:
-      result = quant(width(view).val * q.val, ukRelative)
-      # result = quant(view.wImg.toRelative(view.wImg).val * q.val, ukRelative)#
+      result = times(view.width, q, length = some(view.wView), scale = some(view.xScale))
     of akY:
-      result = quant(height(view).val * q.val, ukRelative)
+      result = times(view.height, q, length = some(view.hView), scale = some(view.yScale))
   of ukPoint, ukCentimeter, ukInch:
-    # do nothing, already an absolute value
-    # TODO: Convert to points?
+    # do nothing, already an absolute value. Respect that!
     result = q
   of ukData:
     case axKind
@@ -1443,14 +1441,8 @@ proc embedInto(view: Viewport, into: Viewport): Viewport =
   ## the (left, bottom) coordinates and scaling the width / height
   result = view
   result.origin = result.origin.embedInto(into)
-  # echo "View width ", view.width
-  # echo "Into width ", into.width
-  result.width = quant(width(result).val * width(into).val, ukRelative)
-  # echo "Result width ", result.width
-  #Coord1D(pos: result.width.toRelative.pos * into.width.toRelative.pos,
-                                          #        kind: ukRelative)
-  result.height = quant(height(result).val * height(into).val, ukRelative)
-
+  result.width = embedInto(result.width, akX, into)
+  result.height = embedInto(result.height, akY, into)
 
 proc point(c: Coord): Point =
   ## converts the given coordinate to `ukRelative` and returns the position as a
@@ -2142,24 +2134,24 @@ proc ylabel*(view: Viewport,
 
 template xLabelOriginOffset(isSecondary = false): untyped =
   if not isSecondary:
-    Coord1D(pos: -0.5,
+    Coord1D(pos: -0.4,
             kind: ukCentimeter,
-            length: some(view.wImg))
+            length: some(pointWidth(view)))
   else:
-    Coord1D(pos: 0.5,
+    Coord1D(pos: 0.4,
             kind: ukCentimeter,
-            length: some(view.wImg))
+            length: some(pointWidth(view)))
 
 template yLabelOriginOffset(isSecondary = false): untyped =
   if not isSecondary:
     Coord1D(pos: 0.5,
             kind: ukCentimeter,
-            length: some(view.hImg))
+            length: some(pointHeight(view)))
   else:
     # TODO: check if value good!
     Coord1D(pos: -0.5,
             kind: ukCentimeter,
-            length: some(view.wImg))
+            length: some(pointHeight(view)))
 
 proc setTextAlignKind(axKind: AxisKind,
                       isSecondary = false,
@@ -2955,8 +2947,10 @@ proc getCenter*(view: Viewport): (float, float) =
   ## NOTE: it is *not* (0.5, 0.5), because the coordinates of the viewport are
   ## described in the coordinate system of the parent!
   let
-    centerX = left(view).pos + width(view).val / 2.0
-    centerY = bottom(view).pos + height(view).val / 2.0
+    centerX = left(view).pos +
+      width(view).toRelative(length = some(view.wView)).val / 2.0
+    centerY = bottom(view).pos +
+      height(view).toRelative(length = some(view.hView)).val / 2.0
   result = (centerX, centerY)
 
 proc parseFilename(fname: string): FiletypeKind =
