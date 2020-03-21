@@ -2661,7 +2661,8 @@ proc initGridLines*(view: Viewport,
 
 proc fillEmptySizesEvenly(s: seq[Quantity],
                           length: Quantity,
-                          num: int): seq[Quantity] =
+                          num: int,
+                          ignoreOverflow = false): seq[Quantity] =
   ## filters out the 0 sized Coord1D from `s` and replaces them with
   ## evenly sized sizes filling up to a total of 1.0
   ## Length is the width / height of the viewport in which the layout
@@ -2672,7 +2673,7 @@ proc fillEmptySizesEvenly(s: seq[Quantity],
   else:
     let sumWidths = s.mapIt(it.toRelative(some(length)).val).foldl(a + b)
     let remainWidth = (1.0 - sumWidths) / zeroNum.float
-    if remainWidth < 0:
+    if not ignoreOverflow and remainWidth < 0:
       raise newException(ValueError, "Given layout sizes exceed the viewport " &
         "size. Remaining sizes cannot be filled! Total size: " & $sumWidths &
         " Remaining rows/cols: " & $zeroNum)
@@ -2686,7 +2687,8 @@ proc layout*(view: var Viewport,
              cols, rows: int,
              colWidths: seq[Quantity] = @[],
              rowHeights: seq[Quantity] = @[],
-             margin: Quantity = quant(0.0, ukRelative)) =
+             margin: Quantity = quant(0.0, ukRelative),
+             ignoreOverflow = false) =
   ## creates a layout of viewports within the given `view` of
   ## `cols` columns and `rows` rows. Optionally the widths and
   ## heights of the cols / rows may be set. If none are given,
@@ -2696,6 +2698,9 @@ proc layout*(view: var Viewport,
   ## space after the other sizes are summed between those.
   ## If a `margin` is given, each viewport created will be surrounded
   ## by that margin in all directions.
+  ## If `ignoreOverflow` is true a layout which technically does not fit
+  ## into the existing `view` will still be allowed. Otherwise (default)
+  ## a `ValueError` is raised.
   # extend the seq of children to accomodate for layout
   const nameTmpl = "$#/layout_$#"
   doAssert colWidths.len == cols or colWidths.len == 0, "there must be " &
