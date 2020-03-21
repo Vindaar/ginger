@@ -1,3 +1,9 @@
+* v0.1.16
+- =layout= now has a =ignoreOverflow= argument, which if true will
+  allow overflowing layouts, i.e. layouts which exceed the size of the
+  viewport
+- =Style= now has a =font= field
+
 * v0.1.15
 - fix =pointWidth= and =pointHeight= to return real width and height
   of viewport
