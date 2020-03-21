@@ -85,3 +85,4 @@ type
     marker*: MarkerKind
     errorBarKind*: ErrorBarKind
     gradient*: Option[Gradient] # overrides `color`
+    font*: Font
