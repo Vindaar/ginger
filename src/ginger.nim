@@ -380,10 +380,188 @@ proc toRelative*(q: Quantity,
     raise newException(Exception, "Cannot convert quantity " & $q & " to " &
       "relative quantity!")
 
+
+func to*(q: Quantity, kind: UnitKind,
+         length = none[Quantity](),
+         scale = none[Scale]()): Quantity =
+  case kind
+  of ukPoint: q.toPoints(length = length)
+  of ukInch: q.toInch()
+  of ukCentimeter: q.toCentimeter
+  of ukRelative: q.toRelative(length = length, scale = scale)
+  #of ukData:
+  else: raise newException(ValueError, "Cannot convert to `" & $kind & "`!")
+
 proc `+`*(c1, c2: Coord1D): Coord1D
 proc `-`*(c1, c2: Coord1D): Coord1D
 proc `*`*(c1, c2: Coord1D): Coord1D
 proc `/`*(c1, c2: Coord1D): Coord1D
+
+proc times*(q1, q2: Quantity,
+            length: Option[Quantity] = none[Quantity](),
+            scale: Option[Scale] = none[Scale]()): Quantity =
+  ## multiplication of two quantities. If one of the quantities is absolute
+  ## the result will also be absolute!
+  if q1.unit == q2.unit:
+    # just multiply the values
+    result = quant((q1.val * q2.val), q1.unit)
+  else:
+    case q1.unit
+    of ukPoint, ukInch, ukCentimeter:
+      case q2.unit
+      of ukRelative:
+        result = quant(q1.val * q2.val, q1.unit)
+      of ukPoint, ukInch, ukCentimeter:
+        # divide as points, convert back
+        result = quant(
+          (q1.toPoints().val * q2.toPoints(length = length).val),
+          ukPoint)
+          .to(q1.unit, length = length, scale = scale)
+      of ukStrWidth, ukStrHeight, ukData:
+        raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
+    of ukRelative:
+      case q2.unit
+      of ukRelative: doAssert false, "not possible!"
+      of ukPoint, ukCentimeter, ukInch:
+        # just divide
+        result = quant((q1.val * q2.val), q2.unit)
+      of ukStrWidth, ukStrHeight, ukData:
+        raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
+    of ukData:
+      # return as relative
+      result = quant(
+        (q1.toRelative(length = length,
+                       scale = scale).val *
+         q2.toRelative(length = length,
+                       scale = scale).val),
+        ukRelative)
+    else:
+      raise newException(ValueError, "Cannot do arithmetic on `" & $q1.unit & "`!")
+
+proc divide*(q1, q2: Quantity,
+          length: Option[Quantity] = none[Quantity](),
+          scale: Option[Scale] = none[Scale]()): Quantity =
+  ## multiplication of two quantities. If one of the quantities is absolute
+  ## the result will also be absolute!
+  if q1.unit == q2.unit:
+    # just divide the values
+    result = quant((q1.val / q2.val), q1.unit)
+  else:
+    case q1.unit
+    of ukPoint, ukInch, ukCentimeter:
+      case q2.unit
+      of ukRelative:
+        result = quant(q1.val / q2.val, q1.unit)
+      of ukPoint, ukInch, ukCentimeter:
+        # divide as points, convert back
+        result = quant(
+          (q1.toPoints().val / q2.toPoints(length = length).val),
+          ukPoint)
+          .to(q1.unit, length = length, scale = scale)
+      of ukStrWidth, ukStrHeight, ukData:
+        raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
+    of ukRelative:
+      case q2.unit
+      of ukRelative: doAssert false, "not possible!"
+      of ukPoint, ukCentimeter, ukInch:
+        # just divide
+        result = quant((q1.val / q2.val), q2.unit)
+      of ukStrWidth, ukStrHeight, ukData:
+        raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
+    of ukData:
+      # return as relative
+      result = quant(
+        (q1.toRelative(length = length,
+                       scale = scale).val /
+         q2.toRelative(length = length,
+                       scale = scale).val),
+        ukRelative)
+    else:
+      raise newException(ValueError, "Cannot do arithmetic on `" & $q1.unit & "`!")
+
+proc add*(q1, q2: Quantity,
+          length: Option[Quantity] = none[Quantity](),
+          scale: Option[Scale] = none[Scale]()): Quantity =
+  ## multiplication of two quantities. If one of the quantities is absolute
+  ## the result will also be absolute!
+  if q1.unit == q2.unit:
+    # just add the values
+    result = quant((q1.val + q2.val), q1.unit)
+  else:
+    case q1.unit
+    of ukPoint, ukInch, ukCentimeter:
+      case q2.unit
+      of ukPoint, ukInch, ukCentimeter, ukRelative:
+        # multiply as points, convert back
+        result = quant(
+          (q1.toPoints().val + q2.toPoints(length = length).val),
+          ukPoint)
+          .to(q1.unit, length = length, scale = scale)
+      of ukStrWidth, ukStrHeight, ukData:
+        raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
+    of ukRelative:
+      case q2.unit
+      of ukRelative: doAssert false, "not possible!"
+      of ukPoint, ukCentimeter, ukInch:
+        # add as points, convert back
+        result = quant(
+          (q1.toPoints(length = length).val + q2.toPoints().val),
+          ukPoint)
+          .to(q2.unit, length = length, scale = scale)
+      of ukStrWidth, ukStrHeight, ukData:
+        raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
+    of ukData:
+      # return as relative
+      result = quant(
+        (q1.toRelative(length = length,
+                       scale = scale).val +
+         q2.toRelative(length = length,
+                       scale = scale).val),
+        ukRelative)
+    else:
+      raise newException(ValueError, "Cannot do arithmetic on `" & $q1.unit & "`!")
+
+proc sub*(q1, q2: Quantity,
+          length: Option[Quantity] = none[Quantity](),
+          scale: Option[Scale] = none[Scale]()): Quantity =
+  ## multiplication of two quantities. If one of the quantities is absolute
+  ## the result will also be absolute!
+  if q1.unit == q2.unit:
+    # just subtract the values
+    result = quant((q1.val - q2.val), q1.unit)
+  else:
+    case q1.unit
+    of ukPoint, ukInch, ukCentimeter:
+      case q2.unit
+      of ukPoint, ukInch, ukCentimeter, ukRelative:
+        # multiply as points, convert back
+        result = quant(
+          (q1.toPoints().val - q2.toPoints(length = length).val),
+          ukPoint)
+          .to(q1.unit, length = length, scale = scale)
+      of ukStrWidth, ukStrHeight, ukData:
+        raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
+    of ukRelative:
+      case q2.unit
+      of ukRelative: doAssert false, "not possible!"
+      of ukPoint, ukCentimeter, ukInch:
+        # add as points, convert back
+        result = quant(
+          (q1.toPoints(length = length).val - q2.toPoints().val),
+          ukPoint)
+          .to(q2.unit, length = length, scale = scale)
+      of ukStrWidth, ukStrHeight, ukData:
+        raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
+    of ukData:
+      # return as relative
+      result = quant(
+        (q1.toRelative(length = length,
+                       scale = scale).val -
+         q2.toRelative(length = length,
+                       scale = scale).val),
+        ukRelative)
+    else:
+      raise newException(ValueError, "Cannot do arithmetic on `" & $q1.unit & "`!")
 
 func initCoord1D*(at: float, kind: UnitKind = ukRelative): Coord1D =
   ## returns a Coord1D at coordinate `at` of kind `kind`
