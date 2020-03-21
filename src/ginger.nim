@@ -190,6 +190,9 @@ type
 
 const DPI = 72.27
 
+proc pointWidth*(view: Viewport): Quantity
+proc pointHeight*(view: Viewport): Quantity
+
 template defaultFont(pts = 12.0): untyped = Font(family: "sans-serif", size: pts, color: color(0.0, 0.0, 0.0))
 
 template setFontOrDefault(setTo, fontArg: untyped): untyped =
