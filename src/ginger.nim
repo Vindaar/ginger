@@ -1081,13 +1081,10 @@ proc to*(p: Coord1D, toKind: UnitKind,
     case toKind
     of ukRelative: result = p # nothing to do
     of ukPoint:
-      # echo "Performing conversion to ", ukPoint
-      # echo "For pos ", pRel, " with length ", absLength.get()
       doAssert absLength.isSome, "Conversion to absolute requires a length scale!"
       result = Coord1D(pos: pRel.pos * absLength.get().toPoints.val,
                        length: some(absLength.get.toPoints),
                        kind: ukPoint)
-      # echo "Result is ", result
     of ukInch:
       doAssert absLength.isSome, "Conversion to inches requires an absolute length scale!"
       # assumes absLength is size in points!
@@ -1374,17 +1371,6 @@ proc convertToKind(c: Coord1D, toKind: Coord1D): Coord1D =
   else:
     raise newException(Exception, "convertToKind not implemented for " & $toKind.kind)
 
-#proc translate(c: Coord1D, byCoord: Coord1D): Coord1D =
-#  ## translates the coordinate `c` by `byCoord`
-#  let pos = c.toRelative.pos + byCoord.toRelative.pos
-#  result = Coord1D(pos: pos, kind: ukRelative)
-#  result = result.convertToKind(c)
-
-#proc translate(c: Coord, byCoord: Coord): Coord =
-#  result = Coord(x: c.x.translate(byCoord.x),
-#                 y: c.y.translate(byCoord.y),
-#                 kind: c.kind)
-
 proc embedInto*(q: Quantity, axKind: AxisKind, view: Viewport): Quantity =
   ## Embeds the quantity `q` into the viewport `view`
   ## NOTE: Embedding a quantity is a special case. A quantity (in our case)
@@ -1427,13 +1413,10 @@ proc embedInto(c: Coord1D, axKind: AxisKind, view: Viewport): Coord1D =
   of akX:
     case c.kind
     of ukPoint, ukCentimeter, ukInch:
-      # echo "Pos is ", c, " and origin ", view.origin.x
       let origAbs = view.origin.x.to(ukPoint, absLength = some(view.wImg))
-      # echo "Orig abs ", origAbs
       # NOTE: for a Coord1D giving a *value* the following is a scaling, but for
       # a Coord1D giving a *coordinate* it is a translation!
-      pos = origAbs + c #* view.width
-      # echo "Pos now is ", pos
+      pos = origAbs + c
     else:
       pos = Coord1D(pos: left(view).pos + width(view).val * c.toRelative.pos,
                     kind: ukRelative)
@@ -1441,12 +1424,8 @@ proc embedInto(c: Coord1D, axKind: AxisKind, view: Viewport): Coord1D =
   of akY:
     case c.kind
     of ukPoint, ukCentimeter, ukInch:
-      # echo "View is ", view.wImg
       let origAbs = view.origin.y.to(ukPoint, absLength = some(view.hImg))
-      #pos = view.origin.y + c# * view.height
-      #var mc = c
-      #mc.length = some(view.hImg)
-      pos = origAbs + c #* view.height
+      pos = origAbs + c
     else:
       pos = Coord1D(pos: bottom(view).pos + height(view).val * c.toRelative.pos,
                     kind: ukRelative)
@@ -1458,23 +1437,6 @@ proc embedInto(c: Coord, view: Viewport): Coord =
     cX = c.x.embedInto(akX, view)
     cY = c.y.embedInto(akY, view)
   result = Coord(x: cX, y: cY)
-  #var
-  #  posX: Coord1D
-  #  posY: Coord1D
-  #case c.x.kind
-  #of ukPoint, ukCentimeter, ukInch:
-  #  posX = view.origin.x + c.x
-  #else:
-  #  posX = Coord1D(pos: left(view) + width(view) * c.x.toRelative.pos,
-  #                 kind: ukRelative)
-  #case c.y.kind
-  #of ukPoint, ukCentimeter, ukInch:
-  #  posY = view.origin.y + c.y
-  #else:
-  #  posY = Coord1D(pos: bottom(view) + height(view) * c.y.toRelative.pos,
-  #                 kind: ukRelative)
-  #result = Coord(x: posX, y: posY, kind: ukRelative)
-
 
 proc embedInto(view: Viewport, into: Viewport): Viewport =
   ## embeds the given `view` into the `into` Viewport by embedding
@@ -1493,12 +1455,7 @@ proc embedInto(view: Viewport, into: Viewport): Viewport =
 proc point(c: Coord): Point =
   ## converts the given coordinate to `ukRelative` and returns the position as a
   ## `Point`
-  #result = (x: c.x.toRelative.pos, y: c.y.toRelative.pos)
   result = (x: c.x.pos, y: c.y.pos)
-
-
-
-
 
 ################################################################################
 ############ INIT FUNCTIONS
