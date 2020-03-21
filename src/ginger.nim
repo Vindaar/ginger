@@ -1686,6 +1686,39 @@ proc initText*(view: Viewport,
     result.rotate = some(rotate.get())
   setFontOrDefault(result, font)
 
+proc drawBoundary*(view: var Viewport,
+                   color = none[Color](),
+                   writeName = false,
+                   writeNumber = none[int](),
+                   style = none[Style]()) =
+  ## Adds a boundary (a rectangle) around the given viewport
+  var mstyle: Option[Style]
+  if style.isNone:
+    let c = if color.isSome: color.unsafeGet else: black
+    mstyle = some(Style(lineWidth: 1.0,
+                        color: c,
+                        fillColor: transparent,
+                        lineType: ltSolid))
+  else: mstyle = style
+  let rect = view.initRect(left = 0.0, bottom = 0.0,
+                           width = 1.0, height = 1.0,
+                           style = mstyle)
+  view.addObj rect
+  if writeName:
+    # write name of layout in center
+    let text = view.initText(c(0.5, 0.5),
+                             text = view.name,
+                             textKind = goText,
+                             alignKind = taCenter)
+    view.addObj text
+  if writeNumber.isSome:
+    # write name of layout in center
+    let text = view.initText(c(0.5, 0.5),
+                             text = $writeNumber.unsafeGet,
+                             textKind = goText,
+                             alignKind = taCenter)
+    view.addObj text
+
 proc strHeight*(val: float, font: Font): Coord1D =
   ## returns a Coord1D of kind `ukStrHeight` for the given
   ## number of times the string height `val` for font `font`.
