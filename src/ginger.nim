@@ -309,8 +309,7 @@ template absToInch(x: float): float = x / DPI
 template inchToCm(x: float): float = x * 2.54
 
 func toPoints*(q: Quantity,
-               length: Option[Quantity] = none[Quantity]()): Quantity {.raises: [ValueError,
-                                                                                 UnpackError].}  =
+               length: Option[Quantity] = none[Quantity]()): Quantity =
   ## returns the quantity converted to Points. This will fail if attempted to
   ## convert a non absolute unit!
   case q.unit
@@ -329,7 +328,7 @@ func toPoints*(q: Quantity,
     raise newException(ValueError, "Cannot convert quantity with unit " &
       $q.unit & " to points!")
 
-func toInch*(q: Quantity): Quantity {.raises: ValueError.}  =
+func toInch*(q: Quantity): Quantity =
   ## returns the quantity converted to inch. This will fail if attempted to
   ## convert a non absolute unit!
   case q.unit
@@ -340,7 +339,7 @@ func toInch*(q: Quantity): Quantity {.raises: ValueError.}  =
     raise newException(ValueError, "Cannot convert quantity with unit " &
       $q.unit & " to inch!")
 
-func toCentimeter*(q: Quantity): Quantity {.raises: ValueError.} =
+func toCentimeter*(q: Quantity): Quantity =
   ## returns the quantity converted to centimeter. This will fail if attempted to
   ## convert a non absolute unit!
   case q.unit
@@ -573,7 +572,7 @@ func initCoord1D*(at: float, kind: UnitKind = ukRelative): Coord1D =
 template c1*(at: float, kind: UnitKind = ukRelative): Coord1D =
   initCoord1D(at, kind)
 
-func initCoord1d*(view: Viewport, at: float,
+proc initCoord1d*(view: Viewport, at: float,
                   axKind: AxisKind,
                   kind: UnitKind = ukPoint): Coord1D =
   ## Full name should be `initCoord1D`, but since it's a convenience function
@@ -611,7 +610,7 @@ template c1*(view: Viewport, at: float,
              kind: UnitKind = ukPoint): Coord1D =
   initCoord1D(view, at, axKind, kind)
 
-func initCoord*(x, y: float, kind: UnitKind = ukRelative): Coord =
+proc initCoord*(x, y: float, kind: UnitKind = ukRelative): Coord =
   ## returns a coordinate at coordinates x, y of kind `kind`
   result = Coord(x: initCoord1D(x, kind = kind),
                  y: initCoord1D(y, kind = kind))
@@ -619,7 +618,7 @@ func initCoord*(x, y: float, kind: UnitKind = ukRelative): Coord =
 template c*(x, y: float, kind: UnitKind = ukRelative): Coord =
   initCoord(x, y, kind)
 
-func initCoord*(view: Viewport, x, y: float,
+proc initCoord*(view: Viewport, x, y: float,
                 kind: UnitKind = ukRelative): Coord =
   ## length and scale aware (using Viewport) initCoord, that automatically
   ## assigns the correct length and scale for absolute / data coords
