@@ -2207,6 +2207,7 @@ proc initTickLabel(view: Viewport,
                    labelTxt: Option[string] = none[string](),
                    font: Option[Font] = none[Font](),
                    rotate = none[float](),
+                   margin = none[Coord1D](),
                    name = "tickLabel",
                    isSecondary = false,
                    alignToOverride = none[TextAlignKind]()): GraphObject =
@@ -2224,11 +2225,13 @@ proc initTickLabel(view: Viewport,
   case tick.tkAxis
   of akX:
     let yCoord = XAxisYPos(isSecondary = isSecondary)
+    let yOffset = if margin.isSome: margin.unsafeGet
+                  else: yLabelOriginOffset(isSecondary)
+    origin = Coord(x: loc.x,
+                   y: yCoord + yOffset)
     case loc.x.kind
     of ukData:
       let scale = loc.x.scale
-      origin = Coord(x: loc.x,
-                     y: yCoord + yLabelOriginOffset(isSecondary))
       if labelTxt.isNone:
         # NOTE: for the `tickScale` required for `formatTickValue` we will use the `scale` attached
         # to the tick position `/ 10.0`. (`10` from the default number of ticks). Since we divide
@@ -2238,8 +2241,6 @@ proc initTickLabel(view: Viewport,
     else:
       doAssert labelTxt.isSome, "if tick contains `tkPos.kind != ukData` a label text " &
         "must be provided!"
-      origin = Coord(x: loc.x,
-                     y: yCoord + yLabelOriginOffset(isSecondary))
     if gobjName == "tickLabel":
       gobjName = "x" & name
     result = view.initText(origin, text, textKind = goTickLabel,
@@ -2249,11 +2250,13 @@ proc initTickLabel(view: Viewport,
                            name = gobjName)
   of akY:
     let xCoord = YAxisXPos(isSecondary = isSecondary)
+    let xOffset = if margin.isSome: margin.unsafeGet
+                  else: xLabelOriginOffset(isSecondary)
+    origin = Coord(x: xCoord + xOffset,
+                   y: loc.y)
     case loc.y.kind
     of ukData:
       let scale = loc.y.scale
-      origin = Coord(x: xCoord + xLabelOriginOffset(isSecondary),
-                     y: loc.y)
       if labelTxt.isNone:
         # NOTE: for the `tickScale` required for `formatTickValue` we will use the `scale` attached
         # to the tick position `/ 10.0`. (`10` from the default number of ticks). Since we divide
@@ -2263,9 +2266,6 @@ proc initTickLabel(view: Viewport,
     else:
       doAssert labelTxt.isSome, "if tick contains `tkPos.kind != ukData` a label text " &
         "must be provided!"
-      origin = Coord(x: xCoord,
-                     y: loc.y + yLabelOriginOffset(isSecondary))
-
     if gobjName == "tickLabel":
       gobjName = "y" & name
     result = view.initText(origin, text,
@@ -2289,6 +2289,7 @@ proc axisCoord*(c: Coord1D, axKind: AxisKind,
 
 proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                  font: Option[Font] = none[Font](),
+                 margin = none[Coord1d](),
                  isSecondary = false,
                 ): seq[GraphObject] =
   ## returns all tick labels for the given ticks
@@ -2344,6 +2345,7 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
       labelTxt = some(&"{formatTickValue(newPos[i], tickScale)}")
     result.add view.initTickLabel(tick = ticks[i], font = font,
                                   labelTxt = labelTxt,
+                                  margin = margin,
                                   isSecondary = isSecondary)
 
 proc initTick(view: Viewport,
@@ -2376,6 +2378,7 @@ proc tickLabels*(view: Viewport,
                  font: Option[Font] = none[Font](),
                  isSecondary = false,
                  rotate = none[float](),
+                 margin = none[Coord1D](),
                  alignToOverride = none[TextAlignKind]()
                 ): (seq[GraphObject], seq[GraphObject]) =
   ## Overload of `tickLabels`, which allows to define custom tick label
@@ -2395,6 +2398,7 @@ proc tickLabels*(view: Viewport,
                                       labelTxt = some(tickLabels[i]),
                                       isSecondary = isSecondary,
                                       rotate = rotate,
+                                      margin = margin,
                                       alignToOverride = alignToOverride)
 
 # taken straight from: *cough*
