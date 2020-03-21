@@ -184,20 +184,51 @@ proc drawText*(img: BImage, text: string, font: Font, at: Point,
     ctx.move_to(x, y)
     ctx.show_text(text)
 
+proc createGradient(gradient: Gradient,
+                    left, bottom, width, height: float): PPattern =
+  echo left, " ", bottom, " ", width, " ", height
+  let middle = bottom + height / 2.0
+  let right = left + width
+  let center = left + width / 2.0
+
+  #result = pattern_create_linear(left, middle, left + width, middle)
+  result = pattern_create_linear(center, bottom + height, center, bottom)
+  let stepSize = width / gradient.colors.len.float
+  let numColors = gradient.colors.len.float
+  for i, c in gradient.colors:
+    result.add_color_stop_rgb(i.float / numColors, c.r, c.g, c.b)
+
 proc drawRectangle*(img: BImage, left, bottom, width, height: float,
                     style: Style,
-                    rotateAngle: Option[(float, Point),] = none[(float, Point)]()) =
+                    rotate: Option[float] = none[float](),
+                    rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
   ## draws a rectangle on the image
   img.cCanvas.withSurface:
-    if rotateAngle.isSome:
-      let rotAngTup = rotateAngle.get
+    if rotateInView.isSome:
+      # possible rotation of viewport
+      let rotAngTup = rotateInView.get
       ctx.rotate(rotAngTup[0], rotAngTup[1])
+    if rotate.isSome:
+      # possible rotation desired for rectangle
+      let
+        rotAtX = left
+        rotAtY = bottom
+      ctx.rotate(rotate.get(), (rotAtX, rotAtY))
     ctx.rectangle(left, bottom, width, height)
     ctx.set_line_width(style.lineWidth)
     ctx.setLineStyle(style.lineType, style.lineWidth)
     ctx.set_source_rgba(style.color.r, style.color.g, style.color.b, style.color.a)
     ctx.stroke_preserve()
-    ctx.set_source_rgba(style.fillColor.r, style.fillColor.g, style.fillColor.b, style.fillColor.a)
+    if style.gradient.isSome:
+      var pat = createGradient(style.gradient.unsafeGet,
+                               left = left,
+                               bottom = bottom,
+                               width = width,
+                               height = height)
+      ctx.set_source(pat)
+      destroy(pat)
+    else:
+      ctx.set_source_rgba(style.fillColor.r, style.fillColor.g, style.fillColor.b, style.fillColor.a)
     ctx.fill()
 
 proc initBImage*(filename: string,

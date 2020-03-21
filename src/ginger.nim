@@ -1632,13 +1632,16 @@ proc initRect*(view: Viewport,
                origin: Coord,
                width, height: Quantity,
                color = color(0.0, 0.0, 0.0),
+               gradient = none[Gradient](),
                style = none[Style](),
+               rotate = none[float](),
                name = "rect"): GraphObject =
   result = GraphObject(kind: goRect,
                        name: name,
                        reOrigin: origin.patchCoord(view),
-                       reWidth: width,#.patchCoord(view.wImg),
-                       reHeight: height)#.patchCoord(view.hImg))
+                       reWidth: width,
+                       reHeight: height,
+                       rotate: rotate)
   if style.isSome:
     result.style = style
   else:
@@ -1646,11 +1649,13 @@ proc initRect*(view: Viewport,
                               color: color(0.0, 0.0, 0.0, 0.0),
                               size: 0.0,
                               lineType: ltSolid,
-                              fillColor: color))
+                              fillColor: color,
+                              gradient: gradient))
 
 proc initRect*(view: Viewport,
                left, bottom, width, height: float,
                color = color(0.0, 0.0, 0.0),
+               gradient = none[Gradient](),
                style = none[Style](),
                name = "rect"): GraphObject =
   let origin = Coord(x: Coord1D(pos: left, kind: ukRelative),
@@ -1663,6 +1668,7 @@ proc initRect*(view: Viewport,
                          height = heightCoord,
                          color = color,
                          style = style,
+                         gradient = gradient,
                          name = name)
 
 proc initText*(view: Viewport,
@@ -1960,7 +1966,6 @@ proc initErrorBar*(view: Viewport,
                   x2 = pt.x,
                   y1 = errorUp,
                   y2 = errorDown)
-
       let chUp = view.initLine(
         start = Coord(x: pt.x - view.c1(locStyle.size, akX, ukPoint),
                       y: errorUp),
@@ -2780,7 +2785,8 @@ proc drawRect(img: BImage, gobj: GraphObject) =
                     gobj.reWidth.val, gobj.reHeight.val,
                     gobj.style.get, # if we end up here without a style,
                                     # it's a bug!
-                    gobj.rotateInView)
+                    rotate = gobj.rotate,
+                    rotateInView = gobj.rotateInView)
 
 proc drawPoint(img: BImage, gobj: GraphObject) =
   doAssert gobj.kind == goPoint, "object must be a `goPoint`!"

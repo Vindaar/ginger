@@ -31,7 +31,8 @@ proc drawText*(img: BImage, text: string, font: Font, at: Point,
 
 proc drawRectangle*(img: BImage, left, bottom, width, height: float,
                     style: Style,
-                    rotateAngle: Option[(float, Point),] = none[(float, Point)]()) =
+                    rotate: Option[float] = none[float](),
+                    rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
   debugecho "WARNING: `drawRectangle` of dummy backend is being called!"
 
 proc initBImage*(filename: string,

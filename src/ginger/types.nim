@@ -1,4 +1,5 @@
 import chroma
+import options
 
 when not defined(noCairo):
   import cairo
@@ -15,6 +16,10 @@ else:
       height*: float64
       x_advance*: float64
       y_advance*: float64
+
+    TPattern = object
+      discard
+    PPattern = ptr TPattern
 
 type
   BackendKind* = enum
@@ -67,6 +72,10 @@ type
   MarkerKind* = enum
     mkCircle, mkCross, mkRotCross, mkStar
 
+  Gradient* = object
+    colors*: seq[Color]
+    rotation*: float
+
   Style* = object
     color*: Color
     size*: float
@@ -75,3 +84,4 @@ type
     fillColor*: Color
     marker*: MarkerKind
     errorBarKind*: ErrorBarKind
+    gradient*: Option[Gradient] # overrides `color`
