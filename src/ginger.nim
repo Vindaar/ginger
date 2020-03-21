@@ -883,8 +883,34 @@ proc `+`*(c1, c2: Coord1D): Coord1D =
       result = c1
       result.pos = c1.pos + c2.pos
   else:
-    result = Coord1D(pos: c1.toRelative.pos + c2.toRelative.pos,
-                     kind: ukRelative)
+    if c1.kind in {ukPoint, ukInch, ukCentimeter}:
+      result = c1
+      # convert to quantities and perform math on those
+      let scale = if c2.kind == ukData: some(c2.scale) else: none[Scale]()
+      let res = add(quant(c1.pos, c1.kind),
+                    quant(c2.pos, c2.kind),
+                    length = c1.length,
+                    scale = scale)
+      if res.unit == ukRelative:
+        result = c1(res.val, ukRelative)
+      else:
+        result.pos = res.val
+    elif c2.kind in {ukPoint, ukInch, ukCentimeter}:
+      # convert to quantities and perform math on those
+      result = c2
+      # convert to quantities and perform math on those
+      let scale = if c1.kind == ukData: some(c1.scale) else: none[Scale]()
+      let res = add(quant(c1.pos, c1.kind),
+                    quant(c2.pos, c2.kind),
+                    length = c2.length,
+                    scale = scale)
+      if res.unit == ukRelative:
+        result = c1(res.val, ukRelative)
+      else:
+        result.pos = res.val
+    else:
+      result = Coord1D(pos: c1.toRelative.pos + c2.toRelative.pos,
+                       kind: ukRelative)
 
 proc `-`*(c1, c2: Coord1D): Coord1D =
   ## subtracts two Coord1D by converting to relative coordinates if necessary.
@@ -901,8 +927,33 @@ proc `-`*(c1, c2: Coord1D): Coord1D =
     else:
       result.pos = c1.pos - c2.pos
   else:
-    result = Coord1D(pos: c1.toRelative.pos - c2.toRelative.pos,
-                     kind: ukRelative)
+    if c1.kind in {ukPoint, ukInch, ukCentimeter}:
+      result = c1
+      # convert to quantities and perform math on those
+      let scale = if c2.kind == ukData: some(c2.scale) else: none[Scale]()
+      let res = sub(quant(c1.pos, c1.kind),
+                    quant(c2.pos, c2.kind),
+                    length = c1.length,
+                    scale = scale)
+      if res.unit == ukRelative:
+        result = c1(res.val, ukRelative)
+      else:
+        result.pos = res.val
+    elif c2.kind in {ukPoint, ukInch, ukCentimeter}:
+      result = c2
+      # convert to quantities and perform math on those
+      let scale = if c1.kind == ukData: some(c1.scale) else: none[Scale]()
+      let res = sub(quant(c1.pos, c1.kind),
+                       quant(c2.pos, c2.kind),
+                       length = c2.length,
+                       scale = scale)
+      if res.unit == ukRelative:
+        result = c1(res.val, ukRelative)
+      else:
+        result.pos = res.val
+    else:
+      result = Coord1D(pos: c1.toRelative.pos - c2.toRelative.pos,
+                       kind: ukRelative)
 
 proc `*`*(c1, c2: Coord1D): Coord1D =
   ## subtracts two Coord1D by converting to relative coordinates if necessary.
@@ -921,8 +972,33 @@ proc `*`*(c1, c2: Coord1D): Coord1D =
     else:
       result.pos = c1.pos * c2.pos
   else:
-    result = Coord1D(pos: c1.toRelative.pos * c2.toRelative.pos,
-                     kind: ukRelative)
+    if c1.kind in {ukPoint, ukInch, ukCentimeter}:
+      result = c1
+      # convert to quantities and perform math on those
+      let scale = if c2.kind == ukData: some(c2.scale) else: none[Scale]()
+      let res = times(quant(c1.pos, c1.kind),
+                      quant(c2.pos, c2.kind),
+                      length = c1.length,
+                      scale = scale)
+      if res.unit == ukRelative:
+        result = c1(res.val, ukRelative)
+      else:
+        result.pos = res.val
+    elif c2.kind in {ukPoint, ukInch, ukCentimeter}:
+      result = c2
+      # convert to quantities and perform math on those
+      let scale = if c1.kind == ukData: some(c1.scale) else: none[Scale]()
+      let res = times(quant(c1.pos, c1.kind),
+                      quant(c2.pos, c2.kind),
+                      length = c2.length,
+                      scale = scale)
+      if res.unit == ukRelative:
+        result = c1(res.val, ukRelative)
+      else:
+        result.pos = res.val
+    else:
+      result = Coord1D(pos: c1.toRelative.pos * c2.toRelative.pos,
+                       kind: ukRelative)
 
 proc `/`*(c1, c2: Coord1D): Coord1D =
   ## divides two Coord1D by converting to relative coordinates.
@@ -939,9 +1015,33 @@ proc `/`*(c1, c2: Coord1D): Coord1D =
     else:
       result.pos = c1.pos / c2.pos
   else:
-    result = Coord1D(pos: c1.toRelative.pos / c2.toRelative.pos,
-                     kind: ukRelative)
-
+    if c1.kind in {ukPoint, ukInch, ukCentimeter}:
+      result = c1
+      # convert to quantities and perform math on those
+      let scale = if c2.kind == ukData: some(c2.scale) else: none[Scale]()
+      let res = divide(quant(c1.pos, c1.kind),
+                       quant(c2.pos, c2.kind),
+                       length = c1.length,
+                       scale = scale)
+      if res.unit == ukRelative:
+        result = c1(res.val, ukRelative)
+      else:
+        result.pos = res.val
+    elif c2.kind in {ukPoint, ukInch, ukCentimeter}:
+      result = c2
+      # convert to quantities and perform math on those
+      let scale = if c1.kind == ukData: some(c1.scale) else: none[Scale]()
+      let res = divide(quant(c1.pos, c1.kind),
+                       quant(c2.pos, c2.kind),
+                       length = c2.length,
+                       scale = scale)
+      if res.unit == ukRelative:
+        result = c1(res.val, ukRelative)
+      else:
+        result.pos = res.val
+    else:
+      result = Coord1D(pos: c1.toRelative.pos / c2.toRelative.pos,
+                       kind: ukRelative)
 
 proc to*(p: Coord1D, toKind: UnitKind,
          absLength = none[Quantity](),
