@@ -1,3 +1,7 @@
+* v0.1.17
+Hotfix release for =v0.1.16= due to missing field.
+- add =alignKind= field to =Font=
+
 * v0.1.16
 - =layout= now has a =ignoreOverflow= argument, which if true will
   allow overflowing layouts, i.e. layouts which exceed the size of the
