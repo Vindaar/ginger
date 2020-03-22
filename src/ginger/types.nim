@@ -68,6 +68,7 @@ type
     bold*: bool
     slant*: FontSlant
     color*: Color
+    alignKind*: TextAlignKind
 
   MarkerKind* = enum
     mkCircle, mkCross, mkRotCross, mkStar
