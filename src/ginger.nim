@@ -59,7 +59,7 @@ type
     tkOneSide, # only outside the plot
     tkBothSides # inside and outside the plot
 
-  GraphObject* = object
+  GraphObject* = ref object
     name*: string # name of the Graph Object. Currently mainly used for debugging
     children*: seq[GraphObject]
     style*: Option[Style]
@@ -164,7 +164,7 @@ type
   # - implement coordinate transformations between viewport
   #   and global coordinates
   # - coordinates should be relative coordinates in [0.0, 1.0]
-  Viewport* = object
+  Viewport* = ref object
     # parameters describing the embedding into the parent
     # given relative coords
     name*: string # name of the viewport (useful for debugging)
