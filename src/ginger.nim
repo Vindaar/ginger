@@ -386,6 +386,7 @@ proc toRelative*(q: Quantity,
 func to*(q: Quantity, kind: UnitKind,
          length = none[Quantity](),
          scale = none[Scale]()): Quantity =
+  if q.unit == kind: return q
   case kind
   of ukPoint: q.toPoints(length = length)
   of ukInch: q.toInch()
@@ -1053,6 +1054,7 @@ proc to*(p: Coord1D, toKind: UnitKind,
   ## NOTE: this procedure is a potentially lossy conversion!
   # first check whether it's only a unit conversion between absolute values
   # in this case the conversion is loss free
+  if p.kind == toKind: return p
   if toKind in ukPoint .. ukInch and
      p.kind in ukPoint .. ukInch:
     case toKind
