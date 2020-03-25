@@ -1314,7 +1314,7 @@ func updateDataScale*(view: Viewport,
   for p in mitems(objs):
     view.updateDataScale(p)
 
-func updateDataScale*(view: var Viewport) =
+func updateDataScale*(view: Viewport) =
   ## Updates the data scales of all children viewports of `view` and their
   ## objects recursively
   ## Note that if `view` contains many children or children with many objects
@@ -1326,7 +1326,7 @@ func updateDataScale*(view: var Viewport) =
     # and call for child itself
     ch.updateDataScale()
 
-func addObj*(view: var Viewport, obj: GraphObject) =
+func addObj*(view: Viewport, obj: GraphObject) =
   ## adds the given `obj` to the viewport's objects and makes
   ## sure it inherits all properties, e.g. Style and data scales
   var mobj = obj
@@ -1340,7 +1340,7 @@ func addObj*(view: var Viewport, obj: GraphObject) =
   # debugecho "\n\n"
   view.objects.add mobj
 
-func addObj*(view: var Viewport, objs: varargs[GraphObject]) =
+func addObj*(view: Viewport, objs: varargs[GraphObject]) =
   ## adds the `objs` to the viewport's objects and makes
   ## sure they inherit all properties, e.g. Style and data scales
   for obj in objs:
@@ -1534,7 +1534,7 @@ proc initViewport*(left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
                         wImg = wImg, hImg = hImg,
                         backend = backend)
 
-proc addViewport*(view: var Viewport,
+proc addViewport*(view: Viewport,
                   origin: Coord,
                   width, height: Quantity,
                   style = none[Style](),
@@ -1566,7 +1566,7 @@ proc addViewport*(view: var Viewport,
   #view.children.add viewChild
   result = viewChild
 
-proc addViewport*(view: var Viewport,
+proc addViewport*(view: Viewport,
                   left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
                   style = none[Style](),
                   xScale = none[Scale](),
@@ -1691,7 +1691,7 @@ proc initText*(view: Viewport,
     result.rotate = some(rotate.get())
   setFontOrDefault(result, font)
 
-proc drawBoundary*(view: var Viewport,
+proc drawBoundary*(view: Viewport,
                    color = none[Color](),
                    writeName = false,
                    writeNumber = none[int](),
@@ -2471,7 +2471,7 @@ proc filterByBoundScale(tickPos: var seq[Coord], axKind: AxisKind,
     tickPos = tickPos.filterIt(getAx(it, axKind) >= bscale.low and
                                getAx(it, axKind) <= bscale.high)
 
-proc initTicks*(view: var Viewport,
+proc initTicks*(view: Viewport,
                 axKind: AxisKind,
                 numTicks: int = 0,
                 tickLocs: seq[Coord] = @[],
@@ -2549,7 +2549,7 @@ proc initTicks*(view: var Viewport,
     if updateScale:
       view.updateDataScale()
 
-proc xticks*(view: var Viewport,
+proc xticks*(view: Viewport,
              numTicks: int = 10,
              tickLocs: seq[Coord] = @[],
              major = true,
@@ -2571,7 +2571,7 @@ proc xticks*(view: var Viewport,
                           updateScale = updateScale,
                           isSecondary = isSecondary)
 
-proc yticks*(view: var Viewport,
+proc yticks*(view: Viewport,
              numTicks: int = 10,
              tickLocs: seq[Coord] = @[],
              major = true,
@@ -2687,7 +2687,7 @@ proc fillEmptySizesEvenly(s: seq[Quantity],
       else:
         result.add s[i]
 
-proc layout*(view: var Viewport,
+proc layout*(view: Viewport,
              cols, rows: int,
              colWidths: seq[Quantity] = @[],
              rowHeights: seq[Quantity] = @[],
@@ -2763,7 +2763,7 @@ proc layout*(view: var Viewport,
     curRowT = curRowT + view.c1(heights[i].val, akY, heights[i].unit)
   ## TODO: update width and height of the parent viewport
 
-proc background*(view: var Viewport,
+proc background*(view: Viewport,
                  style: Option[Style] = none[Style]()) =
   var r = GraphObject(kind: goRect,
                       reOrigin: initCoord(0.0, 0.0),
