@@ -3021,7 +3021,7 @@ proc parseFilename(fname: string): FiletypeKind =
   else:
     result = fkPdf
 
-proc draw*(img: BImage, gobj: GraphObject) =
+proc draw*(img: var BImage, gobj: GraphObject) =
   ## draws the given graph object on the image
   let globalObj = gobj.toGlobalCoords(img)
 
@@ -3044,7 +3044,7 @@ proc draw*(img: BImage, gobj: GraphObject) =
     # composite itself has nothing to be drawn, only children handled individually
     discard
 
-proc draw(img: BImage, view: Viewport) =
+proc draw(img: var BImage, view: Viewport) =
   ## draws the full viewport including all objects and all
   ## children onto the image
   ## NOTE: children are drawn `after` the parent viewport
@@ -3052,7 +3052,7 @@ proc draw(img: BImage, view: Viewport) =
   # before we draw stuff apply potential rotation
   let (centerX, centerY) = getCenter(view)
 
-  proc transformAndDraw(img: BImage, obj: GraphObject, view: Viewport) =
+  proc transformAndDraw(img: var BImage, obj: GraphObject, view: Viewport) =
     ## performs the embedding of the object into the viewport
     ## and draws the resulting object
     var mobj = obj

@@ -18,6 +18,8 @@ when not defined(noCairo):
         let err = img.cCanvas.write_to_png(img.fname)
         echo err, " output of write_to_png"
       else: discard # not needed for SVG, PDF
+      if img.created:
+        img.ctx.destroy()
       img.cCanvas.destroy()
     of bkVega:
       discard

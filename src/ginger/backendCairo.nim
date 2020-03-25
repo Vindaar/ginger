@@ -4,24 +4,37 @@ import math
 import types
 import options
 
-template withSurface*(surface: PSurface, name: untyped, actions: untyped): untyped =
-  var `name` {.inject.} = create(surface)
+template withSurface*(img: var BImage, name: untyped, actions: untyped): untyped =
+  if not img.created:
+    img.ctx = create(img.cCanvas)
+    img.created = true
+  template ctx(): untyped = img.ctx
+  # save current context
+  ctx.save()
   actions
-  `name`.destroy()
+  # restore last context, so that next call starts from default
+  ctx.restore()
+  when false:
+    # this is equivalent code, which creates a new context for each
+    # call.
+    var `name` {.inject.} = create(img.cCanvas)
+    actions
+    `name`.destroy()
 
-template withSurface*(surface: PSurface, actions: untyped): untyped =
-  surface.withSurface(ctx):
+template withSurface*(img: var BImage, actions: untyped): untyped =
+  img.withSurface(ctx):
     actions
 
-template withCairo(img: BImage, name: untyped, actions: untyped): untyped =
-  var `name` {.inject.} = image_surface_create(FORMAT_ARGB32, img.width, img.height)
-  `name`.withSurface:
-    actions
-  `name`.destroy()
+when false:
+  template withCairo(img: BImage, name: untyped, actions: untyped): untyped =
+    var `name` {.inject.} = image_surface_create(FORMAT_ARGB32, img.width, img.height)
+    `name`.withSurface:
+      actions
+    `name`.destroy()
 
-template withCairo(img: BImage, actions: untyped): untyped =
-  img.withCairo(surface):
-    actions
+  template withCairo(img: BImage, actions: untyped): untyped =
+    img.withCairo(surface):
+      actions
 
 template rotate(ctx: PContext, angle: float, around: Point): untyped =
   ctx.translate(around[0], around[1])
@@ -59,10 +72,10 @@ func setLineStyle(ctx: PContext, lineType: LineType, lineWidth: float) =
     ctx.set_line_width(0.0)
   else: discard
 
-proc drawLine*(img: BImage, start, stop: Point,
+proc drawLine*(img: var BImage, start, stop: Point,
                style: Style,
                rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
-  img.cCanvas.withSurface:
+  img.withSurface:
     if rotateAngle.isSome:
       let rotAngTup = rotateAngle.get
       ctx.rotate(rotAngTup[0], rotAngTup[1])
@@ -73,10 +86,10 @@ proc drawLine*(img: BImage, start, stop: Point,
     ctx.line_to(stop.x, stop.y)
     ctx.stroke()
 
-proc drawPolyLine*(img: BImage, points: seq[Point],
+proc drawPolyLine*(img: var BImage, points: seq[Point],
                    style: Style,
                    rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
-  img.cCanvas.withSurface:
+  img.withSurface:
     if rotateAngle.isSome:
       let rotAngTup = rotateAngle.get
       ctx.rotate(rotAngTup[0], rotAngTup[1])
@@ -93,14 +106,14 @@ proc drawPolyLine*(img: BImage, points: seq[Point],
     # and fill the created path if desired
     ctx.set_source_rgba(style.fillColor.r, style.fillColor.g, style.fillColor.b,
                         style.fillColor.a)
-    ctx.fill_preserve()
+    ctx.fill()
 
-proc drawCircle*(img: BImage, center: Point, radius: float,
+proc drawCircle*(img: var BImage, center: Point, radius: float,
                  lineWidth: float,
                  strokeColor = color(0.0, 0.0, 0.0),
                  fillColor = color(0.0, 0.0, 0.0, 0.0),
                  rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
-  img.cCanvas.withSurface:
+  img.withSurface:
     if rotateAngle.isSome:
       let rotAngTup = rotateAngle.get
       ctx.rotate(rotAngTup[0], rotAngTup[1])
@@ -139,20 +152,22 @@ proc getTextExtent*(text: string, font: Font): TextExtent =
   let width = text.len.float * font.size * 2.0
   let height = font.size * 2.0
   var surface = image_surface_create(FORMAT_ARGB32, width.int32, height.int32)
-  surface.withSurface:
-    ctx.select_font_face(font.family, font.toCairoFontSlant, font.toCairoFontWeight)
-    ctx.set_font_size(font.size)
-    ctx.set_source_rgba(font.color.r, font.color.g, font.color.b, font.color.a)
-    result = ctx.getTextExtent(text)
+  #surface.withSurface:
+  var ctx = create(surface)
+  ctx.select_font_face(font.family, font.toCairoFontSlant, font.toCairoFontWeight)
+  ctx.set_font_size(font.size)
+  ctx.set_source_rgba(font.color.r, font.color.g, font.color.b, font.color.a)
+  result = ctx.getTextExtent(text)
+  ctx.destroy()
   surface.destroy()
 
-proc drawText*(img: BImage, text: string, font: Font, at: Point,
+proc drawText*(img: var BImage, text: string, font: Font, at: Point,
                alignKind: TextAlignKind = taLeft,
                rotate: Option[float] = none[float](),
                rotateInView: Option[(float, Point)] = none[(float, Point)]()) =
   # NOTE: with text_extents we can center the text too, see:
   # https://www.cairographics.org/samples/text_align_center/
-  img.cCanvas.withSurface:
+  img.withSurface:
     if rotateInView.isSome:
       let rotAngTup = rotateInView.get
       ctx.rotate(rotAngTup[0], rotAngTup[1])
@@ -198,12 +213,12 @@ proc createGradient(gradient: Gradient,
   for i, c in gradient.colors:
     result.add_color_stop_rgb(i.float / numColors, c.r, c.g, c.b)
 
-proc drawRectangle*(img: BImage, left, bottom, width, height: float,
+proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
                     style: Style,
                     rotate: Option[float] = none[float](),
                     rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
   ## draws a rectangle on the image
-  img.cCanvas.withSurface:
+  img.withSurface:
     if rotateInView.isSome:
       # possible rotation of viewport
       let rotAngTup = rotateInView.get
@@ -249,20 +264,13 @@ proc initBImage*(filename: string,
       raise newException(Exception, "Unsupported fType " & $fType & " in `initBImage")
     result = BImage(fname: filename,
                     backend: bkCairo,
+                    created: false,
                     cCanvas: surface,
                     width: width,
                     height: height,
                     fType: fType)
   of bkVega:
     discard
-
-#proc save(img: BImage) =
-#  case img.kind
-#  of bkCairo:
-#    let err = img.cCanvas.write_to_png(
-
-
-
 
 when isMainModule:
   # raw Cairo code

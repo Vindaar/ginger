@@ -40,6 +40,8 @@ type
     case backend*: BackendKind
     of bkCairo:
       cCanvas*: PSurface
+      ctx*: PContext
+      created*: bool # if surface was created
       ftype*: FileTypeKind
     of bkVega:
       discard
