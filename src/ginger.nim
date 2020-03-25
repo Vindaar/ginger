@@ -2656,23 +2656,28 @@ proc initGridLines*(view: Viewport,
 proc fillEmptySizesEvenly(s: seq[Quantity],
                           length: Quantity,
                           num: int,
-                          ignoreOverflow = false): seq[Quantity] =
+                          scale: Scale,
+                          ignoreOverflow = false,
+                         ): seq[Quantity] =
   ## filters out the 0 sized Coord1D from `s` and replaces them with
   ## evenly sized sizes filling up to a total of 1.0
   ## Length is the width / height of the viewport in which the layout
   ## will be set
-  let zeroNum = s.filterIt(it.toRelative(some(length)).val == 0.0).len
+  let zeroNum = s.filterIt(it.toRelative(length = some(length),
+                                         scale = some(scale)).val == 0.0).len
   if zeroNum == 0:
     result = s
   else:
-    let sumWidths = s.mapIt(it.toRelative(some(length)).val).foldl(a + b)
+    let sumWidths = s.mapIt(it.toRelative(length = some(length),
+                                          scale = some(scale)).val).foldl(a + b)
     let remainWidth = (1.0 - sumWidths) / zeroNum.float
     if not ignoreOverflow and remainWidth < 0:
       raise newException(ValueError, "Given layout sizes exceed the viewport " &
         "size. Remaining sizes cannot be filled! Total size: " & $sumWidths &
         " Remaining rows/cols: " & $zeroNum)
     for i in 0 ..< num:
-      if s[i].toRelative(some(length)).val == 0:
+      if s[i].toRelative(length = some(length),
+                         scale = some(scale)).val == 0:
         result.add quant(remainWidth, ukRelative)
       else:
         result.add s[i]
@@ -2706,11 +2711,13 @@ proc layout*(view: var Viewport,
   if colWidths.len == 0:
     widths = newSeqWith(cols, quant(1.0 / cols.float, ukRelative))
   else:
-    widths = fillEmptySizesEvenly(colWidths, pointWidth(view), cols)
+    widths = fillEmptySizesEvenly(colWidths, pointWidth(view), cols, scale = view.xScale,
+                                  ignoreOverflow = ignoreOverflow)
   if rowHeights.len == 0:
     heights = newSeqWith(rows, quant(1.0 / rows.float, ukRelative))
   else:
-    heights = fillEmptySizesEvenly(rowHeights, pointHeight(view), rows)
+    heights = fillEmptySizesEvenly(rowHeights, pointHeight(view), rows, scale = view.yScale,
+                                   ignoreOverflow = ignoreOverflow)
 
   var curRowT = c1(0.0)
   for i in 0 ..< rows:
