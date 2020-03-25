@@ -190,8 +190,8 @@ type
 
 const DPI = 72.27
 
-proc pointWidth*(view: Viewport): Quantity
-proc pointHeight*(view: Viewport): Quantity
+proc pointWidth*(view: Viewport): Quantity {.inline.}
+proc pointHeight*(view: Viewport): Quantity {.inline.}
 
 template defaultFont(pts = 12.0): untyped = Font(family: "sans-serif", size: pts, color: color(0.0, 0.0, 0.0))
 
@@ -1235,15 +1235,15 @@ proc height*(view: Viewport): Quantity =
   ## ukRelative!
   result = view.height.toRelative(length = some(view.hImg))
 
-proc pointWidth*(view: Viewport): Quantity =
+proc pointWidth*(view: Viewport): Quantity {.inline.} =
   ## returns the width of the given viewport in absolute points
-  doAssert view.wView.unit == ukPoint
+  assert view.wView.unit == ukPoint
   result = times(view.wView, view.width.toRelative(length = some(view.wView)),
                  length = some(view.wView))
 
-proc pointHeight*(view: Viewport): Quantity =
+proc pointHeight*(view: Viewport): Quantity {.inline.} =
   ## returns the height of the given viewport in absolute points
-  doAssert view.hView.unit == ukPoint
+  assert view.hView.unit == ukPoint
   result = times(view.hView, view.height.toRelative(length = some(view.hView)),
                  length = some(view.hView))
 
