@@ -2908,15 +2908,14 @@ proc scale[T: SomeNumber](p: Point, width, height: T): Point =
   result = (p.x * width.float,
             p.y * height.float)
 
-proc toAbsImage(c: Coord1D, img: BImage, axKind: AxisKind): Coord1D =
+proc toAbsImage(c: Coord1D, img: BImage, axKind: AxisKind): Coord1D {.inline.} =
   case axKind
   of akX: result = c.to(ukPoint, absLength = some(quant(img.width.float, ukPoint)))
   of akY: result = c.to(ukPoint, absLength = some(quant(img.height.float, ukPoint)))
 
-proc toAbsImage(c: Coord, img: BImage): Coord =
-  result = c.to(ukPoint,
-                absWidth = some(quant(img.width.float, ukPoint)),
-                absHeight = some(quant(img.height.float, ukPoint)))
+proc toAbsImage(c: Coord, img: BImage): Coord {.inline.} =
+  result.x = c.x.toAbsImage(img, akX)
+  result.y = c.y.toAbsImage(img, akY)
 
 proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
   result = gobj
