@@ -1,3 +1,22 @@
+* v0.1.18
+- fix remaining places, which are supposed to use =pointWidth/Height=
+- make =ignoreOverflow= work for =layout= (was previously ignored),
+  which allows for total heights / widhts larger than the
+  viewport. Better to have overflowing viewports than crash if
+  desired!
+- simplify =toAbsImage= implementation, calls =to= for each =Coord=
+  field instead now.
+- deprecate =to= for =Coord=. Use =to= for =Coord1D= instead on each
+  field!
+- =to= now return early if input already has output type
+- =BImage= now has a =PContext= field. Instead of creating a context
+  for each field, we now keep a global one, whose state we save and
+  revert. 
+- =Viewport= and =GraphObject= are now =ref objects= to avoid costly
+  copies, if we have large objects in =ggplotnim=. Reduces memory
+  footprint for plots with many elements significantly (1 Mio. point
+  scatter plot before 8.5 GB (!!!), now *cough* only 1.7 GB). 
+
 * v0.1.17
 Hotfix release for =v0.1.16= due to missing field.
 - add =alignKind= field to =Font=
