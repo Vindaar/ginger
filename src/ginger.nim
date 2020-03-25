@@ -210,12 +210,12 @@ template XAxisYPos*(view: Option[Viewport] = none[Viewport](),
   if view.isSome:
     if not isSecondary:
       let viewEl = view.get
-      Coord1D(pos: height(viewEl).toPoints(some(viewEl.hView)).val + margin,
-              length: some(viewEl.hView),
+      Coord1D(pos: pointHeight(viewEl).val + margin,
+              length: some(pointHeight(viewEl)),
               kind: ukPoint)
     else:
       Coord1D(pos: -margin,
-              length: some(view.get.hView),
+              length: some(pointHeight(view.unsafeGet)),
               kind: ukPoint)
   else:
     if not isSecondary:
@@ -230,11 +230,11 @@ template YAxisXPos*(view: Option[Viewport] = none[Viewport](),
   if view.isSome:
     if not isSecondary:
       Coord1D(pos: -margin,
-              length: some(view.get.wImg),
+              length: some(pointWidth(view.unsafeGet)),
               kind: ukPoint)
     else:
       let viewEl = view.get
-      Coord1D(pos: width(viewEl).toPoints(some(viewEl.wView)).val + margin,
+      Coord1D(pos: pointWidth(viewEl).val + margin,
               length: some(viewEl.wImg),
               kind: ukPoint)
   else:
@@ -584,9 +584,9 @@ proc initCoord1d*(view: Viewport, at: float,
   var optLength: Option[Quantity]
   case axKind
   of akX:
-    length = pointWidth(view) #view.wImg
+    length = pointWidth(view)
   of akY:
-    length = pointHeight(view) #view.hImg
+    length = pointHeight(view)
   case kind
   of ukPoint:
     result.length = some(length.toPoints)
@@ -1380,9 +1380,9 @@ proc embedInto*(q: Quantity, axKind: AxisKind, view: Viewport): Quantity =
   of ukRelative:
     case axKind
     of akX:
-      result = times(view.width, q, length = some(view.wView), scale = some(view.xScale))
+      result = times(view.width, q, length = some(pointWidth(view)), scale = some(view.xScale))
     of akY:
-      result = times(view.height, q, length = some(view.hView), scale = some(view.yScale))
+      result = times(view.height, q, length = some(pointHeight(view)), scale = some(view.yScale))
   of ukPoint, ukCentimeter, ukInch:
     # do nothing, already an absolute value. Respect that!
     result = q
@@ -1549,14 +1549,8 @@ proc addViewport*(view: var Viewport,
                                wImg = view.wImg.toPoints.val,
                                hImg = view.hImg.toPoints.val,
                                # TODO: clean this up
-                               wParentView = some(
-                                 quant(view.wView.val *
-                                       view.width.toRelative(some(view.wView)).val,
-                                       ukPoint)),
-                               hParentView = some(
-                                 quant(view.hView.val *
-                                       view.height.toRelative(some(view.hView)).val,
-                                       ukPoint)),
+                               wParentView = some(pointWidth(view)),
+                               hParentView = some(pointHeight(view)),
                                backend = view.backend)
   # override width and height
   ## echo "TODO: make sure we want to give child viewport scaled (wImg, hImg)!"
@@ -2731,11 +2725,15 @@ proc layout*(view: var Viewport,
                                       scale = some(view.yScale))
       let width = sub(widths[j],
                       times(quant(2.0, ukRelative), marginX,
-                            length = some(pointWidth(view))),
-                      length = some(pointWidth(view)))
+                            length = some(pointWidth(view)),
+                            scale = some(view.xScale)),
+                      length = some(pointWidth(view)),
+                      scale = some(view.xScale))
       let height = sub(heights[i], times(quant(2.0, ukRelative), marginY,
-                                         length = some(pointHeight(view))),
-                       length = some(pointHeight(view)))
+                                         length = some(pointHeight(view)),
+                                         scale = some(view.yScale)),
+                       length = some(pointHeight(view)),
+                       scale = some(view.yScale))
       ## TODO: fix margin. Currently cannot work, since we do not apply the margin
       ## in the `curColL` and `curRowT` vars after each iteration!
       let ch = view.addViewport(
@@ -2995,9 +2993,9 @@ proc getCenter*(view: Viewport): (float, float) =
   ## described in the coordinate system of the parent!
   let
     centerX = left(view).pos +
-      width(view).toRelative(length = some(view.wView)).val / 2.0
+      width(view).toRelative(length = some(pointWidth(view))).val / 2.0
     centerY = bottom(view).pos +
-      height(view).toRelative(length = some(view.hView)).val / 2.0
+      height(view).toRelative(length = some(pointHeight(view))).val / 2.0
   result = (centerX, centerY)
 
 proc parseFilename(fname: string): FiletypeKind =
