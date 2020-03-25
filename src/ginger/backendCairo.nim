@@ -201,7 +201,6 @@ proc drawText*(img: var BImage, text: string, font: Font, at: Point,
 
 proc createGradient(gradient: Gradient,
                     left, bottom, width, height: float): PPattern =
-  echo left, " ", bottom, " ", width, " ", height
   let middle = bottom + height / 2.0
   let right = left + width
   let center = left + width / 2.0
