@@ -2784,14 +2784,14 @@ proc background*(view: var Viewport,
 
 
 
-proc drawLine(img: BImage, gobj: GraphObject) =
+proc drawLine(img: var BImage, gobj: GraphObject) =
   doAssert gobj.kind == goAxis or gobj.kind == goLine, "object must be a `goAxis` or `goLine`!"
   img.drawLine(gobj.lnStart.point, gobj.lnStop.point,
                gobj.style.get, # if we end up here without a style,
                                # it's a bug!
                rotateAngle = gobj.rotateInView)
 
-proc drawRect(img: BImage, gobj: GraphObject) =
+proc drawRect(img: var BImage, gobj: GraphObject) =
   doAssert gobj.kind == goRect, "object must be a `goRect`!"
   # echo "Drawing rect at ", gobj.reOrigin, " of ", gobj.reWidth, " H ", gobj.reHeight
   # echo "Style: ", gobj.style.get
@@ -2803,7 +2803,7 @@ proc drawRect(img: BImage, gobj: GraphObject) =
                     rotate = gobj.rotate,
                     rotateInView = gobj.rotateInView)
 
-proc drawPoint(img: BImage, gobj: GraphObject) =
+proc drawPoint(img: var BImage, gobj: GraphObject) =
   doAssert gobj.kind == goPoint, "object must be a `goPoint`!"
   case gobj.ptMarker
   of mkCircle:
@@ -2832,7 +2832,7 @@ proc drawPoint(img: BImage, gobj: GraphObject) =
   else:
     raise newException(Exception, "Not implemented yet!")
 
-proc drawPolyLine(img: BImage, gobj: GraphObject) =
+proc drawPolyLine(img: var BImage, gobj: GraphObject) =
   doAssert gobj.kind == goPolyLine, "object must be a `goPolyLine`!"
   # TODO: we assume that the coordinates are sorted for now
   img.drawPolyLine(gobj.plPos.mapIt((x: it.x.pos, y: it.y.pos)),
@@ -2840,7 +2840,7 @@ proc drawPolyLine(img: BImage, gobj: GraphObject) =
                    rotateAngle = gobj.rotateInView)
 
 
-proc drawText(img: BImage, gobj: GraphObject) =
+proc drawText(img: var BImage, gobj: GraphObject) =
   doAssert(
     (gobj.kind == goText or gobj.kind == goLabel or gobj.kind == goTickLabel),
     "object must be a `goText`, `goLabel` or `goTickLabel`!"
@@ -2848,7 +2848,7 @@ proc drawText(img: BImage, gobj: GraphObject) =
   img.drawText(gobj.txtText, gobj.txtFont, gobj.txtPos.point, gobj.txtAlign,
                gobj.rotate)
 
-proc drawTick(img: BImage, gobj: GraphObject) =
+proc drawTick(img: var BImage, gobj: GraphObject) =
   ## draw a tick
   doAssert gobj.kind == goTick, "object must be a `goTick`!"
   var style = gobj.style.get() # style *has* to exist
@@ -2893,7 +2893,7 @@ proc drawTick(img: BImage, gobj: GraphObject) =
                  style,
                  rotateAngle = gobj.rotateInView)
 
-proc drawGrid(img: BImage, gobj: GraphObject) =
+proc drawGrid(img: var BImage, gobj: GraphObject) =
   ## draws the (major / minor) grid
   doAssert gobj.kind == goGrid, "object must be a `goGrid`!"
   var style = gobj.style.get() # style *has* to exist
