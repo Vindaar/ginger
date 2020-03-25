@@ -1113,9 +1113,12 @@ proc to*(p: Coord1D, toKind: UnitKind,
 proc to*(p: Coord, toKind: UnitKind,
          absWidth = none[Quantity](), absHeight = none[Quantity](),
          datXScale = none[Scale](), datYScale = none[Scale](),
-         strText = none[string](), strFont = none[Font]()): Coord =
+         strText = none[string](), strFont = none[Font]()): Coord
+  {.deprecated: "Please use `to` for the individual `Coord1D` objects instead!".} =
   ## converts the given Coordinate position in a certain coordinate
   ## system to the same position in a target coordinate system
+  ## TODO: if we decide to keep this proc, replace it by calling `to` for
+  ## `Coord1D` on individual fields instead.
   # first convert any point to a relative point, from which we can
   # calculate any other position easiest
   case toKind
