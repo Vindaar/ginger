@@ -1,4 +1,7 @@
-* v0.1.18
+* v0.2.1
+Hotfix release, which adds the missing =PContext= object for the dummy
+backend, which is used to test on travis in ggplotnim.
+* v0.2.0
 - fix remaining places, which are supposed to use =pointWidth/Height=
 - make =ignoreOverflow= work for =layout= (was previously ignored),
   which allows for total heights / widhts larger than the
