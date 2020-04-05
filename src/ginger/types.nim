@@ -21,6 +21,10 @@ else:
       discard
     PPattern = ptr TPattern
 
+    TContext = object
+      discard
+    PContext = ptr TContext
+
 type
   BackendKind* = enum
     bkCairo, bkVega
