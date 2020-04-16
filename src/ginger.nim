@@ -402,9 +402,15 @@ proc `/`*(c1, c2: Coord1D): Coord1D
 
 proc times*(q1, q2: Quantity,
             length: Option[Quantity] = none[Quantity](),
-            scale: Option[Scale] = none[Scale]()): Quantity =
+            scale: Option[Scale] = none[Scale](),
+            asCoordinate = false): Quantity =
   ## multiplication of two quantities. If one of the quantities is absolute
   ## the result will also be absolute!
+  ## If `asCoordinate` is true and on of the quantities is given in `ukData`,
+  ## the multiplication will be handled by interpreting the value `q` as belonging
+  ## to a coordinate on the `scale` instead of a distance defined by the
+  ## total scale length `(scale.high - scale.low)`. In practice this means
+  ## `scale.low` is subtracted from the `q` beforehand.
   if q1.unit == q2.unit:
     # just multiply the values
     result = quant((q1.val * q2.val), q1.unit)
@@ -432,8 +438,12 @@ proc times*(q1, q2: Quantity,
         raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
     of ukData:
       # return as relative
+      var q1Final: Quantity
+      if asCoordinate:
+        doAssert scale.isSome
+        q1Final = quant(q1.val - scale.unsafeGet.low, ukData)
       result = quant(
-        (q1.toRelative(length = length,
+        (q1Final.toRelative(length = length,
                        scale = scale).val *
          q2.toRelative(length = length,
                        scale = scale).val),
@@ -442,10 +452,16 @@ proc times*(q1, q2: Quantity,
       raise newException(ValueError, "Cannot do arithmetic on `" & $q1.unit & "`!")
 
 proc divide*(q1, q2: Quantity,
-          length: Option[Quantity] = none[Quantity](),
-          scale: Option[Scale] = none[Scale]()): Quantity =
+             length: Option[Quantity] = none[Quantity](),
+             scale: Option[Scale] = none[Scale](),
+             asCoordinate = false): Quantity =
   ## multiplication of two quantities. If one of the quantities is absolute
   ## the result will also be absolute!
+  ## If `asCoordinate` is true and on of the quantities is given in `ukData`,
+  ## the division will be handled by interpreting the value `q` as belonging
+  ## to a coordinate on the `scale` instead of a distance defined by the
+  ## total scale length `(scale.high - scale.low)`. In practice this means
+  ## `scale.low` is subtracted from the `q` beforehand.
   if q1.unit == q2.unit:
     # just divide the values
     result = quant((q1.val / q2.val), q1.unit)
@@ -473,8 +489,12 @@ proc divide*(q1, q2: Quantity,
         raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
     of ukData:
       # return as relative
+      var q1Final: Quantity
+      if asCoordinate:
+        doAssert scale.isSome
+        q1Final = quant(q1.val - scale.unsafeGet.low, ukData)
       result = quant(
-        (q1.toRelative(length = length,
+        (q1Final.toRelative(length = length,
                        scale = scale).val /
          q2.toRelative(length = length,
                        scale = scale).val),
@@ -484,9 +504,15 @@ proc divide*(q1, q2: Quantity,
 
 proc add*(q1, q2: Quantity,
           length: Option[Quantity] = none[Quantity](),
-          scale: Option[Scale] = none[Scale]()): Quantity =
+          scale: Option[Scale] = none[Scale](),
+          asCoordinate = false): Quantity =
   ## multiplication of two quantities. If one of the quantities is absolute
   ## the result will also be absolute!
+  ## If `asCoordinate` is true and on of the quantities is given in `ukData`,
+  ## the addition will be handled by interpreting the value `q` as belonging
+  ## to a coordinate on the `scale` instead of a distance defined by the
+  ## total scale length `(scale.high - scale.low)`. In practice this means
+  ## `scale.low` is subtracted from the `q` beforehand.
   if q1.unit == q2.unit:
     # just add the values
     result = quant((q1.val + q2.val), q1.unit)
@@ -515,8 +541,12 @@ proc add*(q1, q2: Quantity,
         raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
     of ukData:
       # return as relative
+      var q1Final: Quantity
+      if asCoordinate:
+        doAssert scale.isSome
+        q1Final = quant(q1.val - scale.unsafeGet.low, ukData)
       result = quant(
-        (q1.toRelative(length = length,
+        (q1Final.toRelative(length = length,
                        scale = scale).val +
          q2.toRelative(length = length,
                        scale = scale).val),
@@ -526,9 +556,15 @@ proc add*(q1, q2: Quantity,
 
 proc sub*(q1, q2: Quantity,
           length: Option[Quantity] = none[Quantity](),
-          scale: Option[Scale] = none[Scale]()): Quantity =
-  ## multiplication of two quantities. If one of the quantities is absolute
+          scale: Option[Scale] = none[Scale](),
+          asCoordinate = false): Quantity =
+  ## subtraction of two quantities. If one of the quantities is absolute
   ## the result will also be absolute!
+  ## If `asCoordinate` is true and on of the quantities is given in `ukData`,
+  ## the subtraction will be handled by interpreting the value `q` as belonging
+  ## to a coordinate on the `scale` instead of a distance defined by the
+  ## total scale length `(scale.high - scale.low)`. In practice this means
+  ## `scale.low` is subtracted from the `q` beforehand.
   if q1.unit == q2.unit:
     # just subtract the values
     result = quant((q1.val - q2.val), q1.unit)
@@ -557,8 +593,12 @@ proc sub*(q1, q2: Quantity,
         raise newException(ValueError, "Cannot do arithmetic on `" & $q2.unit & "`!")
     of ukData:
       # return as relative
+      var q1Final: Quantity
+      if asCoordinate:
+        doAssert scale.isSome
+        q1Final = quant(q1.val - scale.unsafeGet.low, ukData)
       result = quant(
-        (q1.toRelative(length = length,
+        (q1Final.toRelative(length = length,
                        scale = scale).val -
          q2.toRelative(length = length,
                        scale = scale).val),
@@ -891,7 +931,8 @@ proc `+`*(c1, c2: Coord1D): Coord1D =
       let res = add(quant(c1.pos, c1.kind),
                     quant(c2.pos, c2.kind),
                     length = c1.length,
-                    scale = scale)
+                    scale = scale,
+                    asCoordinate = true)
       if res.unit == ukRelative:
         result = c1(res.val, ukRelative)
       else:
@@ -904,7 +945,8 @@ proc `+`*(c1, c2: Coord1D): Coord1D =
       let res = add(quant(c1.pos, c1.kind),
                     quant(c2.pos, c2.kind),
                     length = c2.length,
-                    scale = scale)
+                    scale = scale,
+                    asCoordinate = true)
       if res.unit == ukRelative:
         result = c1(res.val, ukRelative)
       else:
@@ -935,7 +977,8 @@ proc `-`*(c1, c2: Coord1D): Coord1D =
       let res = sub(quant(c1.pos, c1.kind),
                     quant(c2.pos, c2.kind),
                     length = c1.length,
-                    scale = scale)
+                    scale = scale,
+                    asCoordinate = true)
       if res.unit == ukRelative:
         result = c1(res.val, ukRelative)
       else:
@@ -945,9 +988,10 @@ proc `-`*(c1, c2: Coord1D): Coord1D =
       # convert to quantities and perform math on those
       let scale = if c1.kind == ukData: some(c1.scale) else: none[Scale]()
       let res = sub(quant(c1.pos, c1.kind),
-                       quant(c2.pos, c2.kind),
-                       length = c2.length,
-                       scale = scale)
+                    quant(c2.pos, c2.kind),
+                    length = c2.length,
+                    scale = scale,
+                    asCoordinate = true)
       if res.unit == ukRelative:
         result = c1(res.val, ukRelative)
       else:
@@ -980,7 +1024,8 @@ proc `*`*(c1, c2: Coord1D): Coord1D =
       let res = times(quant(c1.pos, c1.kind),
                       quant(c2.pos, c2.kind),
                       length = c1.length,
-                      scale = scale)
+                      scale = scale,
+                      asCoordinate = true)
       if res.unit == ukRelative:
         result = c1(res.val, ukRelative)
       else:
@@ -992,7 +1037,8 @@ proc `*`*(c1, c2: Coord1D): Coord1D =
       let res = times(quant(c1.pos, c1.kind),
                       quant(c2.pos, c2.kind),
                       length = c2.length,
-                      scale = scale)
+                      scale = scale,
+                      asCoordinate = true)
       if res.unit == ukRelative:
         result = c1(res.val, ukRelative)
       else:
@@ -1023,7 +1069,8 @@ proc `/`*(c1, c2: Coord1D): Coord1D =
       let res = divide(quant(c1.pos, c1.kind),
                        quant(c2.pos, c2.kind),
                        length = c1.length,
-                       scale = scale)
+                       scale = scale,
+                       asCoordinate = true)
       if res.unit == ukRelative:
         result = c1(res.val, ukRelative)
       else:
@@ -1035,7 +1082,8 @@ proc `/`*(c1, c2: Coord1D): Coord1D =
       let res = divide(quant(c1.pos, c1.kind),
                        quant(c2.pos, c2.kind),
                        length = c2.length,
-                       scale = scale)
+                       scale = scale,
+                       asCoordinate = true)
       if res.unit == ukRelative:
         result = c1(res.val, ukRelative)
       else:
@@ -2793,8 +2841,6 @@ proc drawLine(img: var BImage, gobj: GraphObject) =
 
 proc drawRect(img: var BImage, gobj: GraphObject) =
   doAssert gobj.kind == goRect, "object must be a `goRect`!"
-  # echo "Drawing rect at ", gobj.reOrigin, " of ", gobj.reWidth, " H ", gobj.reHeight
-  # echo "Style: ", gobj.style.get
   img.drawRectangle(gobj.reOrigin.point.x, gobj.reOrigin.point.y,
                     # TODO: make sure we HAVE already converted to points!
                     gobj.reWidth.val, gobj.reHeight.val,
@@ -2936,7 +2982,6 @@ proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
     result.reHeight = result.reHeight.toPoints(some(
       quant(img.height.float, ukPoint))
     )
-
   of goPoint:
     result.ptPos = gobj.ptPos.toAbsImage(img)
   of goPolyLine:
