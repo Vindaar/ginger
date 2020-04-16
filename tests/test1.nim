@@ -437,3 +437,37 @@ suite "Viewport":
         ch.checkRecurse()
 
     plt.checkRecurse()
+
+  test "Arithmetic for `Coord1D` involving ukData":
+
+    let q1 = quant(50.0, ukData)
+    let scale = (low: 25.0, high: 125.0)
+
+    # sanity check. Conversion to `ukRelative` for a quantity
+    # is handlded correctly
+    check q1.toRelative(scale = some(scale)) == quant(0.5, ukRelative)
+
+    # now for math involving ukData coordinates. In this case the
+    # subtraction should be
+    let exp = quant(q1.val - scale.low, ukData).toRelative(scale = some(scale))
+
+    let cd1 = Coord1D(kind: ukData,
+                      pos: 50.0,
+                      scale: scale,
+                      axis: akX)
+    let cd2 = Coord1D(kind: ukPoint,
+                      pos: 10.0,
+                      length: some(quant(100.0, ukPoint)))
+    let cd3 = Coord1D(kind: ukPoint,
+                      pos: 0.0,
+                      length: some(quant(100.0, ukPoint)))
+
+    let cd12 = cd1 - cd2
+    check cd12.pos == 0.15
+    check cd12.kind == ukRelative
+
+    let cd13 = cd1 - cd3
+    check cd13.pos == 0.25
+    # this should be the same as `exp`
+    check cd13.pos == exp.val
+    check cd13.kind == ukRelative
