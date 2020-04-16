@@ -739,7 +739,7 @@ func pretty*(gobj: GraphObject, indent = 0): string =
   else:
     result &= "\n"
   for ch in gobj.children:
-    result = pretty(ch, indent + 2)
+    result &= pretty(ch, indent + 2)
   result &= ")\n"
 
 func `$`*(gobj: GraphObject): string =
