@@ -374,7 +374,10 @@ proc toRelative*(q: Quantity,
   of ukData:
     info "[INFO]: conversion of ukData quant to relative. Assuming `length` is data scale!"
     if scale.isSome:
-      result = quant(q.val / (scale.unsafeGet.high - scale.unsafeGet.low), ukRelative)
+      let sc = scale.unsafeGet
+      # NOTE: we do ``not`` subtract the lower scale from `q.val`, because this is
+      # a ``quantity`` and not a ccoordinate!
+      result = quant(q.val / (sc.high - sc.low), ukRelative)
     else:
       raise newException(Exception, "Need a scale to convert quantity of kind " &
         "`ukData` to relative!")
