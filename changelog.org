@@ -1,3 +1,7 @@
+* v0.2.2
+- fixes arithmetic for coordinates involving =ukData= kinds
+- fix string representation for =goComposite=
+
 * v0.2.1
 Hotfix release, which adds the missing =PContext= object for the dummy
 backend, which is used to test on travis in ggplotnim.
