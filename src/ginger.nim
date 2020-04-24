@@ -2279,11 +2279,10 @@ proc initTickLabel(view: Viewport,
   let alignTo = setTextAlignKind(tick.tkAxis, isSecondary, alignToOverride)
   case tick.tkAxis
   of akX:
-    let yCoord = XAxisYPos(isSecondary = isSecondary)
     let yOffset = if margin.isSome: margin.unsafeGet
                   else: yLabelOriginOffset(isSecondary)
     origin = Coord(x: loc.x,
-                   y: yCoord + yOffset)
+                   y: (loc.y + yOffset).toRelative)
     case loc.x.kind
     of ukData:
       let scale = loc.x.scale
@@ -2304,10 +2303,9 @@ proc initTickLabel(view: Viewport,
                            rotate = rotate,
                            name = gobjName)
   of akY:
-    let xCoord = YAxisXPos(isSecondary = isSecondary)
     let xOffset = if margin.isSome: margin.unsafeGet
                   else: xLabelOriginOffset(isSecondary)
-    origin = Coord(x: xCoord + xOffset,
+    origin = Coord(x: (loc.x + xOffset).toRelative,
                    y: loc.y)
     case loc.y.kind
     of ukData:
