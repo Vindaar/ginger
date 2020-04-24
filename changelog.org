@@ -1,3 +1,6 @@
+* v0.2.3
+- make tick label positions relative. For plots that are embedded this
+  is important to keep the labels where they belong.
 * v0.2.2
 - fixes arithmetic for coordinates involving =ukData= kinds
 - fix string representation for =goComposite=
