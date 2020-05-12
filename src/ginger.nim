@@ -2259,7 +2259,7 @@ proc setTextAlignKind(axKind: AxisKind,
 
 proc initTickLabel(view: Viewport,
                    tick: GraphObject,
-                   labelTxt: Option[string] = none[string](),
+                   labelTxt: string,
                    font: Option[Font] = none[Font](),
                    rotate = none[float](),
                    margin = none[Coord1D](),
@@ -2269,9 +2269,6 @@ proc initTickLabel(view: Viewport,
   doAssert tick.kind == goTick, "object must be a `goTick` to create a `goTickLabel`!"
   let mfont = if font.isNone: some(defaultFont(8.0)) else: font
   var label: GraphObject
-  var text = ""
-  if labelTxt.isSome:
-    text = labelTxt.get
   var gobjName = name
   var origin: Coord
   let loc = tick.tkPos
@@ -2283,21 +2280,9 @@ proc initTickLabel(view: Viewport,
                   else: yLabelOriginOffset(isSecondary)
     origin = Coord(x: loc.x,
                    y: (loc.y + yOffset).toRelative)
-    case loc.x.kind
-    of ukData:
-      let scale = loc.x.scale
-      if labelTxt.isNone:
-        # NOTE: for the `tickScale` required for `formatTickValue` we will use the `scale` attached
-        # to the tick position `/ 10.0`. (`10` from the default number of ticks). Since we divide
-        # by 10.0 in `formatTickValue` and users won't be using 1 or 100 ticks, we expect to be able
-        # to detect zero values.
-        text = &"{formatTickValue(loc.x.pos, (scale.high - scale.low) / 10.0)}"
-    else:
-      doAssert labelTxt.isSome, "if tick contains `tkPos.kind != ukData` a label text " &
-        "must be provided!"
     if gobjName == "tickLabel":
       gobjName = "x" & name
-    result = view.initText(origin, text, textKind = goTickLabel,
+    result = view.initText(origin, labelTxt, textKind = goTickLabel,
                            alignKind = alignTo,
                            font = mfont,
                            rotate = rotate,
@@ -2307,21 +2292,9 @@ proc initTickLabel(view: Viewport,
                   else: xLabelOriginOffset(isSecondary)
     origin = Coord(x: (loc.x + xOffset).toRelative,
                    y: loc.y)
-    case loc.y.kind
-    of ukData:
-      let scale = loc.y.scale
-      if labelTxt.isNone:
-        # NOTE: for the `tickScale` required for `formatTickValue` we will use the `scale` attached
-        # to the tick position `/ 10.0`. (`10` from the default number of ticks). Since we divide
-        # by 10.0 in `formatTickValue` and users won't be using 1 or 100 ticks, we expect to be able
-        # to detect zero values.
-        text = &"{formatTickValue(loc.y.pos, (scale.high - scale.low) / 10.0)}"
-    else:
-      doAssert labelTxt.isSome, "if tick contains `tkPos.kind != ukData` a label text " &
-        "must be provided!"
     if gobjName == "tickLabel":
       gobjName = "y" & name
-    result = view.initText(origin, text,
+    result = view.initText(origin, labelTxt,
                            textKind = goTickLabel,
                            alignKind = alignTo,
                            font = mfont,
@@ -2344,6 +2317,7 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                  font: Option[Font] = none[Font](),
                  margin = none[Coord1d](),
                  isSecondary = false,
+                 format: proc(x: float): string = nil,
                 ): seq[GraphObject] =
   ## returns all tick labels for the given ticks
   ## TODO: Clean up the auto subtraction code!
@@ -2360,8 +2334,11 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
   # tick scale (= tick difference) is used to determine if a value is supposed to
   # be exactly 0
   let tickScale = (pos.max - pos.min) / (pos.len - 1).float
+  let fmt =
+    if format != nil: format
+    else: (proc(x: float): string = formatTickValue(x, tickScale))
   # determine pretty if we have to modify values
-  let strs = pos.mapIt(formatTickValue(it, tickScale))
+  let strs = pos.mapIt(fmt(it))
   let strslen = strs.len
   let strsunique = strs.deduplicate.len
   var newPos: seq[float]
@@ -2386,16 +2363,16 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
       rotate = some(-90.0)
     # text that describes what was subtracted
     result.add view.initText(coord,
-                             &"+{formatTickValue(min)}",
+                             &"+{fmt(min)}",
                              textKind = goText,
                              alignKind = taRight,
                              font = font,
                              rotate = rotate,
                              name = "axisSubtraction")
   for i in 0 ..< ticks.len:
-    var labelTxt = none[string]()
-    if newPos.len > 0:
-      labelTxt = some(&"{formatTickValue(newPos[i], tickScale)}")
+    let labelTxt =
+      if newPos.len > 0: fmt(newPos[i])
+      else: strs[i]
     result.add view.initTickLabel(tick = ticks[i], font = font,
                                   labelTxt = labelTxt,
                                   margin = margin,
@@ -2448,7 +2425,7 @@ proc tickLabels*(view: Viewport,
                              isSecondary = isSecondary)
     result[0][i] = tick
     result[1][i] = view.initTickLabel(tick = tick, font = mfont,
-                                      labelTxt = some(tickLabels[i]),
+                                      labelTxt = tickLabels[i],
                                       isSecondary = isSecondary,
                                       rotate = rotate,
                                       margin = margin,
