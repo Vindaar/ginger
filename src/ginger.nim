@@ -2340,35 +2340,36 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
   # determine pretty if we have to modify values
   let strs = pos.mapIt(fmt(it))
   let strslen = strs.len
-  let strsunique = strs.deduplicate.len
   var newPos: seq[float]
-  if strsunique < strslen:
-    # normal stringification loses information, fix
-    let min = pos.min
-    newPos = pos.mapIt(it - min)
-    # based on this, add an additional text in top left
-    let maxtick = ticks[^1]
-    var coord: Coord
-    var rotate: Option[float]
-    case axKind
-    of akX:
-      coord = axisCoord(maxTick.tkPos.x, akX, isSecondary)
-      coord.y = Coord1D(pos: coord.y.toPoints(length = some(view.hImg)).pos + quant(1.5, ukCentimeter).toPoints.val,
-                        kind: ukPoint)
-      rotate = none[float]()
-    of akY:
-      coord = axisCoord(maxTick.tkPos.y, akY, isSecondary)
-      coord.x = Coord1D(pos: coord.x.toPoints(length = some(view.wImg)).pos - quant(2.0, ukCentimeter).toPoints.val,
-                        kind: ukPoint)
-      rotate = some(-90.0)
-    # text that describes what was subtracted
-    result.add view.initText(coord,
-                             &"+{fmt(min)}",
-                             textKind = goText,
-                             alignKind = taRight,
-                             font = font,
-                             rotate = rotate,
-                             name = "axisSubtraction")
+  if format != nil: 
+    let strsunique = strs.deduplicate.len
+    if strsunique < strslen:
+      # normal stringification loses information, fix
+      let min = pos.min
+      newPos = pos.mapIt(it - min)
+      # based on this, add an additional text in top left
+      let maxtick = ticks[^1]
+      var coord: Coord
+      var rotate: Option[float]
+      case axKind
+      of akX:
+        coord = axisCoord(maxTick.tkPos.x, akX, isSecondary)
+        coord.y = Coord1D(pos: coord.y.toPoints(length = some(view.hImg)).pos + quant(1.5, ukCentimeter).toPoints.val,
+                          kind: ukPoint)
+        rotate = none[float]()
+      of akY:
+        coord = axisCoord(maxTick.tkPos.y, akY, isSecondary)
+        coord.x = Coord1D(pos: coord.x.toPoints(length = some(view.wImg)).pos - quant(2.0, ukCentimeter).toPoints.val,
+                          kind: ukPoint)
+        rotate = some(-90.0)
+      # text that describes what was subtracted
+      result.add view.initText(coord,
+                              &"+{fmt(min)}",
+                              textKind = goText,
+                              alignKind = taRight,
+                              font = font,
+                              rotate = rotate,
+                              name = "axisSubtraction")
   for i in 0 ..< ticks.len:
     let labelTxt =
       if newPos.len > 0: fmt(newPos[i])
