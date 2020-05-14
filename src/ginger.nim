@@ -2341,7 +2341,7 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
   let strs = pos.mapIt(fmt(it))
   let strslen = strs.len
   var newPos: seq[float]
-  if format != nil: 
+  if format == nil: 
     let strsunique = strs.deduplicate.len
     if strsunique < strslen:
       # normal stringification loses information, fix
