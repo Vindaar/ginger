@@ -1,3 +1,5 @@
+* v0.2.4
+- add the option to provide tick labels via a callback, PR #18 by @cooldome
 * v0.2.3
 - make tick label positions relative. For plots that are embedded this
   is important to keep the labels where they belong.
