@@ -48,13 +48,9 @@ macro replace*(c: typed, x: untyped): untyped =
   ##                   b: @[1, 2, 3]
   ##                   c: true,
   ##                   d: 5.5)
-  const oldAst = compileOption("oldast")
-  when oldAst:
-    var cImpl = c.getImpl
-  else:
-    # in new AST `getImpl` returns symbol for which it was called
-    # too
-    var cImpl = c.getImpl[2]
+  # in new AST `getImpl` returns symbol for which it was called
+  # too
+  var cImpl = c.getImpl[2]
   # now just replace the correct cImpl fields
   # by the given fields of the user
   for ch in x:
