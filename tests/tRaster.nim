@@ -4,7 +4,7 @@ var
   ys = newSeq[float]()
   zs = newSeq[float]()
 for x in 0 ..< 28:
-  for y in 0 ..< 28:
+  for y in 0 ..< 14:
     xs.add x.float
     ys.add y.float
     zs.add rand(1.0)
@@ -41,7 +41,7 @@ view1.background()
 let raster = view1.initRaster(c(0.0, 0.0),
                               width = quant(1.0, ukRelative),
                               height = quant(1.0, ukRelative),
-                              numX = 28, numY = 28,
+                              numX = 28, numY = 14,
                               drawCb = drawCb)
 
 let grdlines = view1.initGridLines(some(xticks), some(yticks))

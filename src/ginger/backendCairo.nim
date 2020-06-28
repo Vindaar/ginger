@@ -276,7 +276,7 @@ proc drawRaster*(img: var BImage, left, bottom, width, height: float,
       for x in 0 ..< wImg:
         var tX = (x.float / blockSizeX).floor.int
         var tY = (y.float / blockSizeY).floor.int
-        data[y * wImg + x] = toDraw[tY * bY + tX]
+        data[y * wImg + x] = toDraw[tY * numX + tX]
     pngSurface.markDirty()
     # apply the new surface to the image surface
     ctx.set_source(pngSurface, left, bottom)
