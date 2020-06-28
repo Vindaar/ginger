@@ -35,6 +35,13 @@ proc drawRectangle*(img: BImage, left, bottom, width, height: float,
                     rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
   debugecho "WARNING: `drawRectangle` of dummy backend is being called!"
 
+proc drawRaster*(img: var BImage, left, bottom, width, height: float,
+                 numX, numY: int,
+                 drawCb: proc(): seq[uint32],
+                 rotate: Option[float] = none[float](),
+                 rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
+  debugecho "WARNING: `drawRaster` of dummy backend is being called!"
+
 proc initBImage*(filename: string,
                  width, height: int,
                  backend: BackendKind,

@@ -245,6 +245,44 @@ proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
       ctx.set_source_rgba(style.fillColor.r, style.fillColor.g, style.fillColor.b, style.fillColor.a)
     ctx.fill()
 
+proc drawRaster*(img: var BImage, left, bottom, width, height: float,
+                 numX, numY: int,
+                 drawCb: proc(): seq[uint32],
+                 rotate: Option[float] = none[float](),
+                 rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
+  ## draws a rectangle on the image
+  img.withSurface:
+    if rotateInView.isSome:
+      # possible rotation of viewport
+      let rotAngTup = rotateInView.get
+      ctx.rotate(rotAngTup[0], rotAngTup[1])
+    if rotate.isSome:
+      # possible rotation desired for rectangle
+      let
+        rotAtX = left
+        rotAtY = bottom
+      ctx.rotate(rotate.get(), (rotAtX, rotAtY))
+
+    let wImg = width.int32
+    let hImg = height.int32
+    var pngSurface = imageSurfaceCreate(FORMAT_ARGB32, wImg, hImg)
+    pngSurface.flush()
+    # get the raw data of the surface and draw with the callback
+    var data = cast[ptr UncheckedArray[uint32]](getData(pngSurface))
+    let toDraw = drawCb()
+    let blockSizeX = width / numX.float
+    let blockSizeY = height / numY.float
+    for y in 0 ..< hImg:
+      for x in 0 ..< wImg:
+        var tX = (x.float / blockSizeX).floor.int
+        var tY = (y.float / blockSizeY).floor.int
+        data[y * wImg + x] = toDraw[tY * bY + tX]
+    pngSurface.markDirty()
+    # apply the new surface to the image surface
+    ctx.set_source(pngSurface, left, bottom)
+    ctx.paint()
+    pngSurface.destroy()
+
 proc initBImage*(filename: string,
                  width, height: int,
                  backend: BackendKind,

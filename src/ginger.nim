@@ -50,6 +50,7 @@ type
     goRect, # a general rectangle
     goGrid, # the plot grid (lines along the ticks)
     goPolyLine, # a line connecting several points
+    goRaster, # pixel based raster data
     goComposite # an object consisting of several other GraphObjects
 
   CompositeKind* = enum
@@ -97,11 +98,22 @@ type
       plPos*: seq[Coord]
     of goRect:
       reOrigin*: Coord
-      #reBottom*: float
-      #reWidth*: float
-      #reHeight*: float
       reWidth*: Quantity
       reHeight*: Quantity
+    of goRaster:
+      # raw pixel raster object, used for high pixel density heatmaps etc.
+      rstOrigin*: Coord
+      rstPixWidth*: Quantity
+      rstPixHeight*: Quantity
+      # The number of same colored blocks along each direction
+      # e.g. heatmap of 20x20 elements will be drawn to rstPixWidth * rstPixHeight
+      # pixel bitmap (e.g. 500x500 pixels). Need information to calculate size of
+      # each block
+      rstBlockX*: int
+      rstBlockY*: int
+      # should the callback take pixels and return pixels?
+      rstDrawCb*: proc(): seq[uint32] # callback which fills the pix width / height
+                                      # with raw RGB pixels
     of goComposite:
       cmpKind*: CompositeKind # a purely generic kind to describe the composite
                               # used for debugging / echoing
@@ -728,6 +740,13 @@ func pretty*(gobj: GraphObject, indent = 0): string =
     result &= repeat(' ', indent) & &"reOrigin: {gobj.reOrigin},\n"
     result &= repeat(' ', indent) & &"reWidth: {gobj.reWidth},\n"
     result &= repeat(' ', indent) & &"reHeight: {gobj.reHeight}\n"
+  of goRaster:
+    result &= repeat(' ', indent) & &"rstOrigin: {gobj.rstOrigin},\n"
+    result &= repeat(' ', indent) & &"rstPixWidth: {gobj.rstPixWidth},\n"
+    result &= repeat(' ', indent) & &"rstPixHeight: {gobj.rstPixHeight}\n"
+    result &= repeat(' ', indent) & &"rstBlockX: {gobj.rstBlockX},\n"
+    result &= repeat(' ', indent) & &"rstBlockY: {gobj.rstBlockY}\n"
+    result &= repeat(' ', indent) & &"rstDrawCb.isNil?: {gobj.rstDrawCb.isNil}\n"
   else:
     result &= repeat(' ', indent) & &"<no conversion for {gobj.kind}\n"
   result &= repeat(' ', indent) & &"style: {gobj.style},\n"
@@ -1346,6 +1365,8 @@ func updateDataScale(view: Viewport, obj: var GraphObject) =
     obj.plPos.applyIt(view.updateScale(it))
   of goRect:
     view.updateScale(obj.reOrigin)
+  of goRaster:
+    view.updateScale(obj.rstOrigin)
   of goComposite:
     # call this func for all children of the composite
     for ch in mitems(obj.children):
@@ -1720,6 +1741,23 @@ proc initRect*(view: Viewport,
                          style = style,
                          gradient = gradient,
                          name = name)
+
+proc initRaster*(view: Viewport,
+                 origin: Coord,
+                 width, height: Quantity,
+                 numX, numY: int, # grid size of the raster
+                 drawCb: proc(): seq[uint32],
+                 rotate = none[float](),
+                 name = "raster"): GraphObject =
+  result = GraphObject(kind: goRaster,
+                       name: name,
+                       rstOrigin: origin.patchCoord(view),
+                       rstPixWidth: width,
+                       rstPixHeight: height,
+                       rstBlockX: numX,
+                       rstBlockY: numY,
+                       rstDrawCb: drawCb,
+                       rotate: rotate)
 
 proc initText*(view: Viewport,
                origin: Coord,
@@ -2341,7 +2379,7 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
   let strs = pos.mapIt(fmt(it))
   let strslen = strs.len
   var newPos: seq[float]
-  if format == nil: 
+  if format == nil:
     let strsunique = strs.deduplicate.len
     if strsunique < strslen:
       # normal stringification loses information, fix
@@ -2828,6 +2866,16 @@ proc drawRect(img: var BImage, gobj: GraphObject) =
                     rotate = gobj.rotate,
                     rotateInView = gobj.rotateInView)
 
+proc drawRaster(img: var BImage, gobj: GraphObject) =
+  doAssert gobj.kind == goRaster, "object must be a `goRaster`!"
+  img.drawRaster(gobj.rstOrigin.point.x, gobj.rstOrigin.point.y,
+                 # TODO: make sure we HAVE already converted to points!
+                 gobj.rstPixWidth.val, gobj.rstPixHeight.val,
+                 gobj.rstBlockX, gobj.rstBlockY,
+                 gobj.rstDrawCb,
+                 rotate = gobj.rotate,
+                 rotateInView = gobj.rotateInView)
+
 proc drawPoint(img: var BImage, gobj: GraphObject) =
   doAssert gobj.kind == goPoint, "object must be a `goPoint`!"
   case gobj.ptMarker
@@ -2961,6 +3009,14 @@ proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
     result.reHeight = result.reHeight.toPoints(some(
       quant(img.height.float, ukPoint))
     )
+  of goRaster:
+    result.rstOrigin = result.rstOrigin.toAbsImage(img)
+    result.rstPixWidth = result.rstPixWidth.toPoints(some(
+      quant(img.width.float, ukPoint))
+    )
+    result.rstPixHeight = result.rstPixHeight.toPoints(some(
+      quant(img.height.float, ukPoint))
+    )
   of goPoint:
     result.ptPos = gobj.ptPos.toAbsImage(img)
   of goPolyLine:
@@ -2999,6 +3055,10 @@ proc embedInto(gobj: GraphObject, view: Viewport): GraphObject =
     result.reOrigin = gobj.reOrigin.embedInto(view)
     result.reWidth = result.reWidth.embedInto(akX, view)
     result.reHeight = result.reHeight.embedInto(akY, view)
+  of goRaster:
+    result.rstOrigin = gobj.rstOrigin.embedInto(view)
+    result.rstPixWidth = result.rstPixWidth.embedInto(akX, view)
+    result.rstPixHeight = result.rstPixHeight.embedInto(akY, view)
   of goPoint:
     result.ptPos = gobj.ptPos.embedInto(view)
   of goPolyLine:
@@ -3054,6 +3114,8 @@ proc draw*(img: var BImage, gobj: GraphObject) =
     img.drawLine(globalObj)
   of goRect:
     img.drawRect(globalObj)
+  of goRaster:
+    img.drawRaster(globalObj)
   of goPoint:
     img.drawPoint(globalObj)
   of goPolyLine:
@@ -3068,7 +3130,7 @@ proc draw*(img: var BImage, gobj: GraphObject) =
     # composite itself has nothing to be drawn, only children handled individually
     discard
 
-proc draw(img: var BImage, view: Viewport) =
+proc draw*(img: var BImage, view: Viewport) =
   ## draws the full viewport including all objects and all
   ## children onto the image
   ## NOTE: children are drawn `after` the parent viewport
