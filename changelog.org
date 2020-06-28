@@ -1,3 +1,6 @@
+* v0.2.5 
+- add support for raster objects, i.e. bitmap based rectangles with
+  NxM colored blocks
 * v0.2.4
 - add the option to provide tick labels via a callback, PR #18 by @cooldome
 * v0.2.3
