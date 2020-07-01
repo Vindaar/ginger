@@ -14,6 +14,8 @@ export types, backends, macroUtils
 
 from os import splitFile
 
+proc byLent[T](a: T): lent T {.inline.} = a # pending https://github.com/nim-lang/Nim/pull/14875
+
 # TODO: think about renaming `Coord1D` to someting like Unit?
 
 # TODO: implement some more units so that we can use it to define
@@ -1355,14 +1357,14 @@ func updateDataScale(view: Viewport, obj: var GraphObject) =
   of goLabel, goText, goTickLabel:
     view.updateScale(obj.txtPos)
   of goGrid:
-    obj.gdXPos.applyIt(view.updateScale(it))
-    obj.gdYPos.applyIt(view.updateScale(it))
+    obj.gdXPos.applyIt(view.updateScale(it.byLent))
+    obj.gdYPos.applyIt(view.updateScale(it.byLent))
   of goTick:
     view.updateScale(obj.tkPos)
   of goPoint:
     view.updateScale(obj.ptPos)
   of goPolyLine:
-    obj.plPos.applyIt(view.updateScale(it))
+    obj.plPos.applyIt(view.updateScale(it.byLent))
   of goRect:
     view.updateScale(obj.reOrigin)
   of goRaster:
