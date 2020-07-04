@@ -145,6 +145,7 @@ type
     #val*: float
     #kind*: UnitKind
 
+  # TODO: should axis be a global field after all?
   Coord1D* = object
     pos*: float
     case kind*: UnitKind
@@ -621,12 +622,20 @@ proc sub*(q1, q2: Quantity,
     else:
       raise newException(ValueError, "Cannot do arithmetic on `" & $q1.unit & "`!")
 
-func initCoord1D*(at: float, kind: UnitKind = ukRelative): Coord1D =
+func initCoord1D*(at: float,
+                  kind: UnitKind = ukRelative,
+                  axKind: AxisKind = akX): Coord1D =
   ## returns a Coord1D at coordinate `at` of kind `kind`
-  result = Coord1D(pos: at, kind: kind)
+  case kind
+  of ukData:
+    result = Coord1D(pos: at, kind: ukData, axis: axKind)
+  else:
+    result = Coord1D(pos: at, kind: kind)
 
-template c1*(at: float, kind: UnitKind = ukRelative): Coord1D =
-  initCoord1D(at, kind)
+template c1*(at: float,
+             kind: UnitKind = ukRelative,
+             axKind: AxisKind = akX): Coord1D =
+  initCoord1D(at, kind, axKind)
 
 proc initCoord1d*(view: Viewport, at: float,
                   axKind: AxisKind,
@@ -668,8 +677,8 @@ template c1*(view: Viewport, at: float,
 
 proc initCoord*(x, y: float, kind: UnitKind = ukRelative): Coord =
   ## returns a coordinate at coordinates x, y of kind `kind`
-  result = Coord(x: initCoord1D(x, kind = kind),
-                 y: initCoord1D(y, kind = kind))
+  result = Coord(x: initCoord1D(x, kind = kind, axKind = akX),
+                 y: initCoord1D(y, kind = kind, axKind = akY))
 
 template c*(x, y: float, kind: UnitKind = ukRelative): Coord =
   initCoord(x, y, kind)
