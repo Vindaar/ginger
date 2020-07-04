@@ -1,3 +1,7 @@
+* v0.2.6
+- allow assignment of axis in =initCoord1D= proc / template using it,
+  use that in =initCoord= proc / template for =ukData=
+- handle negative width / height in =drawRaster=
 * v0.2.5 
 - add support for raster objects, i.e. bitmap based rectangles with
   NxM colored blocks
