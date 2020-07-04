@@ -263,13 +263,18 @@ proc drawRaster*(img: var BImage, left, bottom, width, height: float,
         rotAtY = bottom
       ctx.rotate(rotate.get(), (rotAtX, rotAtY))
 
+    let
+      width = abs(width)
+      height = abs(height)
     let wImg = width.int32
     let hImg = height.int32
     var pngSurface = imageSurfaceCreate(FORMAT_ARGB32, wImg, hImg)
+
     pngSurface.flush()
     # get the raw data of the surface and draw with the callback
     var data = cast[ptr UncheckedArray[uint32]](getData(pngSurface))
     let toDraw = drawCb()
+    # each tile must be drawn with `blockSize` pixels
     let blockSizeX = width / numX.float
     let blockSizeY = height / numY.float
     for y in 0 ..< hImg:
