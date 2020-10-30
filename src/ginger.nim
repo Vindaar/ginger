@@ -1889,8 +1889,8 @@ proc initMultiLineText*(view: Viewport,
     # and an additional (-0.5 * height) to account for current text being
     # centered on center of line, not bottom
     let newY = origin.y - toRelative(
-      strHeight((numLines.float - idx.float - 0.5).float * 1.75, font),
-      length = some(view.hImg)
+      strHeight((numLines.float - idx.float - 0.5).float * 1.5, font),
+      length = some(view.pointHeight)
     )
     let newOrigin = Coord(x: origin.x,
                           y: newY)
