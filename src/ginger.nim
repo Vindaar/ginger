@@ -2365,6 +2365,8 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
                  margin = none[Coord1d](),
                  isSecondary = false,
                  format: proc(x: float): string = nil,
+                 rotate = none[float](),
+                 alignToOverride = none[TextAlignKind]()
                 ): seq[GraphObject] =
   ## returns all tick labels for the given ticks
   ## TODO: Clean up the auto subtraction code!
@@ -2397,18 +2399,17 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
       # based on this, add an additional text in top left
       let maxtick = ticks[^1]
       var coord: Coord
-      var rotate: Option[float]
+      var rotate = if rotate.isSome: rotate else: none[float]()
       case axKind
       of akX:
         coord = axisCoord(maxTick.tkPos.x, akX, isSecondary)
         coord.y = Coord1D(pos: coord.y.toPoints(length = some(view.hImg)).pos + quant(1.5, ukCentimeter).toPoints.val,
                           kind: ukPoint)
-        rotate = none[float]()
       of akY:
         coord = axisCoord(maxTick.tkPos.y, akY, isSecondary)
         coord.x = Coord1D(pos: coord.x.toPoints(length = some(view.wImg)).pos - quant(2.0, ukCentimeter).toPoints.val,
                           kind: ukPoint)
-        rotate = some(-90.0)
+        rotate = if rotate.isNone: some(-90.0) else: rotate
       # text that describes what was subtracted
       result.add view.initText(coord,
                               &"+{fmt(min)}",
@@ -2424,6 +2425,8 @@ proc tickLabels*(view: Viewport, ticks: seq[GraphObject],
     result.add view.initTickLabel(tick = ticks[i], font = font,
                                   labelTxt = labelTxt,
                                   margin = margin,
+                                  rotate = rotate,
+                                  alignToOverride = alignToOverride,
                                   isSecondary = isSecondary)
 
 proc initTick(view: Viewport,
