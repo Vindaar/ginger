@@ -1,3 +1,5 @@
+* v0.2.9
+- add "Secondary" suffix to the names of tick labels of secondary axes
 * v0.2.8
 - add rotate/alignment argument to another =tickLabels= overload
 * v0.2.7
