@@ -2329,6 +2329,8 @@ proc initTickLabel(view: Viewport,
                    y: (loc.y + yOffset).toRelative)
     if gobjName == "tickLabel":
       gobjName = "x" & name
+      if isSecondary:
+        gobjName &= "Secondary"
     result = view.initText(origin, labelTxt, textKind = goTickLabel,
                            alignKind = alignTo,
                            font = mfont,
@@ -2341,6 +2343,8 @@ proc initTickLabel(view: Viewport,
                    y: loc.y)
     if gobjName == "tickLabel":
       gobjName = "y" & name
+      if isSecondary:
+        gobjName &= "Secondary"
     result = view.initText(origin, labelTxt,
                            textKind = goTickLabel,
                            alignKind = alignTo,
