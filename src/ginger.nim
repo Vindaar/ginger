@@ -2816,14 +2816,19 @@ proc layout*(view: Viewport,
                                       scale = some(view.xScale))
       let marginY = margin.toRelative(length = some(pointHeight(view)),
                                       scale = some(view.yScale))
+      ## Margins are 2 times given margin in relative units relative to the width of a single
+      ## viewport in the resulting layout!
+      ## TODO: possibly given `colWidths`?
       let width = sub(widths[j],
                       times(quant(2.0, ukRelative), marginX,
-                            length = some(pointWidth(view)),
+                            length = some(quant(pointWidth(view).val / cols.float,
+                                                ukPoint)),
                             scale = some(view.xScale)),
                       length = some(pointWidth(view)),
                       scale = some(view.xScale))
       let height = sub(heights[i], times(quant(2.0, ukRelative), marginY,
-                                         length = some(pointHeight(view)),
+                                         length = some(quant(pointHeight(view).val / rows.float,
+                                                             ukPoint)),
                                          scale = some(view.yScale)),
                        length = some(pointHeight(view)),
                        scale = some(view.yScale))
