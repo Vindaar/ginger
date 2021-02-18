@@ -2267,26 +2267,23 @@ proc ylabel*(view: Viewport,
                               isSecondary = isSecondary,
                               rotate = rotate)
 
-template xLabelOriginOffset(isSecondary = false): untyped =
+template xLabelOriginOffset(fnt: Font, isSecondary = false): untyped =
   if not isSecondary:
-    Coord1D(pos: -0.4,
-            kind: ukCentimeter,
-            length: some(pointWidth(view)))
+    # use `M` as default
+    Coord1D(pos: -1.25, kind: ukStrHeight, text: "M", font: fnt)
+      .toRelative(length = some(pointWidth(view)))
   else:
-    Coord1D(pos: 0.4,
-            kind: ukCentimeter,
-            length: some(pointWidth(view)))
+    Coord1D(pos: 1.25, kind: ukStrHeight, text: "M", font: fnt)
+      .toRelative(length = some(pointWidth(view)))
 
-template yLabelOriginOffset(isSecondary = false): untyped =
+template yLabelOriginOffset(fnt: Font, isSecondary = false): untyped =
   if not isSecondary:
-    Coord1D(pos: 0.5,
-            kind: ukCentimeter,
-            length: some(pointHeight(view)))
+    # use `M` as default
+    Coord1D(pos: 1.75, kind: ukStrHeight, text: "M", font: fnt)
+      .toRelative(length = some(pointHeight(view)))
   else:
-    # TODO: check if value good!
-    Coord1D(pos: -0.5,
-            kind: ukCentimeter,
-            length: some(pointHeight(view)))
+    Coord1D(pos: -1.75, kind: ukStrHeight, text: "M", font: fnt)
+      .toRelative(length = some(pointHeight(view)))
 
 proc setTextAlignKind(axKind: AxisKind,
                       isSecondary = false,
@@ -2314,7 +2311,7 @@ proc initTickLabel(view: Viewport,
                    isSecondary = false,
                    alignToOverride = none[TextAlignKind]()): GraphObject =
   doAssert tick.kind == goTick, "object must be a `goTick` to create a `goTickLabel`!"
-  let mfont = if font.isNone: some(defaultFont(8.0)) else: font
+  let mfont = if font.isNone: defaultFont(8.0) else: font.get
   var label: GraphObject
   var gobjName = name
   var origin: Coord
@@ -2324,7 +2321,7 @@ proc initTickLabel(view: Viewport,
   case tick.tkAxis
   of akX:
     let yOffset = if margin.isSome: margin.unsafeGet
-                  else: yLabelOriginOffset(isSecondary)
+                  else: yLabelOriginOffset(mfont, isSecondary)
     origin = Coord(x: loc.x,
                    y: (loc.y + yOffset).toRelative)
     if gobjName == "tickLabel":
@@ -2333,12 +2330,12 @@ proc initTickLabel(view: Viewport,
         gobjName &= "Secondary"
     result = view.initText(origin, labelTxt, textKind = goTickLabel,
                            alignKind = alignTo,
-                           font = mfont,
+                           font = some(mfont),
                            rotate = rotate,
                            name = gobjName)
   of akY:
     let xOffset = if margin.isSome: margin.unsafeGet
-                  else: xLabelOriginOffset(isSecondary)
+                  else: xLabelOriginOffset(mfont, isSecondary)
     origin = Coord(x: (loc.x + xOffset).toRelative,
                    y: loc.y)
     if gobjName == "tickLabel":
@@ -2348,7 +2345,7 @@ proc initTickLabel(view: Viewport,
     result = view.initText(origin, labelTxt,
                            textKind = goTickLabel,
                            alignKind = alignTo,
-                           font = mfont,
+                           font = some(mfont),
                            rotate = rotate,
                            name = gobjName)
 
