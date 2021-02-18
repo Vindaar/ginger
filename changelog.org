@@ -1,3 +1,7 @@
+* v0.2.10
+- change default tick label margin to be based on font height
+- fix margin handling in layout to be based on relative sizes of the
+  *current* viewport instead of the parent viewport
 * v0.2.9
 - add "Secondary" suffix to the names of tick labels of secondary axes
 * v0.2.8
