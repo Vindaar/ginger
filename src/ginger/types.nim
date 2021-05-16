@@ -1,5 +1,6 @@
 import chroma
 import options
+import pixie
 
 when not defined(noCairo):
   import cairo
@@ -27,7 +28,7 @@ else:
 
 type
   BackendKind* = enum
-    bkCairo, bkVega
+    bkCairo, bkVega, bkPixie
   FiletypeKind* = enum
     fkSvg, fkPng, fkPdf, fkVega
 
@@ -49,6 +50,9 @@ type
       ftype*: FileTypeKind
     of bkVega:
       discard
+    of bkPixie:
+      pxImage*: Image
+      filetype*: FileTypeKind # cannot redefine ftype for Cairo
 
   LineType* = enum
     ltNone, ltSolid, ltDashed, ltDotted, ltDotDash, ltLongDash, ltTwoDash
