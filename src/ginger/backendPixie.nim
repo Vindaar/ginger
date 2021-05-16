@@ -50,13 +50,14 @@ proc drawRectangle*(img: BImage, left, bottom, width, height: float,
                     rotate: Option[float] = none[float](),
                     rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
   var path: Path
-  let (x, y) = (left, left + height) # Pixie rects start at top-right
-  path.rect(x, y, width, height)
+  path.rect(bottom, left, width, height)
+
   if rotateInView.isSome:
     let (angle, around) = rotateInView.get
     path.rotate(angle, around)
   if rotate.isSome:
     path.rotate(rotate.get, (left, bottom))
+
   img.pxImage.fillPath(path, style.color)
 
 proc drawRaster*(img: var BImage, left, bottom, width, height: float,
