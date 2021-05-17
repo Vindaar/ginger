@@ -12,7 +12,7 @@ func rotationMatrix(angle: float, around: Point): Mat3 =
   result = translate(around.toVec2) * rotate((angle * PI / 180.0).float32) * translate(-around.toVec2)
 
 proc rotate(path: var Path, angle: float, around: Point) =
-  # We use the low-level Path API because it allows us more flexible rotation
+  # We use the low-level Path API because it's more flexible
   path.transform(rotationMatrix(angle, around))
 
 proc drawLine*(img: BImage, start, stop: Point,
@@ -40,6 +40,7 @@ proc drawPolyLine*(img: BImage, points: seq[Point],
     path.lineTo(points[idx].toVec2)
 
   img.pxImage.strokePath(path, style.color, style.lineWidth)
+  # When drawing that closes it will fill!
   img.pxImage.fillPath(path, style.fillColor)
 
 proc drawCircle*(img: BImage, center: Point, radius: float,
@@ -60,7 +61,7 @@ proc drawCircle*(img: BImage, center: Point, radius: float,
 proc getTextExtent*(text: string, font: types.Font): TextExtent =
   debugecho "WARNING: `getTextExtent` of Pixie backend is being called and is unnessecary"
 
-func align(alignKind: TextAlignKind): tuple[HAlignMode, VAlignMode] =
+func align(alignKind: TextAlignKind): (HAlignMode, VAlignMode) =
   # Return Pixie alignments given a Ginger text alignment
   case alignKind:
   of taLeft:
@@ -89,7 +90,7 @@ proc drawText*(img: BImage, text: string, font: types.Font, at: Point,
 
   let (hAlign, vAlign) = align(alignKind)
   # Render the text to the image using our transformation matrix and alignment
-  img.pxImage.fillText(pxFont, text, transformMatrix, hAlign, vAlign)
+  img.pxImage.fillText(pxFont, text, transformMatrix, vec2(0,0), hAlign, vAlign)
 
 proc drawRectangle*(img: BImage, left, bottom, width, height: float,
                     style: Style,
