@@ -40,7 +40,7 @@ proc drawPolyLine*(img: BImage, points: seq[Point],
     path.lineTo(points[idx].toVec2)
 
   img.pxImage.strokePath(path, style.color, style.lineWidth)
-  # When drawing that closes it will fill!
+  # When drawing a line that closes a path, it will fill
   img.pxImage.fillPath(path, style.fillColor)
 
 proc drawCircle*(img: BImage, center: Point, radius: float,
