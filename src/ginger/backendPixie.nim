@@ -1,5 +1,5 @@
 import chroma
-import options
+import std/[options, strformat]
 import pixie
 import types
 
@@ -79,22 +79,42 @@ proc drawCircle*(img: BImage, center: Point, radius: float,
 proc getTextExtent*(text: string, font: types.Font): TextExtent =
   debugecho "WARNING: `getTextExtent` of Pixie backend is being called and is unnessecary"
 
-func getTextAligns(alignKind: TextAlignKind): (HAlignMode, VAlignMode) =
+func getTextAligns(alignKind: TextAlignKind): HAlignMode =
   # Return Pixie alignments given a Ginger text alignment
-  case alignKind:
-  of taLeft:
-    result = (haLeft, vaMiddle)
-  of taCenter:
-    result = (haCenter, vaMiddle)
-  of taRight:
-    result = (haRight, vaMiddle)
+  result = case alignKind
+    of taLeft: haLeft
+    of taCenter: haCenter
+    of taRight: haRight
+
+func getSlant(fs: FontSlant): string =
+  # Returns the suffix for a given slant
+  result = case fs
+    of fsNormal: "Regular"
+    of fsItalic: "Italic"
+    of fsOblique: "Oblique"
+
+proc lookupFont(img: BImage, font: types.Font, path: Option[string]) =
+  # Loads an given font file or loads a "hardcoded" one and 
+  var pxFont: pixie.Font
+  if path.isSome:
+    pxFont = readFont(path.get)
+  else:
+    # TODO better font loading
+    # Currently a skeleton of trying to load a font family according to `types.Font`
+    # It should look into system dirs and list the files
+    let suffix = if font.bold: "Bold" else: getSlant(font.slant)
+    let fileName = &"{font.family}-{suffix}.ttf"
+    pxFont = readFont(filename)
+
+  img.pxContext.font = pxFont
 
 proc drawText*(img: BImage, text: string, font: types.Font, at: Point,
                alignKind: TextAlignKind = taLeft,
                rotate: Option[float] = none[float](),
-               rotateInView: Option[(float, Point)] = none[(float, Point)]()) =
-  var pxFont = readFont(font.family) # TODO: family AFAIK does not point to a valid font file so this will fail
-  pxFont.size = font.size
+               rotateInView: Option[(float, Point)] = none[(float, Point)](),
+               fontPath: Option[string] = none[string]()) =
+  let tempFontPath = some("data/Arial-Bold.ttf")
+  img.lookupFont(font, tempFontPath)
 
   # Check if we need to rotate around a specified Point on the canvas
   if rotateInView.isSome:
@@ -104,8 +124,10 @@ proc drawText*(img: BImage, text: string, font: types.Font, at: Point,
     # Here we only rotate with an angle around the origin if needed
     img.rotate(rotate.get, (at.x, at.y))
 
-  # TODO style text
-  let (hAlign, vAlign) = getTextAligns(alignKind)
+  img.pxContext.font.size = font.size
+  img.pxContext.fillStyle = font.color
+  img.pxContext.strokeStyle = font.color
+  img.pxContext.textAlign = getTextAligns(alignKind)
   img.pxContext.fillText(text, at.toVec2)
   img.saveState()
 
