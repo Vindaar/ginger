@@ -61,7 +61,7 @@ type
     of bkVega:
       discard
     of bkPixie:
-      pxImage*: Image
+      pxContext*: pixie.Context
 
   LineType* = enum
     ltNone, ltSolid, ltDashed, ltDotted, ltDotDash, ltLongDash, ltTwoDash

@@ -7,27 +7,39 @@ func toVec2(point: Point): Vec2 =
   # Helper to convert ginger's Points to vec2's for Pixie
   result = vec2(point.x, point.y)
 
-func rotationMatrix(angle: float, around: Point): Mat3 =
-  # Returns the transformation matrix enabling easy rotation around a point
-  result = translate(around.toVec2) * rotate((angle * PI / 180.0).float32) * translate(-around.toVec2)
+proc saveState(img: BImage) =
+  # Helper to save the current state of the Context
+  # and reset to the identity matrix afterwards
+  img.pxContext.save()
+  img.pxContext.resetTransform()
 
-proc rotate(path: var Path, angle: float, around: Point) =
-  # We use the low-level Path API because it's more flexible
-  path.transform(rotationMatrix(angle, around))
+proc rotate(img: BImage, angle: float, around: Point) =
+  # Rotate the given Context with `angle` around a Point
+  img.pxContext.translate(around.toVec2)
+  img.pxContext.rotate((angle * PI / 180.0).float32)
+  img.pxContext.translate(-around.toVec2)
+
+proc setStyle(img: BImage, style: Style) =
+  # Styles the Pixie Context according to a given Ginger `style`
+  let 
+    fillPaint = Paint(kind: pkSolid, color: style.fillColor.asRgba)
+    strokePaint = Paint(kind: pkSolid, color: style.color.asRgba)
+
+  img.pxContext.fillStyle = fillPaint
+  img.pxContext.strokeStyle = strokePaint 
+  img.pxContext.lineWidth = style.lineWidth
 
 proc drawLine*(img: BImage, start, stop: Point,
                style: Style,
                rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
-  var path: Path
-  path.moveTo(start.toVec2)
-  path.lineTo(stop.toVec2)
-
   if rotateAngle.isSome: 
     let (angle, around) = rotateAngle.get
-    path.rotate(angle, around)
+    img.rotate(angle, around)
+  
+  img.setStyle(style)
+  img.pxContext.strokeSegment(segment(start.toVec2, stop.toVec2))
+  img.saveState()
 
-  img.pxImage.strokePath(path, style.color, style.lineWidth)
-    
 proc drawPolyLine*(img: BImage, points: seq[Point],
                    style: Style,
                    rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
@@ -39,29 +51,29 @@ proc drawPolyLine*(img: BImage, points: seq[Point],
   for idx in 1..points.high:
     path.lineTo(points[idx].toVec2)
 
-  img.pxImage.strokePath(path, style.color, style.lineWidth)
+  img.setStyle(style)
+  img.pxContext.stroke(path)
   # When drawing a line that closes a path, it will fill
-  img.pxImage.fillPath(path, style.fillColor)
+  img.pxContext.fill(path)
+  img.saveState()
 
 proc drawCircle*(img: BImage, center: Point, radius: float,
-                 lineWidth: float,
-                 strokeColor = color(0.0, 0.0, 0.0),
-                 fillColor = color(0.0, 0.0, 0.0, 0.0),
+                 style: Style,
                  rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
-  var path: Path
-  path.circle(center.toVec2, radius)
-
   if rotateAngle.isSome:
     let (angle, around) = rotateAngle.get
-    path.rotate(angle, around)
-
-  img.pxImage.fillPath(path, fillColor)
-  img.pxImage.strokePath(path, strokeColor, lineWidth)
+    img.rotate(angle, around)
+  
+  img.setStyle(style)
+  
+  img.pxContext.strokeCircle(center.toVec2, radius)
+  img.pxContext.fillCircle(center.toVec2, radius)
+  img.saveState()
 
 proc getTextExtent*(text: string, font: types.Font): TextExtent =
   debugecho "WARNING: `getTextExtent` of Pixie backend is being called and is unnessecary"
 
-func align(alignKind: TextAlignKind): (HAlignMode, VAlignMode) =
+func getTextAligns(alignKind: TextAlignKind): (HAlignMode, VAlignMode) =
   # Return Pixie alignments given a Ginger text alignment
   case alignKind:
   of taLeft:
@@ -77,42 +89,40 @@ proc drawText*(img: BImage, text: string, font: types.Font, at: Point,
                rotateInView: Option[(float, Point)] = none[(float, Point)]()) =
   var pxFont = readFont(font.family) # TODO: family AFAIK does not point to a valid font file so this will fail
   pxFont.size = font.size
-  # pxFont.paint.color = font.color
-  # TODO figure out font slant and Pixie
 
-  var transformMatrix: Mat3 = mat3()
   # Rotate the text first and then align it
   if rotateInView.isSome:
     let (angle, around) = rotateInView.get
-    transformMatrix = transformMatrix * rotationMatrix(angle, around)
+    img.rotate(angle, around)
   if rotate.isSome:
-    transformMatrix = transformMatrix * rotationMatrix(rotate.get, (at.x, at.y))
-
-  let (hAlign, vAlign) = align(alignKind)
-  # Render the text to the image using our transformation matrix and alignment
-  img.pxImage.fillText(pxFont, text, transformMatrix, vec2(0,0), hAlign, vAlign)
+    img.rotate(rotate.get, (at.x, at.y))
+  
+  # TODO style text
+  let (hAlign, vAlign) = getTextAligns(alignKind)
+  img.pxContext.fillText(text, at.toVec2)
+  img.saveState()
 
 proc drawRectangle*(img: BImage, left, bottom, width, height: float,
                     style: Style,
                     rotate: Option[float] = none[float](),
                     rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
-  var path: Path
-  path.rect(bottom, left, width, height)
-
   if rotateInView.isSome:
     let (angle, around) = rotateInView.get
-    path.rotate(angle, around)
+    img.rotate(angle, around)
   if rotate.isSome:
-    path.rotate(rotate.get, (left, bottom))
-
-  img.pxImage.fillPath(path, style.color)
+    img.rotate(rotate.get, (left, bottom))
+  
+  img.setStyle(style)
+  let rect = rect(left, bottom, width, height)
+  img.pxContext.strokeRect(rect)
+  img.pxContext.fillRect(rect)
+  img.saveState()
 
 proc drawRaster*(img: var BImage, left, bottom, width, height: float,
                  numX, numY: int,
                  drawCb: proc(): seq[uint32],
                  rotate: Option[float] = none[float](),
-                 rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
-  debugecho "WARNING: `drawRaster` of Pixie backend is being called!"
+                 rotateInView: Option[(float, Point),] = none[(float, Point)]()) = discard
 
 proc initBImage*(filename: string,
                  width, height: int,
@@ -120,19 +130,25 @@ proc initBImage*(filename: string,
                  fType: FiletypeKind): BImage =
   case backend
   of bkPixie:
-    var image: Image = newImage(width, height)
+    let ctx = newContext(width, height)
+
     case fType
     of fkPng:
-      image.writeFile(filename)
+      ctx.image.writeFile(filename)
     else:
       raise newException(Exception, "Unsupported filetype " & $fType & " in `initBImage`")
     result = BImage(fname: filename,
                     width: width,
                     height: height,
                     backend: bkPixie,
-                    pxImage: image,
-                    filetype: fType)
+                    pxContext: ctx,
+                    ftype: fType)
   of bkCairo:
     discard
   of bkVega:
     discard
+
+proc writeFile*(img: BImage, fname: string) {.inline.} =
+  # Helper that writes an Image using it's Context to a file
+  img.pxContext.image.writeFile(fname)
+
