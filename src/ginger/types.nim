@@ -42,17 +42,16 @@ type
     fname*: string
     width*: int
     height*: int
+    ftype*: FileTypeKind
     case backend*: BackendKind
     of bkCairo:
       cCanvas*: PSurface
       ctx*: PContext
       created*: bool # if surface was created
-      ftype*: FileTypeKind
     of bkVega:
       discard
     of bkPixie:
-      pxImage*: Image
-      filetype*: FileTypeKind # cannot redefine ftype for Cairo
+      pxContext*: pixie.Context
 
   LineType* = enum
     ltNone, ltSolid, ltDashed, ltDotted, ltDotDash, ltLongDash, ltTwoDash
