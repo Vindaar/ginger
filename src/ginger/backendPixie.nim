@@ -150,16 +150,16 @@ proc drawRaster*(img: var BImage, left, bottom, width, height: float,
   if rotate.isSome:
     # Here we only rotate with an angle around the origin if needed
     img.rotate(rotate.get, (left, bottom))
-
+  
+  # Initialize our raster
   let
-    # Initialize our raster
     rasterWidth = abs(width).int32
     rasterHeight = abs(height).int32
-    raster = newImage(rasterWidth, rasterHeight)
     # Dimensions of a single tile in pixels
     tileWidth = width / numX.float
     tileHeight = height / numY.float
     toDraw = drawCb() # Get the sequence that holds the color information
+  var raster = newImage(rasterWidth, rasterHeight)
 
   for y in 0 ..< rasterHeight:
     for x in 0 ..< rasterWidth:
@@ -178,7 +178,7 @@ proc initBImage*(filename: string,
                  fType: FiletypeKind): BImage =
   case backend
   of bkPixie:
-    let ctx = newContext(width, height)
+    var ctx = newContext(width, height)
 
     case fType
     of fkPng:
