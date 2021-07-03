@@ -2030,18 +2030,33 @@ proc initErrorBar*(view: Viewport,
                   x2 = errorDown,
                   y1 = pt.y,
                   y2 = pt.y)
+      ## NOTE: convert point size of error bar `T` into absolute scale
+      ## of the Y position. We do this, because otherwise we run into
+      ## a problem, as the result will be `ukRelative`, causing the lines
+      ## to be drawn inverted. Ref downstream:
+      ## https://github.com/Vindaar/ggplotnim/issues/94
+      ## This fixes the downstream bug, but I'm a bit unclear why it breaks.
+      ## Does `ukRelative` simply always refer to position from *top*? That
+      ## would of course be wrong for the y axis.
+      let sc = some(pt.y.scale)
+      let locAbs = view.c1(locStyle.size, akY, ukPoint)
+        .to(ukData,
+            datScale = sc,
+            datAxis = some(akY))
+      let pLow = pt.y - locAbs
+      let pHigh = pt.y + locAbs
       let chRight = view.initLine(
         start = Coord(x: errorUp,
-                      y: pt.y - view.c1(locStyle.size, akY, ukPoint)),
+                      y: pLow),
         stop = Coord(x: errorUp,
-                     y: pt.y + view.c1(locStyle.size, akY, ukPoint)),
+                     y: pHigh),
         style = style
       )
       let chLeft = view.initLine(
         start = Coord(x: errorDown,
-                      y: pt.y - view.c1(locStyle.size, akY, ukPoint)),
+                      y: pLow),
         stop = Coord(x: errorDown,
-                     y: pt.y + view.c1(locStyle.size, akY, ukPoint)),
+                     y: pHigh),
         style = style
       )
       result.children.add @[chRight, chLeft]
@@ -2066,7 +2081,6 @@ proc initErrorBar*(view: Viewport,
         style = style
       )
       result.children.add @[chUp, chDown]
-  #else: discard
 
 proc initErrorBar*(view: Viewport,
                    pt: Point,
