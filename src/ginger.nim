@@ -1992,31 +1992,19 @@ proc initErrorBar*(view: Viewport,
             size: 10.0) # describes length of orthogonal line of `ebLinesT`
     )
   # in case the user hands the errors as `ukData`, update the scale
-  #doAssert pt.ptPos.isScaleNonTrivial, "Data scale must be non trivial!"
-  #var
-  #  # error variables with appropriate scales, if `ukData`
-  #  errUp: Coord1D
-  #  errDown: Coord1D
-  #errUp = view.updateScale(errorUp)
-  #errDown = view.updateScale(errorDown)
   template createLines(axKind, x1, x2, y1, y2: untyped): untyped =
-    let chUp = view.initLine(
-      start = pt,
-      stop = Coord(
+    let line = view.initLine(
+      start = Coord(
         x: x1,
         y: y1
       ),
-      style = style
-    )
-    let chDown = view.initLine(
-      start = pt,
       stop = Coord(
         x: x2,
         y: y2,
       ),
       style = style
     )
-    result.children = @[chDown, chUp]
+    result.children = @[line]
 
   case ebKind
   of ebLines:
