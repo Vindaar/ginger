@@ -1,5 +1,6 @@
 import chroma
 import options
+import pixie
 
 when not defined(noCairo):
   import cairo
@@ -27,7 +28,7 @@ else:
 
 type
   BackendKind* = enum
-    bkCairo, bkVega
+    bkCairo, bkVega, bkPixie
   FiletypeKind* = enum
     fkSvg, fkPng, fkPdf, fkVega
 
@@ -41,14 +42,16 @@ type
     fname*: string
     width*: int
     height*: int
+    ftype*: FileTypeKind
     case backend*: BackendKind
     of bkCairo:
       cCanvas*: PSurface
       ctx*: PContext
       created*: bool # if surface was created
-      ftype*: FileTypeKind
     of bkVega:
       discard
+    of bkPixie:
+      pxContext*: pixie.Context
 
   LineType* = enum
     ltNone, ltSolid, ltDashed, ltDotted, ltDotDash, ltLongDash, ltTwoDash
