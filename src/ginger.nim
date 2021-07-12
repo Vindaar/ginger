@@ -812,8 +812,8 @@ func toRelative*(p: Coord1D,
     # given font, or assuming a font size in dots calculate from DPI?
     # Do the former for now
     let extents = getTextExtent(p.text, p.font)
-    let relevantDim = if p.kind == ukStrWidth: extents.x_bearing + extents.x_advance
-                      else: extents.y_advance - extents.y_bearing
+    let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
+                      else: extents.height #extents.y_advance - extents.y_bearing
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
     if length.isSome:
       result = Coord1D(pos: (p.pos * relevantDim) / length.unsafeGet.toPoints.val,
@@ -859,8 +859,8 @@ func toPoints*(p: Coord1D,
     # Do the former for now
     let extents = getTextExtent(p.text, p.font)
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
-    let relevantDim = if p.kind == ukStrWidth: extents.x_bearing + extents.x_advance
-                      else: extents.y_advance - extents.y_bearing#extents.height
+    let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
+                      else: extents.height #extents.y_advance - extents.y_bearing
     result = Coord1D(pos: p.pos * relevantDim,
                      kind: ukPoint)
 
