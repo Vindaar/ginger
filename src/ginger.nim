@@ -1830,6 +1830,14 @@ proc strHeight*(val: float, font: Font): Coord1D =
                    text: "W",
                    font: font)
 
+proc strWidth*(val: float, font: Font): Coord1D =
+  ## returns a Coord1D of kind `ukStrWidth` for the given
+  ## number of times the string height `val` for font `font`.
+  ## We use `'W'` to determine the height of the given font
+  result = Coord1D(pos: val, kind: ukStrWidth,
+                   text: "W",
+                   font: font)
+
 proc getStrHeight*(text: string, font: Font): Quantity =
   ## returns a quantity of the height of the given `text` under
   ## the given `font`, taking into account multiple lines. The
