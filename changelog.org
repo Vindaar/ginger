@@ -1,3 +1,8 @@
+* v0.2.12
+- fix height used in =getStrHeight= to determine height of multiple
+  lines
+- change string width / height computations to use text extents
+  =width=, =height= fields instead of advance and bearing  
 * v0.2.11
 - fix downstream =ggplotnim= issue #94:
   https://github.com/Vindaar/ggplotnim/issues/94
