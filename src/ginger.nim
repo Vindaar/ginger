@@ -1848,7 +1848,7 @@ proc getStrHeight*(text: string, font: Font): Quantity =
   # ``N lines + (N - 1) * (LineSpacing - 1.0)``
   result = quant(
     val = toPoints(
-      strHeight(numLines.float * 1.75, font),
+      strHeight(numLines.float * 1.5, font),
       #strHeight((numLines).float + (numLines - 1).float * 0.75, font)
       #strHeight((numLines.float - 1.0) * 1.75, font)
     ).pos,
