@@ -812,8 +812,8 @@ func toRelative*(p: Coord1D,
     # given font, or assuming a font size in dots calculate from DPI?
     # Do the former for now
     let extents = getTextExtent(p.text, p.font)
-    let relevantDim = if p.kind == ukStrWidth: extents.x_bearing + extents.x_advance
-                      else: extents.y_advance - extents.y_bearing
+    let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
+                      else: extents.height #extents.y_advance - extents.y_bearing
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
     if length.isSome:
       result = Coord1D(pos: (p.pos * relevantDim) / length.unsafeGet.toPoints.val,
@@ -859,8 +859,8 @@ func toPoints*(p: Coord1D,
     # Do the former for now
     let extents = getTextExtent(p.text, p.font)
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
-    let relevantDim = if p.kind == ukStrWidth: extents.x_bearing + extents.x_advance
-                      else: extents.y_advance - extents.y_bearing#extents.height
+    let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
+                      else: extents.height #extents.y_advance - extents.y_bearing
     result = Coord1D(pos: p.pos * relevantDim,
                      kind: ukPoint)
 
@@ -1830,6 +1830,14 @@ proc strHeight*(val: float, font: Font): Coord1D =
                    text: "W",
                    font: font)
 
+proc strWidth*(val: float, font: Font): Coord1D =
+  ## returns a Coord1D of kind `ukStrWidth` for the given
+  ## number of times the string height `val` for font `font`.
+  ## We use `'W'` to determine the height of the given font
+  result = Coord1D(pos: val, kind: ukStrWidth,
+                   text: "W",
+                   font: font)
+
 proc getStrHeight*(text: string, font: Font): Quantity =
   ## returns a quantity of the height of the given `text` under
   ## the given `font`, taking into account multiple lines. The
@@ -1840,7 +1848,7 @@ proc getStrHeight*(text: string, font: Font): Quantity =
   # ``N lines + (N - 1) * (LineSpacing - 1.0)``
   result = quant(
     val = toPoints(
-      strHeight(numLines.float * 1.75, font),
+      strHeight(numLines.float * 1.5, font),
       #strHeight((numLines).float + (numLines - 1).float * 0.75, font)
       #strHeight((numLines.float - 1.0) * 1.75, font)
     ).pos,
