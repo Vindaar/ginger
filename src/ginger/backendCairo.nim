@@ -290,29 +290,24 @@ proc drawRaster*(img: var BImage, left, bottom, width, height: float,
 
 proc initBImage*(filename: string,
                  width, height: int,
-                 backend: BackendKind,
                  fType: FiletypeKind): BImage =
-  case backend
-  of bkCairo:
-    var surface: PSurface
-    case fType:
-    of fkPng:
-      surface = image_surface_create(FORMAT_ARGB32, width.int32, height.int32)
-    of fkSvg:
-      surface = svg_surface_create(filename, width.float, height.float)
-    of fkPdf:
-      surface = pdf_surface_create(filename, width.float, height.float)
-    else:
-      raise newException(Exception, "Unsupported fType " & $fType & " in `initBImage")
-    result = BImage(fname: filename,
-                    backend: bkCairo,
-                    created: false,
-                    cCanvas: surface,
-                    width: width,
-                    height: height,
-                    fType: fType)
-  of bkVega:
-    discard
+  var surface: PSurface
+  case fType:
+  of fkPng:
+    surface = image_surface_create(FORMAT_ARGB32, width.int32, height.int32)
+  of fkSvg:
+    surface = svg_surface_create(filename, width.float, height.float)
+  of fkPdf:
+    surface = pdf_surface_create(filename, width.float, height.float)
+  else:
+    raise newException(Exception, "Unsupported fType " & $fType & " in `initBImage")
+  result = BImage(fname: filename,
+                  backend: bkCairo,
+                  created: false,
+                  cCanvas: surface,
+                  width: width,
+                  height: height,
+                  fType: fType)
 
 when isMainModule:
   # raw Cairo code

@@ -27,9 +27,9 @@ else:
 
 type
   BackendKind* = enum
-    bkCairo, bkVega
+    bkCairo, bkVega, bkTikZ
   FiletypeKind* = enum
-    fkSvg, fkPng, fkPdf, fkVega
+    fkSvg, fkPng, fkPdf, fkVega, fkTeX
 
   Point* = tuple[x, y: float]
   IPoint* = tuple[x, y: int]
@@ -41,14 +41,15 @@ type
     fname*: string
     width*: int
     height*: int
+    ftype*: FileTypeKind
     case backend*: BackendKind
     of bkCairo:
       cCanvas*: PSurface
       ctx*: PContext
       created*: bool # if surface was created
-      ftype*: FileTypeKind
-    of bkVega:
-      discard
+    of bkTikZ:
+      data*: string # stores the TikZ commands as a string to be inserted into a LaTeX template
+    of bkVega: discard
 
   LineType* = enum
     ltNone, ltSolid, ltDashed, ltDotted, ltDotDash, ltLongDash, ltTwoDash
