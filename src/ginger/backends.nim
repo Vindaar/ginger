@@ -128,18 +128,28 @@ when not defined(noCairo):
       var f = open(img.fname, fmWrite)
       f.write("""
 \documentclass[a4paper]{article}
+% \documentclass[tikz,border = 2mm]{standalone}
 \usepackage[utf8]{inputenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[rgb]{xcolor}
 \usepackage[T1]{fontenc}
+\usepackage{unicode-math}
+\usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage{tikz}
 \usepackage{siunitx}
 
 \begin{document}
 
+\begin{center}
 \begin{tikzpicture}
   """)
       f.write(img.data)
-      f.write("\n" & r"\end{tikzpicture}" & "\n" & r"\end{document}")
+      f.write("""
+\end{tikzpicture}
+\end{center}
+\end{document}
+""")
       f.close()
     of bkVega:
       discard
