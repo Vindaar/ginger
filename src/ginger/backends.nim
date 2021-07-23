@@ -1,6 +1,7 @@
 import chroma
 import types
 import options
+from os import getTempDir
 
 export types
 export chroma
@@ -80,6 +81,12 @@ when not defined(noCairo):
       )
     else: discard
 
+  # forward declarations to use them in `drawRaster` for `TikZ`
+  proc initBImage*(filename: string,
+                   width, height: int,
+                   fType: FiletypeKind,
+                   texOptions: TeXOptions): BImage
+  proc destroy*(img: var BImage)
   proc drawRaster*(img: var BImage, left, bottom, width, height: float,
                    numX, numY: int,
                    drawCb: proc(): seq[uint32],
@@ -91,8 +98,15 @@ when not defined(noCairo):
         img, left, bottom, width, height, numX, numY, drawCB, rotate, rotateInView
       )
     of bkTikz:
+      let tmpName = getTempDir() & "raster_ggplotnim_tikz_tmp_store.png"
+      var imgC = initBImage(tmpName,
+                            width = width.int, height = height.int,
+                            ftype = fkPng,
+                            texOptions = TeXOptions())
+      imgC.drawRaster(0, 0, width, height, numX, numY, drawCB, rotate, rotateInView)
+      imgC.destroy()
       backendTikz.drawRaster(
-        img, left, bottom, width, height, numX, numY, drawCB, rotate, rotateInView
+        img, tmpName, left, bottom, width, height, numX, numY, drawCB, rotate, rotateInView
       )
     else: discard
 
