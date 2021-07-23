@@ -1,3 +1,8 @@
+* v0.3.0
+- implements the TikZ backend for native LaTeX plots. Either
+  generation of TeX code using TikZ or direct compilation by calling
+  =xelatex/pdflatex=
+  
 * v0.2.12
 - fix height used in =getStrHeight= to determine height of multiple
   lines
