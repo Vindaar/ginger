@@ -30,19 +30,23 @@ func toStrDirect(p: Point, isLength: static bool = false): string =
     tmp
 
 proc toStr(alignKind: TextAlignKind): string =
-  ## convert the text align kind to the correct tikz notation
+  ## convert the text align kind to the correct TikZ notation.
+  ##
+  ## In TikZ the the node is placed `right`, `left` (etc.) of the coordinate, wherease
+  ## in cairo it is aligned by the `left` / `right` edge. Thus, the inversion.
   case alignKind
   of taLeft: result = "right"
   of taCenter: result = "" # default
   of taRight: result = "left"
 
 proc nodeProperties(img: BImage, at: Point, alignKind: TextAlignKind, rotate: Option[float]): string =
-  result = "["
-  result.add alignKind.toStr
+  result = alignKind.toStr
+  var rot: string
   if rotate.isSome:
-    #result.add ", rotate around = {" & $(-rotate.get) & ":" & at.toStr & "}" # rotation opposite of cairo
-    result.add ", rotate = " & $(-rotate.get) # rotation opposite of cairo
-  result.add "]"
+    rot = "rotate = " & $(-rotate.get) # rotation is opposite of cairo
+    result = if result.len > 0: result & ", " & rot else: rot
+  if result.len > 0:
+    result = "[" & result & "]"
   echo result
 
 template latexAdd(body: untyped): untyped {.dirty.} =
