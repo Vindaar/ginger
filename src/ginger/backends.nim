@@ -46,10 +46,10 @@ when not defined(noCairo):
       )
     else: discard
 
-  proc getTextExtent*(text: string, font: Font): TextExtent =
-    case img.backend
-    of bkCairo: backendCairo.getTextExtent(text, font)
-    of bkTikZ: backendTikZ.getTextExtent(text, font)
+  proc getTextExtent*(backend: BackendKind, text: string, font: Font): TextExtent =
+    case backend
+    of bkCairo: result = backendCairo.getTextExtent(text, font)
+    of bkTikZ: result = backendTikZ.getTextExtent(text, font)
     else: discard
 
   proc drawText*(img: var BImage, text: string, font: Font, at: Point,

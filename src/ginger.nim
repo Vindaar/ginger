@@ -166,6 +166,7 @@ type
       # to be taken
       text*: string
       font*: Font
+      backend*: BackendKind # string based values are only defined given a backend
     #of ckMixed:
     #  # all outstanding variables still need to be
     #  outstanding: seq[Coord1D]
@@ -811,7 +812,7 @@ func toRelative*(p: Coord1D,
     # can either use cairo's internals, e.g. get the extent of the string in a
     # given font, or assuming a font size in dots calculate from DPI?
     # Do the former for now
-    let extents = getTextExtent(p.text, p.font)
+    let extents = getTextExtent(p.backend, p.text, p.font)
     let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
                       else: extents.height #extents.y_advance - extents.y_bearing
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
@@ -857,7 +858,7 @@ func toPoints*(p: Coord1D,
     # can either use cairo's internals, e.g. get the extent of the string in a
     # given font, or assuming a font size in dots calculate from DPI?
     # Do the former for now
-    let extents = getTextExtent(p.text, p.font)
+    let extents = getTextExtent(p.backend, p.text, p.font)
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
     let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
                       else: extents.height #extents.y_advance - extents.y_bearing
@@ -1539,11 +1540,6 @@ proc point(c: Coord): Point =
 ############ INIT FUNCTIONS
 ################################################################################
 
-
-
-
-
-
 proc initViewport*(origin: Coord,
                    width, height: Quantity,
                    style = none[Style](),
@@ -1822,23 +1818,25 @@ proc drawBoundary*(view: Viewport,
                              alignKind = taCenter)
     view.addObj text
 
-proc strHeight*(val: float, font: Font): Coord1D =
+proc strHeight*(backend: BackendKind, val: float, font: Font): Coord1D =
   ## returns a Coord1D of kind `ukStrHeight` for the given
   ## number of times the string height `val` for font `font`.
   ## We use `'W'` to determine the height of the given font
   result = Coord1D(pos: val, kind: ukStrHeight,
+                   backend: backend,
                    text: "W",
                    font: font)
 
-proc strWidth*(val: float, font: Font): Coord1D =
+proc strWidth*(backend: BackendKind, val: float, font: Font): Coord1D =
   ## returns a Coord1D of kind `ukStrWidth` for the given
   ## number of times the string height `val` for font `font`.
   ## We use `'W'` to determine the height of the given font
   result = Coord1D(pos: val, kind: ukStrWidth,
+                   backend: backend,
                    text: "W",
                    font: font)
 
-proc getStrHeight*(text: string, font: Font): Quantity =
+proc getStrHeight*(backend: BackendKind, text: string, font: Font): Quantity =
   ## returns a quantity of the height of the given `text` under
   ## the given `font`, taking into account multiple lines. The
   ## result is of kind `ukPoint`.
@@ -1848,19 +1846,20 @@ proc getStrHeight*(text: string, font: Font): Quantity =
   # ``N lines + (N - 1) * (LineSpacing - 1.0)``
   result = quant(
     val = toPoints(
-      strHeight(numLines.float * 1.5, font),
+      strHeight(backend, numLines.float * 1.5, font),
       #strHeight((numLines).float + (numLines - 1).float * 0.75, font)
       #strHeight((numLines.float - 1.0) * 1.75, font)
     ).pos,
     unit = ukPoint
   )
 
-proc getStrWidth*(text: string, font: Font): Quantity =
+proc getStrWidth*(backend: BackendKind, text: string, font: Font): Quantity =
   ## returns a Quantity of kind `ukStrWidth` for the given
   ## string under the font `font` of unit kind `ukPoint`
   result = quant(
     val = toPoints(
       Coord1D(pos: 1.0, kind: ukStrWidth,
+              backend: backend,
               text: text,
               font: font)
     ).pos,
@@ -1888,7 +1887,7 @@ proc initMultiLineText*(view: Viewport,
   assert textKind in {goText, goLabel, goTickLabel}
   let font = if fontOpt.isSome: fontOpt.unsafeGet else: defaultFont()
   let lines = text.splitLines
-  let totalHeight = getStrHeight(text, font)
+  let totalHeight = getStrHeight(view.backend, text, font)
   let numLines = lines.len
   for idx, line in lines:
     # calculate new y position based on previous position and
@@ -1897,7 +1896,7 @@ proc initMultiLineText*(view: Viewport,
     # and an additional (-0.5 * height) to account for current text being
     # centered on center of line, not bottom
     let newY = origin.y - toRelative(
-      strHeight((numLines.float - idx.float - 0.5).float * 1.5, font),
+      strHeight(view.backend, (numLines.float - idx.float - 0.5).float * 1.5, font),
       length = some(view.pointHeight)
     )
     let newOrigin = Coord(x: origin.x,
