@@ -159,23 +159,17 @@ proc drawText*(img: var BImage, text: string, font: Font, at: Point,
                alignKind: TextAlignKind = taLeft,
                rotate: Option[float] = none[float](),
                rotateInView: Option[(float, Point)] = none[(float, Point)]()) =
-  ## TODO: fix this coord mess
   var
     x = at.x
     y = at.y
-
   let extents = getTextExtent("M", font)
-  # potentially rotate around specific point (location depends on where we align)
+  # `left`/`right` of node in TeX is too close. Add half a M letter spacing
   case alignKind
   of taLeft:
     x = at.x - (extents.width / 2.0 + extents.x_bearing)
   of taRight:
     x = at.x + (extents.width / 2.0 + extents.x_bearing)
-  of taCenter:
-    #x = at.x - (extents.width / 2.0 + extents.x_bearing)
-    #y = at.y + (extents.height / 2.0 + extents.y_bearing)
-    discard
-  else: discard
+  of taCenter: discard
 
   let alignStr = img.nodeProperties((x: x, y: y), alignKind, rotate)
   let fs = font.size
