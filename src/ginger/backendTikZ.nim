@@ -222,12 +222,19 @@ proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
       `color`
       \draw `lineSt` `atStr` rectangle `sizeStr` ";"
 
-proc drawRaster*(img: var BImage, left, bottom, width, height: float,
+from backendCairo import nil
+proc drawRaster*(img: var BImage, name: string, left, bottom, width, height: float,
                  numX, numY: int,
                  drawCb: proc(): seq[uint32],
                  rotate: Option[float] = none[float](),
                  rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
-  debugecho "WARNING: `drawRaster` of TikZ backend is not implemented yet!"
+  ## draw raster by using Cairo to draw the actual raster and store it as a png. That we
+  ## include here
+  # embedding a picture using a node places ``center`` of picture at `atStr` coord
+  let atStr = img.toStr((x: left + width / 2.0, y: bottom + height / 2.0))
+  let w = width / img.width.float
+  latexAdd:
+    \node at `atStr` {\includegraphics[width = `w`\textwidth]{`name`}}";"
 
 proc initBImage*(filename: string,
                  width, height: int,
