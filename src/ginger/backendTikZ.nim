@@ -55,9 +55,9 @@ template latexAdd(body: untyped): untyped {.dirty.} =
   img.data.add toAdd
 
 proc defColor(name: string, c: Color): string =
-  let color = &"{c.r * 256.0}, {c.g * 256.0}, {c.b * 256.0}"
+  let color = &"{c.r}, {c.g}, {c.b}"
   result = latex:
-    \definecolor{`name`}{RGB}{`color`}
+    \definecolor{`name`}{rgb}{`color`}
 
 proc colorStr(style: Style): string =
   result.add defColor("drawColor", style.color)
