@@ -107,17 +107,16 @@ proc drawLine*(img: var BImage, start, stop: Point,
   let lineSt = style.lineStyle
   latexAdd:
     `color`
-    \draw " " `lineSt` " " `p0` " " -- " " `p1` ";"
+    \draw `lineSt` `p0` -- `p1` ";"
 
 proc drawPolyLine*(img: var BImage, points: seq[Point],
                    style: Style,
                    rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
   let lineSt = style.lineStyle
   let color = style.colorStr
-  echo lineSt
   latexAdd:
     `color`
-    \draw " " `lineSt`
+    \draw `lineSt`
   for i, p in points:
     let pStr = img.toStr(p)
     if i == points.high:
@@ -142,7 +141,7 @@ proc drawCircle*(img: var BImage, center: Point, radius: float,
   let lineSt = style.lineStyle
   latexAdd:
     `color`
-    \draw " " `lineSt` " " `p` " " circle " " [radius = `radius`] ";"
+    \draw `lineSt` `p` circle [radius = `radius`] ";"
 
 proc getTextExtent*(text: string, font: Font): TextExtent =
   ## XXX: HACK
@@ -178,20 +177,17 @@ proc drawText*(img: var BImage, text: string, font: Font, at: Point,
     discard
   else: discard
 
-  let at = (x: x, y: y)
-  let atStr = img.toStr(at)
-  let alignStr = img.nodeProperties(at, alignKind, rotate)
-  echo "ext at ", atStr, " with ", alignStr, " of ", text, " from ", at
-  let ts = $(font.size)
-  let tst = $((font.size) * 1.2)
-  var text = latex:
-    \fontsize{`ts`}{`tst`}\selectfont " " `text`
-  #if rotate.isSome:
-  #  let rt = $(-rotate.get)
-  #  text = latex:
-  #    \rotatebox{`rt`}{`text`}
+  let alignStr = img.nodeProperties((x: x, y: y), alignKind, rotate)
+  let fs = font.size
+  var textStr: string
+  if font.bold:
+    textStr = latex:
+      \fontsize{$(fs)}{$(fs * 1.2)}\selectfont {\textbf{`text`}}
+  else:
+    textStr = latex:
+      \fontsize{$(fs)}{$(fs * 1.2)}\selectfont `text`
   latexAdd:
-    \node " " `alignStr` " at " `atStr` {`text`} ";"
+    \node `alignStr` at $(img.toStr(at)) {`textStr`} ";"
 
 proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
                     style: Style,
@@ -215,7 +211,7 @@ proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
       let curLineStyle = style.lineStyle(fillColor = n)
       latexAdd:
         `curColor`
-        \draw " " `curLineStyle` " " `atStr` " " rectangle " " `sizeStr` ";"
+        \draw `curLineStyle` `atStr` rectangle `sizeStr` ";"
       curBottom += sliceHeight
   else:
     let color = style.colorStr
@@ -224,7 +220,7 @@ proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
     let atStr = atPt.toStrDirect
     latexAdd:
       `color`
-      \draw " " `lineSt` " " `atStr` " " rectangle " " `sizeStr` ";"
+      \draw `lineSt` `atStr` rectangle `sizeStr` ";"
 
 proc drawRaster*(img: var BImage, left, bottom, width, height: float,
                  numX, numY: int,
