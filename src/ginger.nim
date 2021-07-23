@@ -3130,6 +3130,8 @@ proc parseFilename(fname: string): FiletypeKind =
     result = fkSvg
   of ".png":
     result = fkPng
+  of ".tex":
+    result = fkTeX
   else:
     result = fkPdf
 
@@ -3206,9 +3208,10 @@ when not defined(noCairo):
     ## draws the given viewport and all its children and stores it in the
     ## file `filename`
     let ftype = parseFilename(filename)
+    let backend = if ftype == fkTeX: bkTikZ else: bkCairo
     var img = initBImage(filename,
                          width = view.wImg.val.round.int, height = view.hImg.val.round.int,
-                         backend = view.backend,
+                         backend = backend,
                          ftype = ftype)
     img.draw(view)
     img.destroy()
