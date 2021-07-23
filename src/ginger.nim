@@ -3204,17 +3204,17 @@ proc draw*(img: var BImage, view: Viewport) =
     img.draw(mchView)
 
 when not defined(noCairo):
-  proc draw*(view: Viewport, filename: string) =
+  proc draw*(view: Viewport, filename: string, texOptions: TeXOptions) =
     ## draws the given viewport and all its children and stores it in the
     ## file `filename`
     let ftype = parseFilename(filename)
-    let backend = if ftype == fkTeX: bkTikZ else: bkCairo
     var img = initBImage(filename,
                          width = view.wImg.val.round.int, height = view.hImg.val.round.int,
-                         backend = backend,
-                         ftype = ftype)
+                         ftype = ftype,
+                         texOptions = texOptions)
     img.draw(view)
     img.destroy()
+
 else:
   proc draw*(view: Viewport, filename: string) =
     static: echo "Compiling draw as a dummy proc"

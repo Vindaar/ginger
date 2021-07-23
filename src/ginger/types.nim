@@ -37,6 +37,12 @@ type
   AxisKind* = enum
     akX, akY
 
+  TeXOptions* = object
+    useTeX*: bool                # arguments only used if true
+    texTemplate*: Option[string] # a custom user TeX template
+    standalone*: bool            # if true output to a standalone TeX document
+    onlyTikZ*: bool              # if true write ``only`` TikZ commands to file
+
   BImage* = object
     fname*: string
     width*: int
@@ -49,6 +55,7 @@ type
       created*: bool # if surface was created
     of bkTikZ:
       data*: string # stores the TikZ commands as a string to be inserted into a LaTeX template
+      options*: TexOptions
     of bkVega: discard
 
   LineType* = enum
