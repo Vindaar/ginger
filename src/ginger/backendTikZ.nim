@@ -63,11 +63,40 @@ proc colorStr(style: Style): string =
   result.add defColor("drawColor", style.color)
   result.add defColor("fillColor", style.fillColor)
 
+func getLineStyle(lineType: LineType, lineWidth: float): string =
+  template dash: untyped = lineWidth * 4.0
+  template dashSpace: untyped = lineWidth * 5.0
+  template dot: untyped = lineWidth / 2.0
+  template dotSpace: untyped = lineWidth * 2.0
+  template longDash: untyped = lineWidth * 8.0
+
+  case lineType
+  of ltDashed:
+    result = latex:
+      dash pattern = on $(dash())pt off $(dashSpace())pt
+  of ltDotted:
+    result = latex:
+      dash pattern = on $(dot())pt off $(dotSpace())pt
+  of ltDotDash:
+    result = latex:
+      dash pattern = on $(dot())pt off $(dotSpace()) on $(dash())pt off $(dotSpace())
+  of ltLongDash:
+    result = latex:
+      dash pattern = on $(longDash())pt off $(dashSpace())
+  of ltTwoDash:
+    result = latex:
+      dash pattern = on $(dash())pt off $(dotSpace() * 2.0) on $(longDash())pt off $(dotSpace() * 2.0)
+  else: discard
+
 proc lineStyle(style: Style, drawColor = "drawColor", fillColor = "fillColor"): string =
-  #let color = "{" & &"{style.color.r * 256.0}, {style.color.g * 256.0}, {style.color.b * 256.0}" & "}"
   let fillOp = &"fill opacity = {style.fillColor.a}"
   let colorOp = &"draw opacity = {style.color.a}"
-  result = &"[color = {drawColor}, fill = {fillColor}, {colorOp}, {fillOp}, line width = {style.lineWidth}pt]"
+  let lineDash = getLineStyle(style.lineType, style.lineWidth)
+  result = &"[color = {drawColor}, fill = {fillColor}, {colorOp}, {fillOp}, line width = {style.lineWidth}pt"
+  if lineDash.len > 0:
+    result.add ", " & lineDash & "]"
+  else:
+    result.add "]"
 
 proc drawLine*(img: var BImage, start, stop: Point,
                style: Style,
