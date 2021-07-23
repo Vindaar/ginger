@@ -3204,7 +3204,7 @@ proc draw*(img: var BImage, view: Viewport) =
     img.draw(mchView)
 
 when not defined(noCairo):
-  proc draw*(view: Viewport, filename: string, texOptions: TeXOptions) =
+  proc draw*(view: Viewport, filename: string, texOptions: TeXOptions = TeXOptions()) =
     ## draws the given viewport and all its children and stores it in the
     ## file `filename`
     let ftype = parseFilename(filename)
