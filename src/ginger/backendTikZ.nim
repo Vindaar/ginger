@@ -4,6 +4,7 @@ import types
 import options
 
 import os, latexdsl, strformat
+from strutils import `%`
 
 #[
 Maybe we have to collect all colors in a table or seq and create a custom 'preamble' that
@@ -232,9 +233,57 @@ proc drawRaster*(img: var BImage, name: string, left, bottom, width, height: flo
 
 proc initBImage*(filename: string,
                  width, height: int,
-                 fType: FiletypeKind): BImage =
-
+                 fType: FiletypeKind,
+                 texOptions: TexOptions): BImage =
   result = BImage(fname: filename,
                   backend: bkTikZ,
                   width: width, height: height,
-                  fType: fType)
+                  fType: fType,
+                  options: texOptions)
+
+proc getStandaloneTmpl(): string =
+  result = latex:
+    \documentclass[tikz,border = "2mm"]{standalone}
+    \usepackage[utf8]{inputenc}
+    \usepackage[margin="2.5cm"]{geometry}
+    \usepackage{unicode-math} # for unicode support in math environments
+    \usepackage{amsmath}
+    \usepackage{siunitx}
+    \usepackage{tikz}
+    document:
+      tikzpicture:
+        "$#"
+
+proc getOnlyTikZTmpl(): string =
+  result = latex:
+    tikzpicture:
+      "$#"
+
+proc getArticleTmpl(): string =
+  result = latex:
+    \documentclass[a4paper]{article}
+    \usepackage[utf8]{inputenc}
+    \usepackage[margin="2.5cm"]{geometry}
+    \usepackage{unicode-math} # for unicode support in math environments
+    \usepackage{amsmath}
+    \usepackage{siunitx}
+    \usepackage{tikz}
+    document:
+      center:
+        tikzpicture:
+          "$#"
+
+proc writeTeXFile*(img: BImage) =
+  var tmpl: string
+  if img.options.texTemplate.isNone:
+    if img.options.onlyTikZ:
+      tmpl = getOnlyTikZTmpl()
+    elif img.options.standalone:
+      tmpl = getStandaloneTmpl()
+    else:
+      tmpl = getArticleTmpl()
+  else:
+    tmpl = img.options.texTemplate.get
+  var f = open(img.fname, fmWrite)
+  f.write(tmpl % img.data)
+  f.close()

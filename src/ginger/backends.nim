@@ -1,7 +1,8 @@
-import chroma
+import chroma, shell
 import types
 import options
 from os import getTempDir
+from strutils import replace
 
 export types
 export chroma
@@ -111,17 +112,21 @@ when not defined(noCairo):
     else: discard
 
   proc initBImage*(filename: string,
-                   backend: BackendKind,
                    width, height: int,
-                   fType: FiletypeKind): BImage =
+                   fType: FiletypeKind,
+                   texOptions: TeXOptions): BImage =
+    let backend = if ftype == fkTeX or (ftype == fkPdf and texOptions.useTeX): bkTikZ
+                  else: bkCairo
     case backend
     of bkCairo:
       result = backendCairo.initBImage(
         filename, width, height, fType
       )
     of bkTikz:
+      let fname = if ftype == fkPdf: filename.replace(".pdf", ".tex")
+                  else: filename
       result = backendTikz.initBImage(
-        filename, width, height, fType
+        fname, width, height, fType, texOptions
       )
     else: discard
 
@@ -138,32 +143,42 @@ when not defined(noCairo):
       cairo.destroy(img.cCanvas)
     of bkTikZ:
       # write to file
-      var f = open(img.fname, fmWrite)
-      f.write("""
-\documentclass[a4paper]{article}
-% \documentclass[tikz,border = 2mm]{standalone}
-\usepackage[utf8]{inputenc}
-\usepackage[margin=2.5cm]{geometry}
-\usepackage[rgb]{xcolor}
-\usepackage[T1]{fontenc}
-\usepackage{unicode-math}
-\usepackage{amsmath}
-\usepackage{graphicx}
-\usepackage{tikz}
-\usepackage{siunitx}
+      backendTikZ.writeTeXFile(img)
+      # possibly compile
+      case img.fType
+      of fkTeX: discard # nothing to do
+      of fkPdf:
+        # compile using terminal
 
-\begin{document}
+        # 1. check if xelatex in PATH
+        when defined(linux) or defined(macos):
+          let checkCmd = "command -v"
+        elif defined(windows):
+          let checkCmd = "WHERE"
+        else:
+          raise newException(Exception, "Unsupported platform for PDF generation. Please open an issue.")
 
-\begin{center}
-\begin{tikzpicture}
-  """)
-      f.write(img.data)
-      f.write("""
-\end{tikzpicture}
-\end{center}
-\end{document}
-""")
-      f.close()
+        var generated = false
+        template checkAndRun(cmd: untyped): untyped =
+          var (res, err) = shellVerbose:
+            ($checkCmd) ($cmd)
+          if err == 0:
+            (res, err) = shellVerbose:
+              ($cmd) ($img.fname)
+            if err == 0:
+              # successfully generated
+              generated = true
+            else:
+              raise newException(IOError, "Could not generate PDF from TeX file `" & $img.fname &
+                & "` using TeX compiler: `" & $cmd & "`. Output was: " &
+                res)
+        checkAndRun("xelatex")
+        if generated: return # success, no need to try `pdflatex`
+        checkAndRun("pdflatex") # currently broken, as we import `unicode-math`
+        if not generated:
+          raise newException(IOError, "Could not generate a PDF from TeX file " &
+            $img.fname & " as neither `xelatex` nor `pdflatex` was found in PATH")
+      else: doAssert false
     of bkVega:
       discard
 else:
