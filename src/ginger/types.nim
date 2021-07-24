@@ -29,7 +29,6 @@ else:
 type
   BackendKind* = enum
     bkCairo, bkVega, bkTikZ, bkPixie
-
   FiletypeKind* = enum
     fkSvg, fkPng, fkPdf, fkVega, fkTeX
 
