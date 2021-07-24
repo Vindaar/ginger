@@ -32,7 +32,7 @@ when isMainModule:
                          ftype = fkPng)
     rotation = option((45.0, (1.0, 5.0)))
   img.drawLine((0.0, 0.0), (150.0, 140.0), style)
-  img.drawRectangle(30.0, 50.0, 100.0, 100.0, style)
+  img.drawRectangle(300.0, 175.0, 100.0, 100.0, style)
   # Now with rotation
-  img.drawRectangle(10.0, 10.0, 100.0, 100.0, style, none[float](), rotation)
-  img.pxImage.writeFile(img.fname)
+  img.drawRectangle(100, 0, 100.0, 100.0, style, none[float](), rotation)
+  img.pxContext.image.writeFile(img.fname)
