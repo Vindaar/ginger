@@ -64,6 +64,27 @@ proc drawPolyLine*(img: BImage, points: seq[Point],
   img.pxContext.fill(path)
   img.saveState()
 
+proc drawCircle*(img: var BImage, center: Point, radius: float,
+                 lineWidth: float,
+                 strokeColor = color(0.0, 0.0, 0.0),
+                 fillColor = color(0.0, 0.0, 0.0, 0.0),
+                 rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
+  # A temporary function for drawCircle where a style isn't passed a long
+  if rotateAngle.isSome:
+    let (angle, around) = rotateAngle.get
+    img.rotate(angle, around)
+
+  let
+    fillPaint = Paint(kind: pkSolid, color: fillColor.asRgba)
+    strokePaint = Paint(kind: pkSolid, color: strokeColor.asRgba)
+
+  img.pxContext.fillStyle = fillPaint
+  img.pxContext.strokeStyle = strokePaint
+  img.pxContext.lineWidth = lineWidth
+  img.pxContext.strokeCircle(center.toVec2, radius)
+  img.pxContext.fillCircle(center.toVec2, radius)
+  img.saveState()
+
 proc drawCircle*(img: BImage, center: Point, radius: float,
                  style: Style,
                  rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
@@ -191,32 +212,25 @@ proc drawRaster*(img: var BImage, left, bottom, width, height: float,
       raster[x, y] = toDraw[tY * numX + tX].toColorRGBA
 
   # Actually draw the raster on to the Context
-  img.pxContext.image.draw(raster, pos = vec2(left, bottom))
+  img.pxContext.drawImage(raster, pos = vec2(left, bottom))
   img.saveState()
 
 proc initBImage*(filename: string,
                  width, height: int,
-                 backend: BackendKind,
                  fType: FiletypeKind): BImage =
-  case backend
-  of bkPixie:
-    var ctx = newContext(width, height)
+  var ctx = newContext(width, height)
 
-    case fType
-    of fkPng:
-      ctx.image.writeFile(filename)
-    else:
-      raise newException(Exception, "Unsupported filetype " & $fType & " in `initBImage`")
-    result = BImage(fname: filename,
-                    width: width,
-                    height: height,
-                    backend: bkPixie,
-                    pxContext: ctx,
-                    ftype: fType)
-  of bkCairo:
-    discard
-  of bkVega:
-    discard
+  case fType
+  of fkPng:
+    ctx.image.writeFile(filename)
+  else:
+    raise newException(Exception, "Unsupported filetype " & $fType & " in `initBImage`")
+  result = BImage(fname: filename,
+                  width: width,
+                  height: height,
+                  backend: bkPixie,
+                  pxContext: ctx,
+                  ftype: fType)
 
 proc writeFile*(img: BImage, fname: string) {.inline.} =
   # Helper that writes an Image using it's Context to a file
