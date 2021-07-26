@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.3.0"
+version       = "0.3.1"
 author        = "Vindaar"
 description   = "A Grid (R) like package in Nim"
 license       = "MIT"
@@ -13,7 +13,7 @@ requires "nim >= 1.0.0"
 requires "chroma >= 0.1.0"
 requires "https://github.com/Vindaar/seqmath >= 0.1.7"
 requires "cairo >= 1.1.1"
-requires "https://github.com/Vindaar/LatexDSL >= 0.1.4"
+requires "https://github.com/Vindaar/LatexDSL >= 0.1.5"
 requires "shell"
 
 task test, "Run tests":

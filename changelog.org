@@ -1,3 +1,5 @@
+* v0.3.1
+- update LatexDSL dependency to version =v0.1.5=
 * v0.3.0
 - implements the TikZ backend for native LaTeX plots. Either
   generation of TeX code using TikZ or direct compilation by calling
