@@ -130,6 +130,7 @@ when not defined(noCairo):
       )
     else: discard
 
+  from macros import error
   proc destroy*(img: var BImage) =
     case img.backend
     of bkCairo:
@@ -151,12 +152,12 @@ when not defined(noCairo):
         # compile using terminal
 
         # 1. check if xelatex in PATH
-        when defined(linux) or defined(macos):
+        when defined(linux) or defined(macosx):
           let checkCmd = "command -v"
         elif defined(windows):
           let checkCmd = "WHERE"
         else:
-          raise newException(Exception, "Unsupported platform for PDF generation. Please open an issue.")
+          static: error("Unsupported platform for PDF generation. Please open an issue.")
 
         var generated = false
         template checkAndRun(cmd: untyped): untyped =
