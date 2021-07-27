@@ -86,7 +86,7 @@ when not defined(noCairo):
   proc initBImage*(filename: string,
                    width, height: int,
                    fType: FiletypeKind,
-                   texOptions: TeXOptions): BImage
+                   texOptions = TeXOptions()): BImage
   proc destroy*(img: var BImage)
   proc drawRaster*(img: var BImage, left, bottom, width, height: float,
                    numX, numY: int,
