@@ -114,7 +114,7 @@ when not defined(noCairo):
   proc initBImage*(filename: string,
                    width, height: int,
                    fType: FiletypeKind,
-                   texOptions: TeXOptions): BImage =
+                   texOptions = TeXOptions()): BImage =
     let backend = if ftype == fkTeX or (ftype == fkPdf and texOptions.useTeX): bkTikZ
                   else: bkCairo
     case backend
