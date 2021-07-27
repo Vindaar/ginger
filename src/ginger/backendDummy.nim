@@ -20,7 +20,7 @@ proc drawCircle*(img: BImage, center: Point, radius: float,
                  rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
   debugecho "WARNING: `drawCircle` of dummy backend is being called!"
 
-proc getTextExtent*(text: string, font: Font): TextExtent =
+proc getTextExtent*(backend: BackendKind, text: string, font: Font): TextExtent =
   debugecho "WARNING: `getTextExtent` of dummy backend is being called!"
 
 proc drawText*(img: BImage, text: string, font: Font, at: Point,
@@ -42,8 +42,9 @@ proc drawRaster*(img: var BImage, left, bottom, width, height: float,
                  rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
   debugecho "WARNING: `drawRaster` of dummy backend is being called!"
 
+
 proc initBImage*(filename: string,
                  width, height: int,
-                 backend: BackendKind,
-                 fType: FiletypeKind): BImage =
+                 fType: FiletypeKind,
+                 texOptions: TeXOptions): BImage =
   debugecho "WARNING: `initBImage` of dummy backend is being called!"
