@@ -1,3 +1,7 @@
+* v0.3.4
+- TikZ fixes for text placement and multi line text
+- merge determination of backend into single =toBackend= procedure
+- export =parseFilename=, which returns =FileTypeKind= from filename
 * v0.3.3
 - fix determination of platform in =backends.nim= for OSX
 - fail at CT if a bad platform is encountered for TikZ + PDF generation  
