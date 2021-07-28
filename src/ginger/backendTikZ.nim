@@ -40,12 +40,22 @@ proc toStr(alignKind: TextAlignKind): string =
   of taCenter: result = "" # default
   of taRight: result = "left"
 
-proc nodeProperties(img: BImage, at: Point, alignKind: TextAlignKind, rotate: Option[float]): string =
-  result = alignKind.toStr
-  var rot: string
+proc nodeProperties(img: BImage, at: Point, alignKind: TextAlignKind, rotate: Option[float],
+                    font: Font,
+                    alignLeft = false): string =
+  var res = newSeq[string]()
+  let ak = alignKind.toStr
+  if ak.len > 0:
+    res.add ak
   if rotate.isSome:
-    rot = "rotate = " & $(-rotate.get) # rotation is opposite of cairo
-    result = if result.len > 0: result & ", " & rot else: rot
+    res.add "rotate = " & $(-rotate.get) # rotation is opposite of cairo
+  let fs = font.size
+  let fontSize = latex:
+    font = \fontsize{$(fs)}{$(fs * 1.2)}\selectfont
+  res.add fontSize
+  if alignLeft:
+    res.add "align=left"
+  result = res.join(", ")
   if result.len > 0:
     result = "[" & result & "]"
   echo result
