@@ -3120,7 +3120,7 @@ proc getCenter*(view: Viewport): (float, float) =
       height(view).toRelative(length = some(pointHeight(view))).val / 2.0
   result = (centerX, centerY)
 
-proc parseFilename(fname: string): FiletypeKind =
+proc parseFilename*(fname: string): FiletypeKind =
   let (_, _, ext) = fname.splitFile
   case ext.normalize
   of ".pdf":
