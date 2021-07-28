@@ -184,6 +184,7 @@ proc drawText*(img: var BImage, text: string, font: Font, at: Point,
 
   let alignStr = img.nodeProperties((x: x, y: y), alignKind, rotate)
   let fs = font.size
+  let xAt = (x: x, y: y)
   var textStr: string
   if font.bold:
     textStr = latex:
@@ -192,7 +193,7 @@ proc drawText*(img: var BImage, text: string, font: Font, at: Point,
     textStr = latex:
       \fontsize{$(fs)}{$(fs * 1.2)}\selectfont `text`
   latexAdd:
-    \node `alignStr` at $(img.toStr(at)) {`textStr`} ";"
+    \node `alignStr` at $(img.toStr(xAt)) {`textStr`} ";"
 
 proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
                     style: Style,
