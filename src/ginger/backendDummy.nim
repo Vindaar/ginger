@@ -45,6 +45,7 @@ proc drawRaster*(img: var BImage, left, bottom, width, height: float,
 
 proc initBImage*(filename: string,
                  width, height: int,
+                 backend: BackendKind,
                  fType: FiletypeKind,
                  texOptions = TeXOptions()): BImage =
   debugecho "WARNING: `initBImage` of dummy backend is being called!"
