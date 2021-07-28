@@ -85,6 +85,7 @@ when not defined(noCairo):
   # forward declarations to use them in `drawRaster` for `TikZ`
   proc initBImage*(filename: string,
                    width, height: int,
+                   backend: BackendKind,
                    fType: FiletypeKind,
                    texOptions = TeXOptions()): BImage
   proc destroy*(img: var BImage)
@@ -102,6 +103,7 @@ when not defined(noCairo):
       let tmpName = getTempDir() & "raster_ggplotnim_tikz_tmp_store.png"
       var imgC = initBImage(tmpName,
                             width = width.int, height = height.int,
+                            backend = bkCairo,
                             ftype = fkPng,
                             texOptions = TeXOptions())
       imgC.drawRaster(0, 0, width, height, numX, numY, drawCB, rotate, rotateInView)
@@ -113,10 +115,9 @@ when not defined(noCairo):
 
   proc initBImage*(filename: string,
                    width, height: int,
+                   backend: BackendKind,
                    fType: FiletypeKind,
                    texOptions = TeXOptions()): BImage =
-    let backend = if ftype == fkTeX or (ftype == fkPdf and texOptions.useTeX): bkTikZ
-                  else: bkCairo
     case backend
     of bkCairo:
       result = backendCairo.initBImage(
