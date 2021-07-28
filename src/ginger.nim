@@ -3231,7 +3231,7 @@ when not defined(noCairo):
     img.destroy()
 
 else:
-  proc draw*(view: Viewport, filename: string) =
+  proc draw*(view: Viewport, filename: string, texOptions: TeXOptions = TeXOptions()) =
     static: echo "Compiling draw as a dummy proc"
     echo "WARNING: Compiled with `-d:noCairo`. `draw` does not do anything " &
       "in this compilation mode!"
