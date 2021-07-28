@@ -1886,7 +1886,7 @@ proc initMultiLineText*(view: Viewport,
   ## hardcoded, since this works for now.
   assert textKind in {goText, goLabel, goTickLabel}
   let font = if fontOpt.isSome: fontOpt.unsafeGet else: defaultFont()
-  let lines = text.splitLines
+  let lines = text.splitLines # TODO: extend to allow detection of latex `\\`?
   let totalHeight = getStrHeight(view.backend, text, font)
   let numLines = lines.len
   for idx, line in lines:
