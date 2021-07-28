@@ -1,3 +1,5 @@
+* v0.3.5
+- fix =draw= procedure to bring it in line with current backend API
 * v0.3.4
 - TikZ fixes for text placement and multi line text
 - merge determination of backend into single =toBackend= procedure
