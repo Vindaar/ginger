@@ -4,7 +4,7 @@ import types
 import options
 
 import os, latexdsl, strformat
-from strutils import `%`
+from strutils import `%`, join, contains
 
 #[
 Maybe we have to collect all colors in a table or seq and create a custom 'preamble' that
@@ -182,16 +182,17 @@ proc drawText*(img: var BImage, text: string, font: Font, at: Point,
     x = at.x + (extents.width / 2.0 + extents.x_bearing)
   of taCenter: discard
 
-  let alignStr = img.nodeProperties((x: x, y: y), alignKind, rotate)
-  let fs = font.size
+  let alignLeft = if r"\\" in text: true else: false # for manual line breaks, need left alignment
   let xAt = (x: x, y: y)
+  let alignStr = img.nodeProperties(xAt, alignKind, rotate, font,
+                                    alignLeft = alignLeft)
   var textStr: string
   if font.bold:
     textStr = latex:
-      \fontsize{$(fs)}{$(fs * 1.2)}\selectfont {\textbf{`text`}}
+      \textbf{`text`}
   else:
     textStr = latex:
-      \fontsize{$(fs)}{$(fs * 1.2)}\selectfont `text`
+      `text`
   latexAdd:
     \node `alignStr` at $(img.toStr(xAt)) {`textStr`} ";"
 
