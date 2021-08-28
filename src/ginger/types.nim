@@ -42,6 +42,9 @@ type
     texTemplate*: Option[string] # a custom user TeX template
     standalone*: bool            # if true output to a standalone TeX document
     onlyTikZ*: bool              # if true write ``only`` TikZ commands to file
+    caption*: Option[string]     # optional caption for the figure
+    label*: Option[string]       # optional label for the figure
+    placement*: string           # placement option for the figure env ("htbp", ...)
 
   BImage* = object
     fname*: string

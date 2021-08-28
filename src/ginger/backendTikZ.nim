@@ -266,10 +266,49 @@ proc getStandaloneTmpl(): string =
       tikzpicture:
         "$#"
 
-proc getOnlyTikZTmpl(): string =
-  result = latex:
-    tikzpicture:
-      "$#"
+proc getOnlyTikZTmpl(texOptions: TeXOptions): string =
+  if texOptions.caption.isSome and texOptions.label.isSome:
+    let plc = texOptions.placement
+    let cap = texOptions.caption.get
+    let lab = texOptions.label.get
+    result = latex:
+      figure[`plc`]:
+        \centering
+        tikzpicture:
+          "$#"
+        \label{`lab`}
+        \caption{`cap`}
+  elif texOptions.caption.isSome:
+    let plc = texOptions.placement
+    let cap = texOptions.caption.get
+    result = latex:
+      figure[`plc`]:
+        \centering
+        tikzpicture:
+          "$#"
+        \caption{`cap`}
+  elif texOptions.label.isSome:
+    let plc = texOptions.placement
+    let lab = texOptions.label.get
+    result = latex:
+      figure[`plc`]:
+        \centering
+        tikzpicture:
+          "$#"
+        \label{`lab`}
+  else:
+    result = latex:
+      tikzpicture:
+        "$#"
+
+#proc getOnlyTikZTmpl(): string =
+#  result = latex:
+#    figure:
+#      \centering
+#      tikzpicture:
+#        "$#"
+#      \caption{test caption}
+#      \label{test_label}
 
 proc getArticleTmpl(): string =
   result = latex:
@@ -289,7 +328,7 @@ proc writeTeXFile*(img: BImage) =
   var tmpl: string
   if img.options.texTemplate.isNone:
     if img.options.onlyTikZ:
-      tmpl = getOnlyTikZTmpl()
+      tmpl = getOnlyTikZTmpl(img.options)
     elif img.options.standalone:
       tmpl = getStandaloneTmpl()
     else:
