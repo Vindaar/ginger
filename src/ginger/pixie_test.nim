@@ -3,7 +3,7 @@ import types
 import options
 
 import pixie
-import backendPixie
+import backends
 
 when isMainModule:
   var 
@@ -28,7 +28,7 @@ when isMainModule:
     # backend Pixie tests
     img = initBImage("test.png",
                          width = 600, height = 400,
-                         backend = bkPixie,
+                         bkPixie,
                          ftype = fkPng)
     rotation = option((45.0, (1.0, 5.0)))
   img.drawLine((0.0, 0.0), (150.0, 140.0), style)
