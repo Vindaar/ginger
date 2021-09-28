@@ -1886,7 +1886,7 @@ proc initMultiLineText*(view: Viewport,
   ## hardcoded, since this works for now.
   assert textKind in {goText, goLabel, goTickLabel}
   let font = if fontOpt.isSome: fontOpt.unsafeGet else: defaultFont()
-  let lines = text.splitLines
+  let lines = text.splitLines # TODO: extend to allow detection of latex `\\`?
   let totalHeight = getStrHeight(view.backend, text, font)
   let numLines = lines.len
   for idx, line in lines:
@@ -3120,7 +3120,7 @@ proc getCenter*(view: Viewport): (float, float) =
       height(view).toRelative(length = some(pointHeight(view))).val / 2.0
   result = (centerX, centerY)
 
-proc parseFilename(fname: string): FiletypeKind =
+proc parseFilename*(fname: string): FiletypeKind =
   let (_, _, ext) = fname.splitFile
   case ext.normalize
   of ".pdf":
@@ -3133,6 +3133,20 @@ proc parseFilename(fname: string): FiletypeKind =
     result = fkTeX
   else:
     result = fkPdf
+
+proc toBackend*(fType: FiletypeKind, texOptions: TexOptions): BackendKind =
+  ## TODO: generalize the `texOptions` to variant object for possible other backends
+  case fType
+  of fkSvg: result = bkCairo
+  of fkPng: result = bkCairo
+  of fkTeX: result = bkTikZ
+  of fkPdf:
+    # depends on `texOptions`
+    result = if texOptions.useTeX or texOptions.texTemplate.isSome:
+               bkTikZ
+             else:
+               bkCairo # extend for Pixie
+  of fkVega: doAssert false # not supported
 
 proc draw*(img: var BImage, gobj: GraphObject) =
   ## draws the given graph object on the image
@@ -3206,16 +3220,18 @@ when not defined(noCairo):
   proc draw*(view: Viewport, filename: string, texOptions: TeXOptions = TeXOptions()) =
     ## draws the given viewport and all its children and stores it in the
     ## file `filename`
-    let ftype = parseFilename(filename)
+    let fType = parseFilename(filename)
+    let backend = fType.toBackend(texOptions)
     var img = initBImage(filename,
                          width = view.wImg.val.round.int, height = view.hImg.val.round.int,
-                         ftype = ftype,
+                         backend = backend,
+                         ftype = fType,
                          texOptions = texOptions)
     img.draw(view)
     img.destroy()
 
 else:
-  proc draw*(view: Viewport, filename: string) =
+  proc draw*(view: Viewport, filename: string, texOptions: TeXOptions = TeXOptions()) =
     static: echo "Compiling draw as a dummy proc"
     echo "WARNING: Compiled with `-d:noCairo`. `draw` does not do anything " &
       "in this compilation mode!"

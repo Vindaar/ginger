@@ -4,7 +4,7 @@ import types
 import options
 
 import os, latexdsl, strformat
-from strutils import `%`
+from strutils import `%`, join, contains
 
 #[
 Maybe we have to collect all colors in a table or seq and create a custom 'preamble' that
@@ -40,12 +40,22 @@ proc toStr(alignKind: TextAlignKind): string =
   of taCenter: result = "" # default
   of taRight: result = "left"
 
-proc nodeProperties(img: BImage, at: Point, alignKind: TextAlignKind, rotate: Option[float]): string =
-  result = alignKind.toStr
-  var rot: string
+proc nodeProperties(img: BImage, at: Point, alignKind: TextAlignKind, rotate: Option[float],
+                    font: Font,
+                    alignLeft = false): string =
+  var res = newSeq[string]()
+  let ak = alignKind.toStr
+  if ak.len > 0:
+    res.add ak
   if rotate.isSome:
-    rot = "rotate = " & $(-rotate.get) # rotation is opposite of cairo
-    result = if result.len > 0: result & ", " & rot else: rot
+    res.add "rotate = " & $(-rotate.get) # rotation is opposite of cairo
+  let fs = font.size
+  let fontSize = latex:
+    font = \fontsize{$(fs)}{$(fs * 1.2)}\selectfont
+  res.add fontSize
+  if alignLeft:
+    res.add "align=left"
+  result = res.join(", ")
   if result.len > 0:
     result = "[" & result & "]"
   echo result
@@ -172,17 +182,19 @@ proc drawText*(img: var BImage, text: string, font: Font, at: Point,
     x = at.x + (extents.width / 2.0 + extents.x_bearing)
   of taCenter: discard
 
-  let alignStr = img.nodeProperties((x: x, y: y), alignKind, rotate)
-  let fs = font.size
+  let alignLeft = if r"\\" in text: true else: false # for manual line breaks, need left alignment
+  let xAt = (x: x, y: y)
+  let alignStr = img.nodeProperties(xAt, alignKind, rotate, font,
+                                    alignLeft = alignLeft)
   var textStr: string
   if font.bold:
     textStr = latex:
-      \fontsize{$(fs)}{$(fs * 1.2)}\selectfont {\textbf{`text`}}
+      \textbf{`text`}
   else:
     textStr = latex:
-      \fontsize{$(fs)}{$(fs * 1.2)}\selectfont `text`
+      `text`
   latexAdd:
-    \node `alignStr` at $(img.toStr(at)) {`textStr`} ";"
+    \node `alignStr` at $(img.toStr(xAt)) {`textStr`} ";"
 
 proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
                     style: Style,

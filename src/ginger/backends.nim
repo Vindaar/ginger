@@ -102,8 +102,9 @@ when not defined(noCairo):
   # forward declarations to use them in `drawRaster` for `TikZ`
   proc initBImage*(filename: string,
                    width, height: int,
+                   backend: BackendKind,
                    fType: FiletypeKind,
-                   texOptions: TeXOptions): BImage
+                   texOptions = TeXOptions()): BImage
   proc destroy*(img: var BImage)
   proc drawRaster*(img: var BImage, left, bottom, width, height: float,
                    numX, numY: int,
@@ -119,6 +120,7 @@ when not defined(noCairo):
       let tmpName = getTempDir() & "raster_ggplotnim_tikz_tmp_store.png"
       var imgC = initBImage(tmpName,
                             width = width.int, height = height.int,
+                            backend = bkCairo,
                             ftype = fkPng,
                             texOptions = TeXOptions())
       imgC.drawRaster(0, 0, width, height, numX, numY, drawCB, rotate, rotateInView)
@@ -134,10 +136,9 @@ when not defined(noCairo):
 
   proc initBImage*(filename: string,
                    width, height: int,
+                   backend: BackendKind,
                    fType: FiletypeKind,
-                   texOptions: TeXOptions): BImage =
-    let backend = if ftype == fkTeX or (ftype == fkPdf and texOptions.useTeX): bkTikZ
-                  else: bkCairo
+                   texOptions = TeXOptions()): BImage =
     case backend
     of bkCairo:
       result = backendCairo.initBImage(
@@ -155,6 +156,7 @@ when not defined(noCairo):
       )
     else: discard
 
+  from macros import error
   proc destroy*(img: var BImage) =
     case img.backend
     of bkCairo:
@@ -176,12 +178,12 @@ when not defined(noCairo):
         # compile using terminal
 
         # 1. check if xelatex in PATH
-        when defined(linux) or defined(macos):
+        when defined(linux) or defined(macosx):
           let checkCmd = "command -v"
         elif defined(windows):
           let checkCmd = "WHERE"
         else:
-          raise newException(Exception, "Unsupported platform for PDF generation. Please open an issue.")
+          static: error("Unsupported platform for PDF generation. Please open an issue.")
 
         var generated = false
         template checkAndRun(cmd: untyped): untyped =
