@@ -22,12 +22,12 @@ proc toTikZCoord(img: BImage, p: Point, isLength: static bool = false): Point =
 func toStr(img: BImage, p: Point, isLength: static bool = false): string =
   block:
     let pst = img.toTikZCoord(p, isLength = isLength)
-    var tmp = &"({pst.x}\\textwidth, {pst.y}\\textwidth)"
+    var tmp = &"({pst.x:.4f}\\textwidth, {pst.y:.4f}\\textwidth)"
     tmp
 
 func toStrDirect(p: Point, isLength: static bool = false): string =
   block:
-    var tmp = &"({p.x}\\textwidth, {p.y}\\textwidth)"
+    var tmp = &"({p.x:.4f}\\textwidth, {p.y:.4f}\\textwidth)"
     tmp
 
 proc toStr(alignKind: TextAlignKind): string =
