@@ -70,6 +70,12 @@ proc defColor(name: string, c: Color): string =
   result = latex:
     \definecolor{`name`}{rgb}{`color`}
 
+func addColorIfNew(img: var BImage, color: string) =
+  if color != img.lastColor:
+    latexAdd:
+      `color`
+    img.lastColor = color
+
 proc colorStr(style: Style): string =
   result.add defColor("drawColor", style.color)
   result.add defColor("fillColor", style.fillColor)
@@ -116,8 +122,8 @@ proc drawLine*(img: var BImage, start, stop: Point,
   let p1 = img.toStr(stop)
   let color = style.colorStr
   let lineSt = style.lineStyle
+  img.addColorIfNew(color)
   latexAdd:
-    `color`
     \draw `lineSt` `p0` -- `p1` ";"
 
 proc drawPolyLine*(img: var BImage, points: seq[Point],
@@ -125,8 +131,8 @@ proc drawPolyLine*(img: var BImage, points: seq[Point],
                    rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
   let lineSt = style.lineStyle
   let color = style.colorStr
+  img.addColorIfNew(color)
   latexAdd:
-    `color`
     \draw `lineSt`
   for i, p in points:
     let pStr = img.toStr(p)
@@ -149,9 +155,9 @@ proc drawCircle*(img: var BImage, center: Point, radius: float,
                     color: strokeColor,
                     fillColor: fillColor)
   let color = style.colorStr
+  img.addColorIfNew(color)
   let lineSt = style.lineStyle
   latexAdd:
-    `color`
     \draw `lineSt` `p` circle [radius = `radius`] ";"
 
 proc getTextExtent*(text: string, font: Font): TextExtent =
@@ -225,8 +231,8 @@ proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
     let lineSt = style.lineStyle
     let sizeStr = sizePt.toStrDirect
     let atStr = atPt.toStrDirect
+    img.addColorIfNew(color)
     latexAdd:
-      `color`
       \draw `lineSt` `atStr` rectangle `sizeStr` ";"
 
 from backendCairo import nil
