@@ -1,3 +1,7 @@
+* v0.3.7
+- reduces the output size of plots on the TikZ backend, by reducing
+  printed precision of positions and avoiding multiple outputs of the
+  same color
 * v0.3.6
 - add options for TikZ backend to embed the plot in a full figure
   environment with a given caption and label
