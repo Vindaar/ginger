@@ -59,6 +59,7 @@ type
     of bkTikZ:
       data*: string # stores the TikZ commands as a string to be inserted into a LaTeX template
       options*: TexOptions
+      lastColor*: string # stores the last used color to avoid redefining same color
     of bkVega: discard
 
   LineType* = enum
