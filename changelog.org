@@ -1,3 +1,15 @@
+* v0.3.8
+- adds more shapes to draw points with. The available shapes are now:
+  - circle
+  - cross
+  - triangle
+  - rhombus
+  - rectangle
+  - rotated cross
+  - upside down triangle
+  - empty circle
+  - empty rectangle
+  - empty rhombus
 * v0.3.7
 - reduces the output size of plots on the TikZ backend, by reducing
   printed precision of positions and avoiding multiple outputs of the
