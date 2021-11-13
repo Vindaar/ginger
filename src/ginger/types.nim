@@ -89,7 +89,8 @@ type
     alignKind*: TextAlignKind
 
   MarkerKind* = enum
-    mkCircle, mkCross, mkRotCross, mkStar
+    mkCircle, mkCross, mkTriangle, mkRhombus, mkRectangle, mkRotCross, mkUpsideDownTriangle,
+    mkEmptyCircle, mkEmptyRectangle, mkEmptyRhombus
 
   Gradient* = object
     colors*: seq[Color]
