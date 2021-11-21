@@ -1,3 +1,8 @@
+* v0.3.9
+- add a =bkNone= backend kind to detect if no backend was set
+  explicitly
+- improve alignment of text on the TikZ backend. In particular the
+  text width is now more correct.  
 * v0.3.8
 - adds more shapes to draw points with. The available shapes are now:
   - circle
