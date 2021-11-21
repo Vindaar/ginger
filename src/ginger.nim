@@ -2284,22 +2284,22 @@ proc ylabel*(view: Viewport,
                               isSecondary = isSecondary,
                               rotate = rotate)
 
-template xLabelOriginOffset(fnt: Font, isSecondary = false): untyped =
+template xLabelOriginOffset(backend: BackendKind, fnt: Font, isSecondary = false): untyped =
   if not isSecondary:
-    # use `M` as default
-    Coord1D(pos: -1.25, kind: ukStrHeight, text: "M", font: fnt)
+    # uses `W` as default
+    strWidth(backend, -1.25, fnt)
       .toRelative(length = some(pointWidth(view)))
   else:
-    Coord1D(pos: 1.25, kind: ukStrHeight, text: "M", font: fnt)
+    strWidth(backend, 1.25, fnt)
       .toRelative(length = some(pointWidth(view)))
 
-template yLabelOriginOffset(fnt: Font, isSecondary = false): untyped =
+template yLabelOriginOffset(backend: BackendKind, fnt: Font, isSecondary = false): untyped =
   if not isSecondary:
-    # use `M` as default
-    Coord1D(pos: 1.75, kind: ukStrHeight, text: "M", font: fnt)
+    # uses `W` as default
+    strHeight(backend, 1.75, fnt)
       .toRelative(length = some(pointHeight(view)))
   else:
-    Coord1D(pos: -1.75, kind: ukStrHeight, text: "M", font: fnt)
+    strHeight(backend, -1.75, fnt)
       .toRelative(length = some(pointHeight(view)))
 
 proc setTextAlignKind(axKind: AxisKind,
@@ -2338,7 +2338,7 @@ proc initTickLabel(view: Viewport,
   case tick.tkAxis
   of akX:
     let yOffset = if margin.isSome: margin.unsafeGet
-                  else: yLabelOriginOffset(mfont, isSecondary)
+                  else: yLabelOriginOffset(view.backend, mfont, isSecondary)
     origin = Coord(x: loc.x,
                    y: (loc.y + yOffset).toRelative)
     if gobjName == "tickLabel":
@@ -2352,7 +2352,7 @@ proc initTickLabel(view: Viewport,
                            name = gobjName)
   of akY:
     let xOffset = if margin.isSome: margin.unsafeGet
-                  else: xLabelOriginOffset(mfont, isSecondary)
+                  else: xLabelOriginOffset(view.backend, mfont, isSecondary)
     origin = Coord(x: (loc.x + xOffset).toRelative,
                    y: loc.y)
     if gobjName == "tickLabel":
