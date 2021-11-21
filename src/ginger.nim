@@ -775,7 +775,8 @@ func `$`*(gobj: GraphObject): string =
   result = gobj.pretty
 
 func toRelative*(p: Coord1D,
-                 length: Option[Quantity] = none[Quantity]()): Coord1D =
+                 length: Option[Quantity] = none[Quantity](),
+                 backend = none[BackendKind]()): Coord1D =
   ## converts the given coordinate to a relative coordinate
   case p.kind
   of ukRelative:
@@ -812,6 +813,9 @@ func toRelative*(p: Coord1D,
     # can either use cairo's internals, e.g. get the extent of the string in a
     # given font, or assuming a font size in dots calculate from DPI?
     # Do the former for now
+    if p.backend == bkNone:
+      raise newException(ValueError, "Cannot convert " & $p.kind & " to relative without " &
+        "a backend!")
     let extents = getTextExtent(p.backend, p.text, p.font)
     let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
                       else: extents.height #extents.y_advance - extents.y_bearing
@@ -824,7 +828,8 @@ func toRelative*(p: Coord1D,
                          "Conversion from StrWidth to relative requires a length scale!")
 
 func toPoints*(p: Coord1D,
-               length: Option[Quantity] = none[Quantity]()): Coord1D =
+               length: Option[Quantity] = none[Quantity](),
+               backend = none[BackendKind]()): Coord1D =
   ## converts the given coordinate to point based absolute values
   case p.kind
   of ukRelative:
@@ -858,6 +863,9 @@ func toPoints*(p: Coord1D,
     # can either use cairo's internals, e.g. get the extent of the string in a
     # given font, or assuming a font size in dots calculate from DPI?
     # Do the former for now
+    if p.backend == bkNone:
+      raise newException(ValueError, "Cannot convert " & $p.kind & " to relative without " &
+        "a backend!")
     let extents = getTextExtent(p.backend, p.text, p.font)
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
     let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
