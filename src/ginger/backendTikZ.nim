@@ -161,7 +161,7 @@ proc drawCircle*(img: var BImage, center: Point, radius: float,
 proc getTextExtent*(text: string, font: Font): TextExtent =
   ## XXX: HACK
   let ptY = font.size
-  let ptX = ptY
+  let ptX = ptY * 0.5 ## TODO: ideally we need the correct font height to width ratio!
   result = TextExtent(
     x_bearing: 0.0,
     y_bearing: 0.0,
