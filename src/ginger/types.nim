@@ -27,7 +27,7 @@ else:
 
 type
   BackendKind* = enum
-    bkCairo, bkVega, bkTikZ
+    bkNone, bkCairo, bkVega, bkTikZ
   FiletypeKind* = enum
     fkSvg, fkPng, fkPdf, fkVega, fkTeX
 
@@ -60,7 +60,7 @@ type
       data*: string # stores the TikZ commands as a string to be inserted into a LaTeX template
       options*: TexOptions
       lastColor*: string # stores the last used color to avoid redefining same color
-    of bkVega: discard
+    of bkVega, bkNone: discard
 
   LineType* = enum
     ltNone, ltSolid, ltDashed, ltDotted, ltDotDash, ltLongDash, ltTwoDash
