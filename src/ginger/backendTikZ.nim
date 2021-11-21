@@ -36,25 +36,23 @@ proc toStr(alignKind: TextAlignKind): string =
   ## In TikZ the the node is placed `right`, `left` (etc.) of the coordinate, wherease
   ## in cairo it is aligned by the `left` / `right` edge. Thus, the inversion.
   case alignKind
-  of taLeft: result = "right"
+  of taLeft: result = "west"
   of taCenter: result = "" # default
-  of taRight: result = "left"
+  of taRight: result = "east"
 
 proc nodeProperties(img: BImage, at: Point, alignKind: TextAlignKind, rotate: Option[float],
                     font: Font,
                     alignLeft = false): string =
   var res = newSeq[string]()
-  let ak = alignKind.toStr
-  if ak.len > 0:
-    res.add ak
   if rotate.isSome:
     res.add "rotate = " & $(-rotate.get) # rotation is opposite of cairo
   let fs = font.size
   let fontSize = latex:
     font = \fontsize{$(fs)}{$(fs * 1.2)}\selectfont
   res.add fontSize
-  if alignLeft:
-    res.add "align=left"
+  let ak = alignKind.toStr
+  if ak.len > 0:
+    res.add &"anchor={ak}"
   result = res.join(", ")
   if result.len > 0:
     result = "[" & result & "]"
