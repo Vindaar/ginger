@@ -77,9 +77,10 @@ proc nodeProperties(img: BImage, at: Point, alignKind: TextAlignKind, rotate: Op
     result = "[" & result & "]"
 
 template latexAdd(body: untyped): untyped {.dirty.} =
-  let toAdd = latex:
-    body
-  img.data.add toAdd
+  block:
+    let toAdd = latex:
+      body
+    img.data.add toAdd
 
 proc defColor(name: string, c: Color): string =
   let color = &"{c.r}, {c.g}, {c.b}"
