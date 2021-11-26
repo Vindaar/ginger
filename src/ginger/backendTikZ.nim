@@ -36,27 +36,45 @@ proc toStr(alignKind: TextAlignKind): string =
   ## In TikZ the the node is placed `right`, `left` (etc.) of the coordinate, wherease
   ## in cairo it is aligned by the `left` / `right` edge. Thus, the inversion.
   case alignKind
+  of taLeft: result = "right"
+  of taCenter: result = "" # default
+  of taRight: result = "left"
+
+proc toAnchorStr(alignKind: TextAlignKind): string =
+  ## convert the text align kind to the correct TikZ notation for an anchor.
+  case alignKind
   of taLeft: result = "west"
   of taCenter: result = "" # default
   of taRight: result = "east"
 
 proc nodeProperties(img: BImage, at: Point, alignKind: TextAlignKind, rotate: Option[float],
                     font: Font,
-                    alignLeft = false): string =
+                    alignLeft = false,
+                    useAlignOverAnchor = false): string =
+  ## If `useAlignOverAnchor` is true, we do not use `anchor=`, but rather `align=`. This is
+  ## the case if text is put that contains manual line breaks. Those are not supported with `anchor`
+  ## for whatever reason.
   var res = newSeq[string]()
+  let ak = alignKind.toStr
+  if ak.len > 0:
+    res.add ak # this is placement of the node relative to coordinate. Required if `align` is used.
   if rotate.isSome:
     res.add "rotate = " & $(-rotate.get) # rotation is opposite of cairo
   let fs = font.size
   let fontSize = latex:
     font = \fontsize{$(fs)}{$(fs * 1.2)}\selectfont
   res.add fontSize
-  let ak = alignKind.toStr
-  if ak.len > 0:
-    res.add &"anchor={ak}"
+  if useAlignOverAnchor:
+    # if we use align, left and right are same as in ginger
+    if alignKind == taLeft: res.add "align=left"
+    elif alignKind == taRight: res.add "align=right"
+  else:
+    let anchor = alignKind.toAnchorStr
+    if anchor.len > 0:
+      res.add &"anchor={anchor}"
   result = res.join(", ")
   if result.len > 0:
     result = "[" & result & "]"
-  echo result
 
 template latexAdd(body: untyped): untyped {.dirty.} =
   let toAdd = latex:
