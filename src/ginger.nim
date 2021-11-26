@@ -2287,10 +2287,10 @@ proc ylabel*(view: Viewport,
 template xLabelOriginOffset(backend: BackendKind, fnt: Font, isSecondary = false): untyped =
   if not isSecondary:
     # uses `W` as default
-    strWidth(backend, -1.25, fnt)
+    strWidth(backend, -1.15, fnt)
       .toRelative(length = some(pointWidth(view)))
   else:
-    strWidth(backend, 1.25, fnt)
+    strWidth(backend, 1.15, fnt)
       .toRelative(length = some(pointWidth(view)))
 
 template yLabelOriginOffset(backend: BackendKind, fnt: Font, isSecondary = false): untyped =
