@@ -1,3 +1,8 @@
+* v0.3.10
+- further fixes placement of tick labels to make sure x and y axes are
+  at the same distance from the ticks
+- hotfix for a regression in =v0.3.9=, which broke manual line breaks
+  in TikZ backend annotations
 * v0.3.9
 - add a =bkNone= backend kind to detect if no backend was set
   explicitly
