@@ -193,22 +193,11 @@ proc drawText*(img: var BImage, text: string, font: Font, at: Point,
                alignKind: TextAlignKind = taLeft,
                rotate: Option[float] = none[float](),
                rotateInView: Option[(float, Point)] = none[(float, Point)]()) =
-  var
-    x = at.x
-    y = at.y
-  let extents = getTextExtent("M", font)
-  # `left`/`right` of node in TeX is too close. Add half a M letter spacing
-  case alignKind
-  of taLeft:
-    x = at.x - (extents.width / 2.0 + extents.x_bearing)
-  of taRight:
-    x = at.x + (extents.width / 2.0 + extents.x_bearing)
-  of taCenter: discard
-
   let alignLeft = if r"\\" in text: true else: false # for manual line breaks, need left alignment
-  let xAt = (x: x, y: y)
-  let alignStr = img.nodeProperties(xAt, alignKind, rotate, font,
-                                    alignLeft = alignLeft)
+  let useAlignOverAnchor = r"\\" in text
+  let alignStr = img.nodeProperties(at, alignKind, rotate, font,
+                                    alignLeft = alignLeft,
+                                    useAlignOverAnchor = useAlignOverAnchor)
   var textStr: string
   if font.bold:
     textStr = latex:
@@ -217,7 +206,7 @@ proc drawText*(img: var BImage, text: string, font: Font, at: Point,
     textStr = latex:
       `text`
   latexAdd:
-    \node `alignStr` at $(img.toStr(xAt)) {`textStr`} ";"
+    \node `alignStr` at $(img.toStr(at)) {`textStr`} ";"
 
 proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
                     style: Style,
