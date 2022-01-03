@@ -775,7 +775,8 @@ func `$`*(gobj: GraphObject): string =
   result = gobj.pretty
 
 func toRelative*(p: Coord1D,
-                 length: Option[Quantity] = none[Quantity]()): Coord1D =
+                 length: Option[Quantity] = none[Quantity](),
+                 backend = none[BackendKind]()): Coord1D =
   ## converts the given coordinate to a relative coordinate
   case p.kind
   of ukRelative:
@@ -812,6 +813,9 @@ func toRelative*(p: Coord1D,
     # can either use cairo's internals, e.g. get the extent of the string in a
     # given font, or assuming a font size in dots calculate from DPI?
     # Do the former for now
+    if p.backend == bkNone:
+      raise newException(ValueError, "Cannot convert " & $p.kind & " to relative without " &
+        "a backend!")
     let extents = getTextExtent(p.backend, p.text, p.font)
     let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
                       else: extents.height #extents.y_advance - extents.y_bearing
@@ -824,7 +828,8 @@ func toRelative*(p: Coord1D,
                          "Conversion from StrWidth to relative requires a length scale!")
 
 func toPoints*(p: Coord1D,
-               length: Option[Quantity] = none[Quantity]()): Coord1D =
+               length: Option[Quantity] = none[Quantity](),
+               backend = none[BackendKind]()): Coord1D =
   ## converts the given coordinate to point based absolute values
   case p.kind
   of ukRelative:
@@ -858,6 +863,9 @@ func toPoints*(p: Coord1D,
     # can either use cairo's internals, e.g. get the extent of the string in a
     # given font, or assuming a font size in dots calculate from DPI?
     # Do the former for now
+    if p.backend == bkNone:
+      raise newException(ValueError, "Cannot convert " & $p.kind & " to relative without " &
+        "a backend!")
     let extents = getTextExtent(p.backend, p.text, p.font)
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
     let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
@@ -2276,22 +2284,22 @@ proc ylabel*(view: Viewport,
                               isSecondary = isSecondary,
                               rotate = rotate)
 
-template xLabelOriginOffset(fnt: Font, isSecondary = false): untyped =
+template xLabelOriginOffset(backend: BackendKind, fnt: Font, isSecondary = false): untyped =
   if not isSecondary:
-    # use `M` as default
-    Coord1D(pos: -1.25, kind: ukStrHeight, text: "M", font: fnt)
+    # uses `W` as default
+    strWidth(backend, -1.15, fnt)
       .toRelative(length = some(pointWidth(view)))
   else:
-    Coord1D(pos: 1.25, kind: ukStrHeight, text: "M", font: fnt)
+    strWidth(backend, 1.15, fnt)
       .toRelative(length = some(pointWidth(view)))
 
-template yLabelOriginOffset(fnt: Font, isSecondary = false): untyped =
+template yLabelOriginOffset(backend: BackendKind, fnt: Font, isSecondary = false): untyped =
   if not isSecondary:
-    # use `M` as default
-    Coord1D(pos: 1.75, kind: ukStrHeight, text: "M", font: fnt)
+    # uses `W` as default
+    strHeight(backend, 1.75, fnt)
       .toRelative(length = some(pointHeight(view)))
   else:
-    Coord1D(pos: -1.75, kind: ukStrHeight, text: "M", font: fnt)
+    strHeight(backend, -1.75, fnt)
       .toRelative(length = some(pointHeight(view)))
 
 proc setTextAlignKind(axKind: AxisKind,
@@ -2330,7 +2338,7 @@ proc initTickLabel(view: Viewport,
   case tick.tkAxis
   of akX:
     let yOffset = if margin.isSome: margin.unsafeGet
-                  else: yLabelOriginOffset(mfont, isSecondary)
+                  else: yLabelOriginOffset(view.backend, mfont, isSecondary)
     origin = Coord(x: loc.x,
                    y: (loc.y + yOffset).toRelative)
     if gobjName == "tickLabel":
@@ -2344,7 +2352,7 @@ proc initTickLabel(view: Viewport,
                            name = gobjName)
   of akY:
     let xOffset = if margin.isSome: margin.unsafeGet
-                  else: xLabelOriginOffset(mfont, isSecondary)
+                  else: xLabelOriginOffset(view.backend, mfont, isSecondary)
     origin = Coord(x: (loc.x + xOffset).toRelative,
                    y: loc.y)
     if gobjName == "tickLabel":
@@ -2905,30 +2913,81 @@ proc drawRaster(img: var BImage, gobj: GraphObject) =
 
 proc drawPoint(img: var BImage, gobj: GraphObject) =
   doAssert gobj.kind == goPoint, "object must be a `goPoint`!"
+  proc rotateObj(gobj: GraphObject, angle: float,
+                 posX, posY: float,
+                 mkKind: set[MarkerKind]): Option[(float, Point)] =
+    if gobj.ptMarker in mkKind:
+      result = if gobj.rotateInView.isSome:
+                 let tup = gobj.rotateInView.get
+                 some((tup[0] + angle, tup[1]))
+               else:
+                 some((angle, (x: posX, y: posY)))
+
   case gobj.ptMarker
-  of mkCircle:
-    img.drawCircle(gobj.ptPos.point, gobj.ptSize, lineWidth = 0.0,
-                   strokeColor = color(0.0, 0.0, 0.0, 0.0),
-                   fillColor = gobj.ptColor,
+  of mkCircle, mkEmptyCircle:
+    let fillColor = if gobj.ptMarker == mkCircle: gobj.ptColor
+                    else: transparent
+    let strokeColor = if gobj.ptMarker == mkCircle: transparent
+                    else: gobj.ptColor
+    img.drawCircle(gobj.ptPos.point, gobj.ptSize, lineWidth = 1.0,
+                   strokeColor = strokeColor,
+                   fillColor = fillColor,
                    rotateAngle = gobj.rotateInView)
-  of mkCross:
+  of mkCross, mkRotCross:
     var style = gobj.style.get() # style *has* to exist
     # modify line width to accomodate drawing a cross
-    style.lineWidth = gobj.ptSize / 4.0
+    style.lineWidth = gobj.ptSize / 2.0
     style.color = gobj.ptColor
     style.lineType = ltSolid
     style.fillColor = gobj.ptColor
     let
       posX = gobj.ptPos.point.x
       posY = gobj.ptPos.point.y
-    img.drawLine((posX - gobj.ptSize / 2.0, posY),
-                 (posX + gobj.ptSize / 2.0, posY),
+    # possibly rotate
+    let rotate = gobj.rotateObj(45.0, posX, posY, {mkRotCross})
+
+    img.drawLine((posX - gobj.ptSize, posY),
+                 (posX + gobj.ptSize, posY),
                  style,
-                 rotateAngle = gobj.rotateInView)
-    img.drawLine((posX, posY - gobj.ptSize / 2.0),
-                 (posX, posY + gobj.ptSize / 2.0),
+                 rotateAngle = rotate)
+    img.drawLine((posX, posY - gobj.ptSize),
+                 (posX, posY + gobj.ptSize),
                  style,
-                 rotateAngle = gobj.rotateInView)
+                 rotateAngle = rotate)
+  of mkTriangle, mkUpsideDownTriangle:
+    var style = gobj.style.get() # style *has* to exist
+    # modify line width to accomodate drawing a cross
+    style.lineWidth = gobj.ptSize / 2.0
+    style.color = gobj.ptColor
+    style.lineType = ltSolid
+    style.fillColor = gobj.ptColor
+    let
+      posX = gobj.ptPos.point.x
+      posY = gobj.ptPos.point.y
+    let step = sin(60'f64.degToRad) * gobj.ptSize
+
+    let rotate = gobj.rotateObj(180.0, posX, posY, {mkUpsideDownTriangle})
+    # add all corner points of triangle
+    let points = @[(x: posX - step, y: posY + step), # bottom left
+                   (x: posX,        y: posY - step), # top middle
+                   (x: posX + step, y: posY + step)] # bottom right
+    img.drawPolyLine(points, style, rotateAngle = rotate)
+  of mkRectangle, mkEmptyRectangle, mkRhombus, mkEmptyRhombus:
+    var style = gobj.style.get() # style *has* to exist
+    # modify line width to accomodate drawing a cross
+    style.lineWidth = gobj.ptSize / 2.0
+    style.color = gobj.ptColor
+    style.lineType = ltSolid
+    style.fillColor = if gobj.ptMarker in {mkRectangle, mkRhombus}: gobj.ptColor
+                      else: transparent
+    let
+      posX = gobj.ptPos.point.x
+      posY = gobj.ptPos.point.y
+    let rotate = gobj.rotateObj(45.0, posX, posY, {mkRhombus, mkEmptyRhombus})
+    let size = gobj.ptSize * 1.5
+    img.drawRectangle(posX - size / 2.0, posY - size / 2.0, size, size,
+                      style,
+                      rotateInView = rotate)
   else:
     raise newException(Exception, "Not implemented yet!")
 

@@ -28,7 +28,7 @@ else:
 
 type
   BackendKind* = enum
-    bkCairo, bkVega, bkTikZ, bkPixie
+    bkNone, bkCairo, bkVega, bkTikZ, bkPixie
   FiletypeKind* = enum
     fkSvg, fkPng, fkPdf, fkVega, fkTeX
 
@@ -43,6 +43,9 @@ type
     texTemplate*: Option[string] # a custom user TeX template
     standalone*: bool            # if true output to a standalone TeX document
     onlyTikZ*: bool              # if true write ``only`` TikZ commands to file
+    caption*: Option[string]     # optional caption for the figure
+    label*: Option[string]       # optional label for the figure
+    placement*: string           # placement option for the figure env ("htbp", ...)
 
   BImage* = object
     fname*: string
@@ -57,10 +60,10 @@ type
     of bkTikZ:
       data*: string # stores the TikZ commands as a string to be inserted into a LaTeX template
       options*: TexOptions
-    of bkVega:
-      discard
+      lastColor*: string # stores the last used color to avoid redefining same color
     of bkPixie:
       pxContext*: pixie.Context
+    of bkVega, bkNone: discard
 
   LineType* = enum
     ltNone, ltSolid, ltDashed, ltDotted, ltDotDash, ltLongDash, ltTwoDash
@@ -89,7 +92,8 @@ type
     alignKind*: TextAlignKind
 
   MarkerKind* = enum
-    mkCircle, mkCross, mkRotCross, mkStar
+    mkCircle, mkCross, mkTriangle, mkRhombus, mkRectangle, mkRotCross, mkUpsideDownTriangle,
+    mkEmptyCircle, mkEmptyRectangle, mkEmptyRhombus
 
   Gradient* = object
     colors*: seq[Color]

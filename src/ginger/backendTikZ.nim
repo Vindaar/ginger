@@ -22,12 +22,12 @@ proc toTikZCoord(img: BImage, p: Point, isLength: static bool = false): Point =
 func toStr(img: BImage, p: Point, isLength: static bool = false): string =
   block:
     let pst = img.toTikZCoord(p, isLength = isLength)
-    var tmp = &"({pst.x}\\textwidth, {pst.y}\\textwidth)"
+    var tmp = &"({pst.x:.4f}\\textwidth, {pst.y:.4f}\\textwidth)"
     tmp
 
 func toStrDirect(p: Point, isLength: static bool = false): string =
   block:
-    var tmp = &"({p.x}\\textwidth, {p.y}\\textwidth)"
+    var tmp = &"({p.x:.4f}\\textwidth, {p.y:.4f}\\textwidth)"
     tmp
 
 proc toStr(alignKind: TextAlignKind): string =
@@ -40,35 +40,58 @@ proc toStr(alignKind: TextAlignKind): string =
   of taCenter: result = "" # default
   of taRight: result = "left"
 
+proc toAnchorStr(alignKind: TextAlignKind): string =
+  ## convert the text align kind to the correct TikZ notation for an anchor.
+  case alignKind
+  of taLeft: result = "west"
+  of taCenter: result = "" # default
+  of taRight: result = "east"
+
 proc nodeProperties(img: BImage, at: Point, alignKind: TextAlignKind, rotate: Option[float],
                     font: Font,
-                    alignLeft = false): string =
+                    alignLeft = false,
+                    useAlignOverAnchor = false): string =
+  ## If `useAlignOverAnchor` is true, we do not use `anchor=`, but rather `align=`. This is
+  ## the case if text is put that contains manual line breaks. Those are not supported with `anchor`
+  ## for whatever reason.
   var res = newSeq[string]()
   let ak = alignKind.toStr
   if ak.len > 0:
-    res.add ak
+    res.add ak # this is placement of the node relative to coordinate. Required if `align` is used.
   if rotate.isSome:
     res.add "rotate = " & $(-rotate.get) # rotation is opposite of cairo
   let fs = font.size
   let fontSize = latex:
     font = \fontsize{$(fs)}{$(fs * 1.2)}\selectfont
   res.add fontSize
-  if alignLeft:
-    res.add "align=left"
+  if useAlignOverAnchor:
+    # if we use align, left and right are same as in ginger
+    if alignKind == taLeft: res.add "align=left"
+    elif alignKind == taRight: res.add "align=right"
+  else:
+    let anchor = alignKind.toAnchorStr
+    if anchor.len > 0:
+      res.add &"anchor={anchor}"
   result = res.join(", ")
   if result.len > 0:
     result = "[" & result & "]"
-  echo result
 
 template latexAdd(body: untyped): untyped {.dirty.} =
-  let toAdd = latex:
-    body
-  img.data.add toAdd
+  block:
+    let toAdd = latex:
+      body
+    img.data.add toAdd
 
 proc defColor(name: string, c: Color): string =
   let color = &"{c.r}, {c.g}, {c.b}"
   result = latex:
     \definecolor{`name`}{rgb}{`color`}
+
+func addColorIfNew(img: var BImage, color: string) =
+  if color != img.lastColor:
+    latexAdd:
+      `color`
+    img.lastColor = color
 
 proc colorStr(style: Style): string =
   result.add defColor("drawColor", style.color)
@@ -116,8 +139,8 @@ proc drawLine*(img: var BImage, start, stop: Point,
   let p1 = img.toStr(stop)
   let color = style.colorStr
   let lineSt = style.lineStyle
+  img.addColorIfNew(color)
   latexAdd:
-    `color`
     \draw `lineSt` `p0` -- `p1` ";"
 
 proc drawPolyLine*(img: var BImage, points: seq[Point],
@@ -125,8 +148,8 @@ proc drawPolyLine*(img: var BImage, points: seq[Point],
                    rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
   let lineSt = style.lineStyle
   let color = style.colorStr
+  img.addColorIfNew(color)
   latexAdd:
-    `color`
     \draw `lineSt`
   for i, p in points:
     let pStr = img.toStr(p)
@@ -149,15 +172,15 @@ proc drawCircle*(img: var BImage, center: Point, radius: float,
                     color: strokeColor,
                     fillColor: fillColor)
   let color = style.colorStr
+  img.addColorIfNew(color)
   let lineSt = style.lineStyle
   latexAdd:
-    `color`
     \draw `lineSt` `p` circle [radius = `radius`] ";"
 
 proc getTextExtent*(text: string, font: Font): TextExtent =
   ## XXX: HACK
   let ptY = font.size
-  let ptX = ptY
+  let ptX = ptY * 0.5 ## TODO: ideally we need the correct font height to width ratio!
   result = TextExtent(
     x_bearing: 0.0,
     y_bearing: 0.0,
@@ -170,22 +193,11 @@ proc drawText*(img: var BImage, text: string, font: Font, at: Point,
                alignKind: TextAlignKind = taLeft,
                rotate: Option[float] = none[float](),
                rotateInView: Option[(float, Point)] = none[(float, Point)]()) =
-  var
-    x = at.x
-    y = at.y
-  let extents = getTextExtent("M", font)
-  # `left`/`right` of node in TeX is too close. Add half a M letter spacing
-  case alignKind
-  of taLeft:
-    x = at.x - (extents.width / 2.0 + extents.x_bearing)
-  of taRight:
-    x = at.x + (extents.width / 2.0 + extents.x_bearing)
-  of taCenter: discard
-
   let alignLeft = if r"\\" in text: true else: false # for manual line breaks, need left alignment
-  let xAt = (x: x, y: y)
-  let alignStr = img.nodeProperties(xAt, alignKind, rotate, font,
-                                    alignLeft = alignLeft)
+  let useAlignOverAnchor = r"\\" in text
+  let alignStr = img.nodeProperties(at, alignKind, rotate, font,
+                                    alignLeft = alignLeft,
+                                    useAlignOverAnchor = useAlignOverAnchor)
   var textStr: string
   if font.bold:
     textStr = latex:
@@ -194,7 +206,7 @@ proc drawText*(img: var BImage, text: string, font: Font, at: Point,
     textStr = latex:
       `text`
   latexAdd:
-    \node `alignStr` at $(img.toStr(xAt)) {`textStr`} ";"
+    \node `alignStr` at $(img.toStr(at)) {`textStr`} ";"
 
 proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
                     style: Style,
@@ -225,8 +237,8 @@ proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
     let lineSt = style.lineStyle
     let sizeStr = sizePt.toStrDirect
     let atStr = atPt.toStrDirect
+    img.addColorIfNew(color)
     latexAdd:
-      `color`
       \draw `lineSt` `atStr` rectangle `sizeStr` ";"
 
 from backendCairo import nil
@@ -266,10 +278,49 @@ proc getStandaloneTmpl(): string =
       tikzpicture:
         "$#"
 
-proc getOnlyTikZTmpl(): string =
-  result = latex:
-    tikzpicture:
-      "$#"
+proc getOnlyTikZTmpl(texOptions: TeXOptions): string =
+  if texOptions.caption.isSome and texOptions.label.isSome:
+    let plc = texOptions.placement
+    let cap = texOptions.caption.get
+    let lab = texOptions.label.get
+    result = latex:
+      figure[`plc`]:
+        \centering
+        tikzpicture:
+          "$#"
+        \label{`lab`}
+        \caption{`cap`}
+  elif texOptions.caption.isSome:
+    let plc = texOptions.placement
+    let cap = texOptions.caption.get
+    result = latex:
+      figure[`plc`]:
+        \centering
+        tikzpicture:
+          "$#"
+        \caption{`cap`}
+  elif texOptions.label.isSome:
+    let plc = texOptions.placement
+    let lab = texOptions.label.get
+    result = latex:
+      figure[`plc`]:
+        \centering
+        tikzpicture:
+          "$#"
+        \label{`lab`}
+  else:
+    result = latex:
+      tikzpicture:
+        "$#"
+
+#proc getOnlyTikZTmpl(): string =
+#  result = latex:
+#    figure:
+#      \centering
+#      tikzpicture:
+#        "$#"
+#      \caption{test caption}
+#      \label{test_label}
 
 proc getArticleTmpl(): string =
   result = latex:
@@ -289,7 +340,7 @@ proc writeTeXFile*(img: BImage) =
   var tmpl: string
   if img.options.texTemplate.isNone:
     if img.options.onlyTikZ:
-      tmpl = getOnlyTikZTmpl()
+      tmpl = getOnlyTikZTmpl(img.options)
     elif img.options.standalone:
       tmpl = getStandaloneTmpl()
     else:
