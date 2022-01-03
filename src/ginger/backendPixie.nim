@@ -99,7 +99,18 @@ proc drawCircle*(img: BImage, center: Point, radius: float,
   img.saveState()
 
 proc getTextExtent*(text: string, font: types.Font): TextExtent =
-  debugecho "WARNING: `getTextExtent` of Pixie backend is being called and is unnessecary"
+  # This is for now copied from the TikZ backend until I figure out how to
+  # use `computeBounds` from pixie.fonts
+  let ptY = font.size
+  let ptX = ptY * 0.5
+  result = TextExtent(
+    x_bearing: 0.0,
+    y_bearing: 0.0,
+    width: ptX * text.len.float,
+    height: ptY,
+  )
+  result.x_advance = result.width
+  result.y_advance = result.height
 
 func getTextAligns(alignKind: TextAlignKind): HorizontalAlignment =
   # Return Pixie alignments given a Ginger text alignment
