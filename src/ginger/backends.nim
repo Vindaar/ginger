@@ -206,7 +206,7 @@ when not defined(noCairo):
           raise newException(IOError, "Could not generate a PDF from TeX file " &
             $img.fname & " as neither `xelatex` nor `pdflatex` was found in PATH")
       else: doAssert false
-    of bkVega:
+    of bkVega, bkNone:
       discard
     of bkPixie:
       discard

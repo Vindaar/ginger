@@ -23,8 +23,8 @@ proc rotate(img: BImage, angle: float, around: Point) =
 proc setStyle(img: BImage, style: Style) =
   # Styles the Pixie Context according to a given Ginger `style`
   let 
-    fillPaint = Paint(kind: pkSolid, color: style.fillColor.asRgba)
-    strokePaint = Paint(kind: pkSolid, color: style.color.asRgba)
+    fillPaint = Paint(kind: pkSolid, color: style.fillColor)
+    strokePaint = Paint(kind: pkSolid, color: style.color)
 
   img.pxContext.fillStyle = fillPaint
   img.pxContext.strokeStyle = strokePaint 
@@ -75,14 +75,14 @@ proc drawCircle*(img: var BImage, center: Point, radius: float,
     img.rotate(angle, around)
 
   let
-    fillPaint = Paint(kind: pkSolid, color: fillColor.asRgba)
-    strokePaint = Paint(kind: pkSolid, color: strokeColor.asRgba)
+    fillPaint = Paint(kind: pkSolid, color: fillColor)
+    strokePaint = Paint(kind: pkSolid, color: strokeColor)
 
   img.pxContext.fillStyle = fillPaint
   img.pxContext.strokeStyle = strokePaint
   img.pxContext.lineWidth = lineWidth
-  img.pxContext.strokeCircle(center.toVec2, radius)
-  img.pxContext.fillCircle(center.toVec2, radius)
+  img.pxContext.strokeCircle(circle(center.toVec2, radius))
+  img.pxContext.fillCircle(circle(center.toVec2, radius))
   img.saveState()
 
 proc drawCircle*(img: BImage, center: Point, radius: float,
@@ -93,14 +93,15 @@ proc drawCircle*(img: BImage, center: Point, radius: float,
     img.rotate(angle, around)
 
   img.setStyle(style)
-  img.pxContext.strokeCircle(center.toVec2, radius)
-  img.pxContext.fillCircle(center.toVec2, radius)
+
+  img.pxContext.strokeCircle(circle(center.toVec2, radius))
+  img.pxContext.fillCircle(circle(center.toVec2, radius))
   img.saveState()
 
 proc getTextExtent*(text: string, font: types.Font): TextExtent =
   debugecho "WARNING: `getTextExtent` of Pixie backend is being called and is unnessecary"
 
-func getTextAligns(alignKind: TextAlignKind): HAlignMode =
+func getTextAligns(alignKind: TextAlignKind): HorizontalAlignment =
   # Return Pixie alignments given a Ginger text alignment
   result = case alignKind
     of taLeft: haLeft
@@ -114,18 +115,18 @@ func getSlant(fs: FontSlant): string =
     of fsItalic: "Italic"
     of fsOblique: "Oblique"
 
-proc lookupFont(img: BImage, font: types.Font, path: Option[string]) =
+proc setFont(img: BImage, font: types.Font, path: Option[string]) =
   # Loads an given font file or loads a "hardcoded" one and 
-  var pxFont: pixie.Font
+  var pxFont: string
   if path.isSome:
-    pxFont = readFont(path.get)
+    pxFont = path.get
   else:
     # TODO better font loading
     # Currently a skeleton of trying to load a font family according to `types.Font`
     # It should look into system dirs and list the files
     let suffix = if font.bold: "Bold" else: getSlant(font.slant)
     let fileName = &"{font.family}-{suffix}.ttf"
-    pxFont = readFont(filename)
+    pxFont = filename
 
   img.pxContext.font = pxFont
 
@@ -135,7 +136,7 @@ proc drawText*(img: BImage, text: string, font: types.Font, at: Point,
                rotateInView: Option[(float, Point)] = none[(float, Point)](),
                fontPath: Option[string] = none[string]()) =
   let tempFontPath = some("data/Arial-Bold.ttf")
-  img.lookupFont(font, tempFontPath)
+  img.setFont(font, tempFontPath)
 
   # Check if we need to rotate around a specified Point on the canvas
   if rotateInView.isSome:
@@ -145,7 +146,7 @@ proc drawText*(img: BImage, text: string, font: types.Font, at: Point,
     # Here we only rotate with an angle around the origin if needed
     img.rotate(rotate.get, (at.x, at.y))
 
-  img.pxContext.font.size = font.size
+  img.pxContext.fontSize = font.size
   img.pxContext.fillStyle = font.color
   img.pxContext.strokeStyle = font.color
   img.pxContext.textAlign = getTextAligns(alignKind)

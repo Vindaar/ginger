@@ -1,3 +1,32 @@
+* v0.3.10
+- further fixes placement of tick labels to make sure x and y axes are
+  at the same distance from the ticks
+- hotfix for a regression in =v0.3.9=, which broke manual line breaks
+  in TikZ backend annotations
+* v0.3.9
+- add a =bkNone= backend kind to detect if no backend was set
+  explicitly
+- improve alignment of text on the TikZ backend. In particular the
+  text width is now more correct.  
+* v0.3.8
+- adds more shapes to draw points with. The available shapes are now:
+  - circle
+  - cross
+  - triangle
+  - rhombus
+  - rectangle
+  - rotated cross
+  - upside down triangle
+  - empty circle
+  - empty rectangle
+  - empty rhombus
+* v0.3.7
+- reduces the output size of plots on the TikZ backend, by reducing
+  printed precision of positions and avoiding multiple outputs of the
+  same color
+* v0.3.6
+- add options for TikZ backend to embed the plot in a full figure
+  environment with a given caption and label
 * v0.3.5
 - fix =draw= procedure to bring it in line with current backend API
 * v0.3.4
