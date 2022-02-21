@@ -1,3 +1,6 @@
+* v0.3.11
+- small release that disables the status message when successfully
+  writing a PNG on the Cairo backend
 * v0.3.10
 - further fixes placement of tick labels to make sure x and y axes are
   at the same distance from the ticks
