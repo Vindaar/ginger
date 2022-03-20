@@ -23,8 +23,8 @@ proc rotate(img: BImage, angle: float, around: Point) =
 proc setStyle(img: BImage, style: Style) =
   # Styles the Pixie Context according to a given Ginger `style`
   let 
-    fillPaint = Paint(kind: pkSolid, color: style.fillColor)
-    strokePaint = Paint(kind: pkSolid, color: style.color)
+    fillPaint = Paint(kind: SolidPaint, color: style.fillColor)
+    strokePaint = Paint(kind: SolidPaint, color: style.color)
 
   img.pxContext.fillStyle = fillPaint
   img.pxContext.strokeStyle = strokePaint 
@@ -75,8 +75,8 @@ proc drawCircle*(img: var BImage, center: Point, radius: float,
     img.rotate(angle, around)
 
   let
-    fillPaint = Paint(kind: pkSolid, color: fillColor)
-    strokePaint = Paint(kind: pkSolid, color: strokeColor)
+    fillPaint = Paint(kind: SolidPaint, color: fillColor)
+    strokePaint = Paint(kind: SolidPaint, color: strokeColor)
 
   img.pxContext.fillStyle = fillPaint
   img.pxContext.strokeStyle = strokePaint
@@ -115,9 +115,9 @@ proc getTextExtent*(text: string, font: types.Font): TextExtent =
 func getTextAligns(alignKind: TextAlignKind): HorizontalAlignment =
   # Return Pixie alignments given a Ginger text alignment
   result = case alignKind
-    of taLeft: haLeft
-    of taCenter: haCenter
-    of taRight: haRight
+    of taLeft: LeftAlign
+    of taCenter: CenterAlign
+    of taRight: RightAlign
 
 func getSlant(fs: FontSlant): string =
   # Returns the suffix for a given slant
