@@ -83,13 +83,16 @@ suite "Coordinate transformations":
   test "Math with ukStrWidth":
     # Adding to a ukStrWidth can be useful
     let c1 = Coord1D(pos: 1.0, kind: ukStrWidth,
-                     text: "Test text", font: Font(family: "sans-serif",
-                                                   size: 16.0,
-                                                   color: black))
+                     text: "Test text",
+                     font: Font(family: "sans-serif",
+                                size: 16.0,
+                                color: black),
+                     backend: bkCairo)
+
     let c2 = Coord1D(pos: 0.3, kind: ukCentimeter)
     let c3 = c1 + c2
     check c3.kind == ukPoint
-    check abs(c3.pos - 77.5358267) < 1e-4
+    check abs(c3.pos - 79.5358267) < 1e-4
 
 suite "Embeddings":
   test "Dummy":
