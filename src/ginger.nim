@@ -638,7 +638,7 @@ template c1*(at: float,
              axKind: AxisKind = akX): Coord1D =
   initCoord1D(at, kind, axKind)
 
-proc initCoord1d*(view: Viewport, at: float,
+proc initCoord1D*(view: Viewport, at: float,
                   axKind: AxisKind,
                   kind: UnitKind = ukPoint): Coord1D =
   ## Full name should be `initCoord1D`, but since it's a convenience function
@@ -1005,8 +1005,7 @@ proc `-`*(c1, c2: Coord1D): Coord1D =
     # assign to c1 to keep correct scale
     result = c1
     if c1.isAbsolute and c2.isAbsolute:
-      result.pos = c1.toPoints.pos - c2.toPoints.pos
-      result.kind = ukPoint
+      result = Coord1D(kind: ukPoint, pos: c1.toPoints.pos - c2.toPoints.pos)
     else:
       result.pos = c1.pos - c2.pos
   else:
@@ -1052,8 +1051,7 @@ proc `*`*(c1, c2: Coord1D): Coord1D =
     # assign to c1 to keep correct scale
     result = c1
     if c1.isAbsolute and c2.isAbsolute:
-      result.pos = c1.toPoints.pos * c2.toPoints.pos
-      result.kind = ukPoint
+      result = Coord1D(kind: ukPoint, pos: c1.toPoints.pos * c2.toPoints.pos)
     else:
       result.pos = c1.pos * c2.pos
   else:
@@ -1097,8 +1095,7 @@ proc `/`*(c1, c2: Coord1D): Coord1D =
     # assign to c1 to keep correct scale
     result = c1
     if c1.isAbsolute and c2.isAbsolute:
-      result.pos = c1.toPoints.pos / c2.toPoints.pos
-      result.kind = ukPoint
+      result = Coord1D(kind: ukPoint, pos: c1.toPoints.pos / c2.toPoints.pos)
     else:
       result.pos = c1.pos / c2.pos
   else:
@@ -1895,7 +1892,6 @@ proc initMultiLineText*(view: Viewport,
   assert textKind in {goText, goLabel, goTickLabel}
   let font = if fontOpt.isSome: fontOpt.unsafeGet else: defaultFont()
   let lines = text.splitLines # TODO: extend to allow detection of latex `\\`?
-  let totalHeight = getStrHeight(view.backend, text, font)
   let numLines = lines.len
   for idx, line in lines:
     # calculate new y position based on previous position and
