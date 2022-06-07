@@ -867,9 +867,9 @@ func toPoints*(p: Coord1D,
       raise newException(ValueError, "Cannot convert " & $p.kind & " to relative without " &
         "a backend!")
     let extents = getTextExtent(p.backend, p.text, p.font)
-    # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
-    let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
-                      else: extents.height #extents.y_advance - extents.y_bearing
+    ## without bearing & advance the width / height will be off if spaces are involved
+    let relevantDim = if p.kind == ukStrWidth: extents.x_bearing + extents.x_advance
+                      else: extents.y_advance - extents.y_bearing
     result = Coord1D(pos: p.pos * relevantDim,
                      kind: ukPoint)
 
