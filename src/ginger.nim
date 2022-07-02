@@ -2077,17 +2077,29 @@ proc initErrorBar*(view: Viewport,
                   x2 = pt.x,
                   y1 = errorUp,
                   y2 = errorDown)
+      let sc = some(pt.x.scale)
+      ## Conversion to absolute (ukPoint) coordinates. For the same (equivalent)
+      ## reason as mentioned above. If an `xMargin` is added without this conversion,
+      ## the resulting error bar top lines (that make the 'T'), are shifted. End up
+      ## at the location in pixel coordinates that would be correct without a margin.
+      ## By converting here the placement is correct including a margin. Weird.
+      let locAbs = view.c1(locStyle.size, akX, ukPoint)
+        .to(ukData,
+            datScale = sc,
+            datAxis = some(akX))
+      let pLeft = pt.x - locAbs
+      let pRight = pt.x + locAbs
       let chUp = view.initLine(
-        start = Coord(x: pt.x - view.c1(locStyle.size, akX, ukPoint),
+        start = Coord(x: pLeft,
                       y: errorUp),
-        stop = Coord(x: pt.x + view.c1(locStyle.size, akX, ukPoint),
+        stop = Coord(x: pRight,
                      y: errorUp),
         style = style
       )
       let chDown = view.initLine(
-        start = Coord(x: pt.x - view.c1(locStyle.size, akX, ukPoint),
+        start = Coord(x: pLeft,
                       y: errorDown),
-        stop = Coord(x: pt.x + view.c1(locStyle.size, akX, ukPoint),
+        stop = Coord(x: pRight,
                      y: errorDown),
         style = style
       )
