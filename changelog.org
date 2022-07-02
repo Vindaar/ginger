@@ -1,3 +1,14 @@
+* v0.3.12
+- add Github Actions CI, automatic documentation generation
+- clean up code to output less hints / warnings due to style and
+  unused variables
+- change calculation of text width / height by using advance &
+  bearing to fix distances computed if spaces (leading / trailing) are
+  involved
+- fix placement of 'T' error bar lines in x axis if =xMargin= is used
+  in ggplotnim
+- mark closures and procs using closures as ={.gcsafe.}= to move
+  towards allowing plot generation from multiple threads
 * v0.3.11
 - small release that disables the status message when successfully
   writing a PNG on the Cairo backend
