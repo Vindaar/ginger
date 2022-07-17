@@ -163,7 +163,8 @@ when not defined(noCairo):
       case img.fType
       of fkPng:
         let err = cairo.write_to_png(img.cCanvas, img.fname)
-        echo err, " output of write_to_png"
+        if err != cairo.StatusSuccess:
+          echo "WARNING: `write_to_png` returned status code: ", err
       else: discard # not needed for SVG, PDF
       if img.created:
         cairo.destroy(img.ctx)
