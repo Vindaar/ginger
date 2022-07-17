@@ -2,6 +2,7 @@ import chroma
 import std/[options, strformat]
 import pixie
 import types
+import ../utils/fontfinder
 
 func toVec2(point: Point): Vec2 =
   # Helper to convert ginger's Points to vec2's for Pixie
@@ -126,18 +127,15 @@ func getSlant(fs: FontSlant): string =
     of fsItalic: "Italic"
     of fsOblique: "Oblique"
 
-proc setFont(img: BImage, font: types.Font, path: Option[string]) =
-  # Loads an given font file or loads a "hardcoded" one and 
+proc setFont(img: BImage, font: types.Font) =
+  # Find try to find path of the given font, else load a default font
   var pxFont: string
+  let path = getFontPath(font.family, font.slant.getSlant)
   if path.isSome:
     pxFont = path.get
   else:
-    # TODO better font loading
-    # Currently a skeleton of trying to load a font family according to `types.Font`
-    # It should look into system dirs and list the files
-    let suffix = if font.bold: "Bold" else: getSlant(font.slant)
-    let fileName = &"{font.family}-{suffix}.ttf"
-    pxFont = filename
+    # This can still fail because Arial could be named like ArialSans.
+    pxFont = getFontPath("Arial Sans", "Regular").get
 
   img.pxContext.font = pxFont
 
@@ -146,8 +144,7 @@ proc drawText*(img: BImage, text: string, font: types.Font, at: Point,
                rotate: Option[float] = none[float](),
                rotateInView: Option[(float, Point)] = none[(float, Point)](),
                fontPath: Option[string] = none[string]()) =
-  let tempFontPath = some("data/Arial-Bold.ttf")
-  img.setFont(font, tempFontPath)
+  img.setFont(font)
 
   # Check if we need to rotate around a specified Point on the canvas
   if rotateInView.isSome:
