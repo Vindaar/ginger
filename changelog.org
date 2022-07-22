@@ -7,8 +7,9 @@
   involved
 - fix placement of 'T' error bar lines in x axis if =xMargin= is used
   in ggplotnim
-- mark closures and procs using closures as ={.gcsafe.}= to move
-  towards allowing plot generation from multiple threads
+- add =goManyPoints= object, which can be used to reduce memory
+  consumption and increase performance when plotting many points of
+  the same style.
 * v0.3.11
 - small release that disables the status message when successfully
   writing a PNG on the Cairo backend
