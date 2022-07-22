@@ -60,7 +60,8 @@ type
     tkOneSide, # only outside the plot
     tkBothSides # inside and outside the plot
 
-  GraphObject* = ref object
+  GraphObject* = ref GraphObjectObj
+  GraphObjectObj* = object
     name*: string # name of the Graph Object. Currently mainly used for debugging
     children*: seq[GraphObject]
     style*: Option[Style]
