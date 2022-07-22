@@ -46,6 +46,7 @@ type
     goTick, # an axis tick
     goTickLabel, # a tick label (i.e. the number or text)
     goPoint, # a general point
+    goManyPoints, # used if many points of same style
     goLine, # a general line
     goRect, # a general rectangle
     goGrid, # the plot grid (lines along the ticks)
@@ -95,6 +96,13 @@ type
       ptSize*: float # can be removed, due to style
       ptColor*: Color # can be removed, due to style
       ptPos*: Coord
+    of goManyPoints:
+      ptsMarker*: MarkerKind
+      ptsSize*: float
+      ptsColor*: Color
+      ptsPos*: seq[Coord] # seq coord for now, but may become a seq[Point]
+      ## If we add a `drawCircles` in the future, this could be useful
+      # ptsRelPos*: seq[Point] # stores the final positions in global space after embedding & converting
     of goPolyLine:
       plPos*: seq[Coord]
     of goRect:
@@ -745,6 +753,11 @@ func pretty*(gobj: GraphObject, indent = 0): string =
     result &= repeat(' ', indent) & &"ptMarker: {gobj.ptMarker},\n"
     result &= repeat(' ', indent) & &"ptSize: {gobj.ptSize},\n"
     result &= repeat(' ', indent) & &"ptColor: {gobj.ptColor}\n"
+  of goManyPoints:
+    result &= repeat(' ', indent) & &"ptsPos: {gobj.ptsPos},\n"
+    result &= repeat(' ', indent) & &"ptsMarker: {gobj.ptsMarker},\n"
+    result &= repeat(' ', indent) & &"ptsSize: {gobj.ptsSize},\n"
+    result &= repeat(' ', indent) & &"ptsColor: {gobj.ptsColor}\n"
   of goPolyLine:
     result &= repeat(' ', indent) & &"plPos: {gobj.plPos}\n"
   of goRect:
@@ -1375,6 +1388,8 @@ func updateDataScale(view: Viewport, obj: var GraphObject) =
     view.updateScale(obj.tkPos)
   of goPoint:
     view.updateScale(obj.ptPos)
+  of goManyPoints:
+    obj.ptsPos.applyIt(view.updateScale(it))
   of goPolyLine:
     obj.plPos.applyIt(view.updateScale(it))
   of goRect:
@@ -1970,6 +1985,17 @@ proc initPoint*(view: Viewport,
                              axis: akY,
                              kind: ukData))
   result = view.initPoint(pos = pos, style = style, name = name)
+
+func initManyPoint*(view: Viewport,
+                    pos: seq[Coord],
+                    style: Style,
+                    name = "many_points"): GraphObject =
+  result = GraphObject(kind: goManyPoints,
+                       name: name,
+                       ptsMarker: style.marker,
+                       ptsSize: style.size,
+                       ptsColor: style.color,
+                       ptsPos: pos)
 
 func isScaleNonTrivial(c: Coord1D): bool =
   doAssert c.kind == ukData, "coord must be of kind ukData!"
@@ -2918,85 +2944,138 @@ proc drawRaster(img: var BImage, gobj: GraphObject) =
                  rotate = gobj.rotate,
                  rotateInView = gobj.rotateInView)
 
-proc drawPoint(img: var BImage, gobj: GraphObject) =
-  doAssert gobj.kind == goPoint, "object must be a `goPoint`!"
-  proc rotateObj(gobj: GraphObject, angle: float,
-                 posX, posY: float,
+proc drawPointImpl(
+  img: var BImage, pos: Point,
+  style: Option[Style],
+  ptMarker: MarkerKind, ptSize: float, ptColor: Color,
+  rotateInView: Option[(float, Point)]
+     ) =
+
+  proc rotateObj(rotateInView: Option[(float, Point)],
+                 ptMarker: MarkerKind,
+                 angle: float,
+                 pos: Point,
                  mkKind: set[MarkerKind]): Option[(float, Point)] =
-    if gobj.ptMarker in mkKind:
-      result = if gobj.rotateInView.isSome:
-                 let tup = gobj.rotateInView.get
+    if ptMarker in mkKind:
+      result = if rotateInView.isSome:
+                 let tup = rotateInView.get
                  some((tup[0] + angle, tup[1]))
                else:
-                 some((angle, (x: posX, y: posY)))
+                 some((angle, pos))
 
-  case gobj.ptMarker
+  case ptMarker
   of mkCircle, mkEmptyCircle:
-    let fillColor = if gobj.ptMarker == mkCircle: gobj.ptColor
+    let fillColor = if ptMarker == mkCircle: ptColor
                     else: transparent
-    let strokeColor = if gobj.ptMarker == mkCircle: transparent
-                    else: gobj.ptColor
-    img.drawCircle(gobj.ptPos.point, gobj.ptSize, lineWidth = 1.0,
+    let strokeColor = if ptMarker == mkCircle: transparent
+                    else: ptColor
+    img.drawCircle(pos,
+                   ptSize, lineWidth = 1.0,
                    strokeColor = strokeColor,
                    fillColor = fillColor,
-                   rotateAngle = gobj.rotateInView)
+                   rotateAngle = rotateInView)
   of mkCross, mkRotCross:
-    var style = gobj.style.get() # style *has* to exist
+    var style = style.get() # style *has* to exist
     # modify line width to accomodate drawing a cross
-    style.lineWidth = gobj.ptSize / 2.0
-    style.color = gobj.ptColor
+    style.lineWidth = ptSize / 2.0
+    style.color = ptColor
     style.lineType = ltSolid
-    style.fillColor = gobj.ptColor
-    let
-      posX = gobj.ptPos.point.x
-      posY = gobj.ptPos.point.y
+    style.fillColor = ptColor
     # possibly rotate
-    let rotate = gobj.rotateObj(45.0, posX, posY, {mkRotCross})
-
-    img.drawLine((posX - gobj.ptSize, posY),
-                 (posX + gobj.ptSize, posY),
+    let rotate = rotateObj(rotateInView, ptMarker, 45.0, pos, {mkRotCross})
+    let (posX, posY) = pos
+    img.drawLine((posX - ptSize, posY),
+                 (posX + ptSize, posY),
                  style,
                  rotateAngle = rotate)
-    img.drawLine((posX, posY - gobj.ptSize),
-                 (posX, posY + gobj.ptSize),
+    img.drawLine((posX, posY - ptSize),
+                 (posX, posY + ptSize),
                  style,
                  rotateAngle = rotate)
   of mkTriangle, mkUpsideDownTriangle:
-    var style = gobj.style.get() # style *has* to exist
+    var style = style.get() # style *has* to exist
     # modify line width to accomodate drawing a cross
-    style.lineWidth = gobj.ptSize / 2.0
-    style.color = gobj.ptColor
+    style.lineWidth = ptSize / 2.0
+    style.color = ptColor
     style.lineType = ltSolid
-    style.fillColor = gobj.ptColor
-    let
-      posX = gobj.ptPos.point.x
-      posY = gobj.ptPos.point.y
-    let step = sin(60'f64.degToRad) * gobj.ptSize
+    style.fillColor = ptColor
+    let step = sin(60'f64.degToRad) * ptSize
 
-    let rotate = gobj.rotateObj(180.0, posX, posY, {mkUpsideDownTriangle})
+    let rotate = rotateObj(rotateInView, ptMarker, 180.0, pos, {mkUpsideDownTriangle})
     # add all corner points of triangle
+    let (posX, posY) = pos
     let points = @[(x: posX - step, y: posY + step), # bottom left
                    (x: posX,        y: posY - step), # top middle
                    (x: posX + step, y: posY + step)] # bottom right
     img.drawPolyLine(points, style, rotateAngle = rotate)
   of mkRectangle, mkEmptyRectangle, mkRhombus, mkEmptyRhombus:
-    var style = gobj.style.get() # style *has* to exist
+    var style = style.get() # style *has* to exist
     # modify line width to accomodate drawing a cross
-    style.lineWidth = gobj.ptSize / 2.0
-    style.color = gobj.ptColor
+    style.lineWidth = ptSize / 2.0
+    style.color = ptColor
     style.lineType = ltSolid
-    style.fillColor = if gobj.ptMarker in {mkRectangle, mkRhombus}: gobj.ptColor
+    style.fillColor = if ptMarker in {mkRectangle, mkRhombus}: ptColor
                       else: transparent
-    let
-      posX = gobj.ptPos.point.x
-      posY = gobj.ptPos.point.y
-    let rotate = gobj.rotateObj(45.0, posX, posY, {mkRhombus, mkEmptyRhombus})
-    let size = gobj.ptSize * 1.5
+    let rotate = rotateObj(rotateInView, ptMarker, 45.0, pos, {mkRhombus, mkEmptyRhombus})
+    let size = ptSize * 1.5
+    let (posX, posY) = pos
     img.drawRectangle(posX - size / 2.0, posY - size / 2.0, size, size,
                       style,
                       rotateInView = rotate)
   else:
     raise newException(Exception, "Not implemented yet!")
+
+proc drawPoint(img: var BImage, gobj: GraphObject) =
+  doAssert gobj.kind == goPoint, "object must be a `goPoint`!"
+  img.drawPointImpl(gobj.ptPos.point,
+                    gobj.style,
+                    gobj.ptMarker,
+                    gobj.ptSize, gobj.ptColor,
+                    gobj.rotateInView)
+
+proc drawManyPoints(img: var BImage, gobj: GraphObject) =
+  doAssert gobj.kind == goManyPoints, "object must be a `goManyPoints`!"
+
+  let
+    style = gobj.style
+    ptMarker = gobj.ptsMarker
+    ptSize = gobj.ptsSize
+    ptColor = gobj.ptsColor
+    rotateInView = gobj.rotateInView
+
+  when false:
+    ## NOTE: we can envision special casing the drawing of regular circles
+    ## by adding a `drawCircles` function that reduces the amount of cairo
+    ## calls significantly
+    ## (in testing this reduces drawing 30 Mio points from 55s to 30s on my
+    ## laptop with a modified ggplotnim drawing logic for pure floats)
+    case ptMarker
+    of mkCircle, mkEmptyCircle:
+      let fillColor = if ptMarker == mkCircle: ptColor
+                      else: transparent
+      let strokeColor = if ptMarker == mkCircle: transparent
+                      else: ptColor
+      img.drawCircles(gobj.ptsRelPos,
+                      ptSize, lineWidth = 1.0,
+                      strokeColor = strokeColor,
+                      fillColor = fillColor,
+                      rotateAngle = rotateInView)
+    else:
+      # alternative drawing individual draw calls
+      for pt in gobj.ptsPos:
+        img.drawPointImpl(pt.point, # convert Coord to Point and draw
+                          style,
+                          ptMarker,
+                          ptSize, ptColor,
+                          rotateInView)
+  else:
+    for pt in gobj.ptsPos:
+      img.drawPointImpl(pt.point, # convert Coord to Point and draw
+                        style,
+                        ptMarker,
+                        ptSize, ptColor,
+                        rotateInView)
+
 
 proc drawPolyLine(img: var BImage, gobj: GraphObject) =
   doAssert gobj.kind == goPolyLine, "object must be a `goPolyLine`!"
@@ -3112,8 +3191,15 @@ proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
     )
   of goPoint:
     result.ptPos = gobj.ptPos.toAbsImage(img)
+  of goManyPoints:
+    # if we add `drawCircles` this could be useful:
+    # result.ptsRelPos = newSeq[Point](gobj.ptsPos.len)
+    for i, pos in mpairs(result.ptsPos):
+      pos = pos.toAbsImage(img)
+      # result.ptsRelPos[i] = pos.point
   of goPolyLine:
-    result.plPos = gobj.plPos.mapIt(it.toAbsImage(img))
+    for pos in mitems(result.plPos):
+      pos = pos.toAbsImage(img)
   of goText, goLabel, goTickLabel:
     result.txtPos = gobj.txtPos.toAbsImage(img)
   of goTick:
@@ -3154,8 +3240,12 @@ proc embedInto(gobj: GraphObject, view: Viewport): GraphObject =
     result.rstPixHeight = result.rstPixHeight.embedInto(akY, view)
   of goPoint:
     result.ptPos = gobj.ptPos.embedInto(view)
+  of goManyPoints:
+    for pos in mitems(gobj.ptsPos):
+      pos = pos.embedInto(view)
   of goPolyLine:
-    result.plPos = gobj.plPos.mapIt(it.embedInto(view))
+    for pos in mitems(gobj.plPos):
+      pos = pos.embedInto(view)
   of goLabel, goText, goTickLabel:
     result.txtPos = gobj.txtPos.embedInto(view)
   of goTick:
@@ -3227,6 +3317,8 @@ proc draw*(img: var BImage, gobj: GraphObject) =
     img.drawRaster(globalObj)
   of goPoint:
     img.drawPoint(globalObj)
+  of goManyPoints:
+    img.drawManyPoints(globalObj)
   of goPolyLine:
     img.drawPolyLine(globalObj)
   of goLabel, goText, goTickLabel:
