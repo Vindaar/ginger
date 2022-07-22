@@ -1160,11 +1160,9 @@ proc to*(p: Coord1D, toKind: UnitKind,
   else:
     # first convert any point to a relative point, from which we can
     # calculate any other position easiest
-    var pRel: Coord1D
-    if absLength.isSome:
-      pRel = p.toRelative(absLength)
-    else:
-      pRel = p.toRelative
+    var pRel = if p.kind == ukRelative: p
+               elif absLength.isSome: p.toRelative(absLength)
+               else: p.toRelative
 
     case toKind
     of ukRelative: result = p # nothing to do
