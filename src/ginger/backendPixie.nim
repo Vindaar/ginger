@@ -2,7 +2,7 @@ import chroma
 import std/[options, strformat]
 import pixie
 import types
-import ../utils/fontfinder
+import fontim
 
 func toVec2(point: Point): Vec2 =
   # Helper to convert ginger's Points to vec2's for Pixie

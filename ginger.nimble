@@ -16,6 +16,7 @@ requires "cairo >= 1.1.1"
 requires "https://github.com/Vindaar/LatexDSL >= 0.1.5"
 requires "pixie >= 4.4.0"
 requires "shell"
+requires "https://github.com/zetashift/fontim >= 0.2.0"
 
 task test, "Run tests":
   exec "nim c -r tests/test1.nim"
