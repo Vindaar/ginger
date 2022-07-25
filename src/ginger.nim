@@ -3478,20 +3478,21 @@ when isMainModule:
     var gobjPoints: seq[GraphObject]
     var gobjErrors: seq[GraphObject]
     for p in points:
-      gobjPoints.add initPoint(view2, (x: p.a, y: p.b),
+      let pnt = (x: p[0], y: p[1])
+      gobjPoints.add initPoint(view2, pnt,
                                marker = mkCross)
-      gobjErrors.add initErrorBar(view2, gobjPoints[^1],
+      gobjErrors.add initErrorBar(view2, pnt,
                                   errorUp = view2.c1(0.5, akX, ukCentimeter), #initCoord1D(p.a * 0.05, kind = ukData),
                                   errorDown = view2.c1(0.5, akX, ukCentimeter),#initCoord1D(p.a * 0.05, kind = ukData),
                                   axKind = akX,
                                   ebKind = ebLinesT)
-      gobjErrors.add initErrorBar(view2, gobjPoints[^1],
+      gobjErrors.add initErrorBar(view2, pnt,
                                   errorUp = view2.c1(0.25, akX, ukCentimeter), #initCoord1D(p.a * 0.05, kind = ukData),
                                   errorDown = view2.c1(0.25, akX, ukCentimeter),#initCoord1D(p.a * 0.05, kind = ukData),
                                   axKind = akY,
                                   ebKind = ebLinesT)
 
-    let ptsLine = view1.initPolyLine(pos = points.mapIt((x: it.a, y: it.b)))
+    let ptsLine = view1.initPolyLine(pos = points.mapIt((x: it[0], y: it[1])))
 
     let
       xticks = view1.xticks()
@@ -3558,7 +3559,7 @@ when isMainModule:
                               "Hello",
                               textKind = goText,
                               alignKind = taCenter,
-                              font = defaultFont())
+                              font = some(defaultFont()))
 
 
     let textRot = view2.initText(initCoord(-0.05, 0.5),
@@ -3567,26 +3568,26 @@ when isMainModule:
                                  alignKind = taCenter,
                                  font = some(defaultFont()),
                                  rotate = some(90.0))
-    var textRot2 = textRot
+    var textRot2 = textRot.clone()
     textRot2.txtAlign = taLeft
     textRot2.rotate = some(70.0)
     textRot2.txtFont.color = color(0.0, 1.0, 0.0)
 
-    var textRot3 = textRot
+    var textRot3 = textRot.clone()
     textRot3.txtAlign = taRight
     textRot3.rotate = some(70.0)
     textRot3.txtFont.color = color(1.0, 0.0, 0.0)
-    var textRot3a = textRot
+    var textRot3a = textRot.clone()
     textRot3a.txtAlign = taRight
     textRot3a.rotate = some(90.0)
     textRot3a.txtFont.color = color(1.0, 1.0, 0.0)
 
-    var textRot4 = textRot
+    var textRot4 = textRot.clone()
     textRot4.txtAlign = taLeft
     textRot4.rotate = some(90.0)
     textRot4.txtFont.color = color(0.0, 0.0, 1.0)
 
-    var textRot5 = textRot
+    var textRot5 = textRot.clone()
     textRot5.txtAlign = taCenter
     textRot5.rotate = some(70.0)
     textRot5.txtFont.color = color(0.0, 1.0, 1.0)
