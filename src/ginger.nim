@@ -211,6 +211,59 @@ type
     hImg*: Quantity
     backend*: BackendKind
 
+proc clone*(g: GraphObject): GraphObject =
+  ## Clones the given graph object
+  result = GraphObject(name: g.name,
+                       children: g.children.mapIt(it.clone()),
+                       rotateInView: g.rotateInView,
+                       rotate: g.rotate,
+                       kind: g.kind)
+  case g.kind
+  of goLine, goAxis:
+    result.lnStart = g.lnStart
+    result.lnStop = g.lnStop
+  of goLabel, goText, goTickLabel:
+    result.txtText = g.txtText
+    result.txtFont = g.txtFont
+    result.txtAlign = g.txtAlign
+    result.txtRotate = g.txtRotate
+  of goGrid:
+    result.gdOrigin = g.gdOrigin
+    result.gdOriginDiag = g.gdOriginDiag
+    result.gdXPos = g.gdXPos
+    result.gdYPos = g.gdYpos
+  of goTick:
+    result.tkMajor = g.tkMajor
+    result.tkPos = g.tkPos
+    result.tkAxis = g.tkAxis
+    result.tkKind = g.tkKind
+    result.tkSecondary = g.tkSecondary
+  of goPoint:
+    result.ptMarker = g.ptMarker
+    result.ptSize = g.ptSize
+    result.ptColor = g.ptColor
+    result.ptPos = g.ptPos
+  of goManyPoints:
+    result.ptsMarker = g.ptsMarker
+    result.ptsSize = g.ptsSize
+    result.ptsColor = g.ptsColor
+    result.ptsPos = g.ptsPos
+  of goPolyLine:
+    result.plPos = g.plPos
+  of goRect:
+    result.reOrigin = g.reOrigin
+    result.reWidth = g.reWidth
+    result.reHeight = g.reHeight
+  of goRaster:
+    result.rstOrigin = g.rstOrigin
+    result.rstPixWidth = g.rstPixWidth
+    result.rstPixHeight = g.rstPixHeight
+    result.rstBlockX = g.rstBlockX
+    result.rstBlockY = g.rstBlockY
+    result.rstDrawCb = g.rstDrawCb
+  of goComposite:
+    result.cmpKind = g.cmpKind
+
 const DPI = 72.27
 
 proc pointWidth*(view: Viewport): Quantity {.inline.}
