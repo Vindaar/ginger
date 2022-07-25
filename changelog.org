@@ -1,3 +1,6 @@
+* v0.3.13
+- add =clone= operation for =GraphObject= type
+- fix example code in main source file  
 * v0.3.12
 - add Github Actions CI, automatic documentation generation
 - clean up code to output less hints / warnings due to style and
