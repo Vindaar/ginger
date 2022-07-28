@@ -1,5 +1,6 @@
 import chroma
 import options
+import pixie
 
 when not defined(noCairo):
   import cairo
@@ -27,7 +28,7 @@ else:
 
 type
   BackendKind* = enum
-    bkNone, bkCairo, bkVega, bkTikZ
+    bkNone, bkCairo, bkVega, bkTikZ, bkPixie
   FiletypeKind* = enum
     fkSvg, fkPng, fkPdf, fkVega, fkTeX
 
@@ -60,6 +61,8 @@ type
       data*: string # stores the TikZ commands as a string to be inserted into a LaTeX template
       options*: TexOptions
       lastColor*: string # stores the last used color to avoid redefining same color
+    of bkPixie:
+      pxContext*: pixie.Context
     of bkVega, bkNone: discard
 
   LineType* = enum

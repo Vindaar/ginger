@@ -13,6 +13,7 @@ when not defined(noCairo):
   from cairo import nil
   from backendCairo import nil
   from backendTikZ import nil
+  from backendPixie import nil
 
   proc drawLine*(img: var BImage, start, stop: Point,
                  style: Style,
@@ -20,6 +21,7 @@ when not defined(noCairo):
     case img.backend
     of bkCairo: backendCairo.drawLine(img, start, stop, style, rotateAngle)
     of bkTikZ: backendTikz.drawLine(img, start, stop, style, rotateAngle)
+    of bkPixie: backendPixie.drawLine(img, start, stop, style, rotateAngle)
     else: discard
 
   proc drawPolyLine*(img: var BImage, points: seq[Point],
@@ -28,6 +30,7 @@ when not defined(noCairo):
     case img.backend
     of bkCairo: backendCairo.drawPolyLine(img, points, style, rotateAngle)
     of bkTikZ: backendTikz.drawPolyLine(img, points, style, rotateAngle)
+    of bkPixie: backendPixie.drawPolyLine(img, points, style, rotateAngle)
     else: discard
 
   proc drawCircle*(img: var BImage, center: Point, radius: float,
@@ -44,12 +47,17 @@ when not defined(noCairo):
       backendTikz.drawCircle(
         img, center, radius, lineWidth, strokeColor, fillColor, rotateAngle
       )
+    of bkPixie:
+      backendPixie.drawCircle(
+        img, center, radius, lineWidth, strokeColor, fillColor, rotateAngle
+      )
     else: discard
 
   proc getTextExtent*(backend: BackendKind, text: string, font: Font): TextExtent =
     case backend
     of bkCairo: result = backendCairo.getTextExtent(text, font)
     of bkTikZ: result = backendTikZ.getTextExtent(text, font)
+    of bkPixie: discard # TODO
     else: discard
 
   proc drawText*(img: var BImage, text: string, font: Font, at: Point,
@@ -63,6 +71,10 @@ when not defined(noCairo):
       )
     of bkTikz:
       backendTikz.drawText(
+        img, text, font, at, alignKind, rotate, rotateInView
+      )
+    of bkPixie:
+      backendPixie.drawText(
         img, text, font, at, alignKind, rotate, rotateInView
       )
     else: discard
@@ -80,6 +92,11 @@ when not defined(noCairo):
       backendTikz.drawRectangle(
         img, left, bottom, width, height, style, rotate, rotateInView
       )
+    of bkPixie:
+      backendPixie.drawRectangle(
+        img, left, bottom, width, height, style, rotate, rotateInView
+      )
+
     else: discard
 
   # forward declarations to use them in `drawRaster` for `TikZ`
@@ -111,6 +128,10 @@ when not defined(noCairo):
       backendTikz.drawRaster(
         img, tmpName, left, bottom, width, height, numX, numY, drawCB, rotate, rotateInView
       )
+    of bkPixie:
+      backendPixie.drawRaster(
+        img, left, bottom, width, height, numX, numY, drawCB, rotate, rotateInView
+      )
     else: discard
 
   proc initBImage*(filename: string,
@@ -128,6 +149,10 @@ when not defined(noCairo):
                   else: filename
       result = backendTikz.initBImage(
         fname, width, height, fType, texOptions
+      )
+    of bkPixie:
+      result = backendPixie.initBImage(
+        filename, width, height, fType
       )
     else: discard
 
@@ -183,6 +208,8 @@ when not defined(noCairo):
             $img.fname & " as neither `xelatex` nor `pdflatex` was found in PATH")
       else: doAssert false
     of bkVega, bkNone:
+      discard
+    of bkPixie:
       discard
 else:
   proc destroy*(img: var BImage) =
