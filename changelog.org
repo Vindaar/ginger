@@ -1,3 +1,5 @@
+* v0.3.14
+- export =xaxis= and =yaxis=
 * v0.3.13
 - add =clone= operation for =GraphObject= type
 - fix example code in main source file  

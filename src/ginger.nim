@@ -1766,14 +1766,14 @@ proc initAxis(view: Viewport,
       lnStop = initCoord(0.0, 1.0)
     result.name = "yAxis"
 
-proc xaxis(view: Viewport,
-           width = 1.0,
-           color = color(0.0, 0.0, 0.0)): GraphObject =
+proc xaxis*(view: Viewport,
+            width = 1.0,
+            color = color(0.0, 0.0, 0.0)): GraphObject =
   result = view.initAxis(akX, width, color)
 
-proc yaxis(view: Viewport,
-           width = 1.0,
-           color = color(0.0, 0.0, 0.0)): GraphObject =
+proc yaxis*(view: Viewport,
+            width = 1.0,
+            color = color(0.0, 0.0, 0.0)): GraphObject =
   result = view.initAxis(akY, width, color)
 
 proc initRect*(view: Viewport,
