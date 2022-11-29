@@ -12,13 +12,14 @@ when defined(noCairo):
   {.warning: "The `noCairo` option is deprecated. Instead backends must be activated on demand " &
     "using `-d:use<Backend>` options (typically defined in a `nim.cfg` or `config.nims` file).".}
 
-when defined(useCairo) and not defined(noCairo): # noCairo for backward compat
+# `use*` variables are defined in `types.nim`
+when useCairo and not defined(noCairo): # noCairo for backward compat
   import backendCairo
   export backendCairo
-when defined(useTikZ):
+when useTikZ:
   import backendTikZ
   export backendTikZ
-when defined(usePixie):
+when usePixie:
   import backendPixie
   export backendPixie
 # backend dummy is always available

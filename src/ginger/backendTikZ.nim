@@ -246,7 +246,7 @@ proc drawRectangle*(img: var BImage[TikZBackend], left, bottom, width, height: f
     latexAdd:
       \draw `lineSt` `atStr` rectangle `sizeStr` ";"
 
-when defined(useCairo) and not defined(noCairo):
+when useCairo and not defined(noCairo):
   from backendCairo import initBImage, drawRaster, destroy
   proc drawRaster*(img: var BImage[TikZBackend], left, bottom, width, height: float,
                    numX, numY: int,
