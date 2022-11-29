@@ -8,30 +8,30 @@ func toVec2(point: Point): Vec2 =
   # Helper to convert ginger's Points to vec2's for Pixie
   result = vec2(point.x, point.y)
 
-proc saveState(img: BImage) =
+proc saveState(img: BImage[PixieBackend]) =
   # Helper to save the current state of the Context
   # and reset to the identity matrix afterwards
   img.pxContext.save()
   img.pxContext.resetTransform()
 
-proc rotate(img: BImage, angle: float, around: Point) =
+proc rotate(img: BImage[PixieBackend], angle: float, around: Point) =
   # Adds the matrix for rotating the given Context of `img` with `angle` around a Point
   # to the Context
   img.pxContext.translate(around.toVec2)
   img.pxContext.rotate((angle * PI / 180.0).float32)
   img.pxContext.translate(-around.toVec2)
 
-proc setStyle(img: BImage, style: Style) =
+proc setStyle(img: BImage[PixieBackend], style: Style) =
   # Styles the Pixie Context according to a given Ginger `style`
-  let 
+  let
     fillPaint = Paint(kind: SolidPaint, color: style.fillColor)
     strokePaint = Paint(kind: SolidPaint, color: style.color)
 
   img.pxContext.fillStyle = fillPaint
-  img.pxContext.strokeStyle = strokePaint 
+  img.pxContext.strokeStyle = strokePaint
   img.pxContext.lineWidth = style.lineWidth
 
-proc drawLine*(img: BImage, start, stop: Point,
+proc drawLine*(img: BImage[PixieBackend], start, stop: Point,
                style: Style,
                rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
   # Draws a line from `start` to `stop`
@@ -44,7 +44,7 @@ proc drawLine*(img: BImage, start, stop: Point,
   img.pxContext.strokeSegment(segment(start.toVec2, stop.toVec2))
   img.saveState()
 
-proc drawPolyLine*(img: BImage, points: seq[Point],
+proc drawPolyLine*(img: BImage[PixieBackend], points: seq[Point],
                    style: Style,
                    rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
   # Draws lines sequentially to every point in `points`
@@ -55,7 +55,7 @@ proc drawPolyLine*(img: BImage, points: seq[Point],
   var path: Path
   let startPoint = points[0].toVec2
   path.moveTo(startPoint)
-  
+
   for idx in 1..points.high:
     path.lineTo(points[idx].toVec2)
 
@@ -65,7 +65,7 @@ proc drawPolyLine*(img: BImage, points: seq[Point],
   img.pxContext.fill(path)
   img.saveState()
 
-proc drawCircle*(img: var BImage, center: Point, radius: float,
+proc drawCircle*(img: var BImage[PixieBackend], center: Point, radius: float,
                  lineWidth: float,
                  strokeColor = color(0.0, 0.0, 0.0),
                  fillColor = color(0.0, 0.0, 0.0, 0.0),
@@ -86,7 +86,7 @@ proc drawCircle*(img: var BImage, center: Point, radius: float,
   img.pxContext.fillCircle(circle(center.toVec2, radius))
   img.saveState()
 
-proc drawCircle*(img: BImage, center: Point, radius: float,
+proc drawCircle*(img: BImage[PixieBackend], center: Point, radius: float,
                  style: Style,
                  rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
   if rotateAngle.isSome:
@@ -99,7 +99,7 @@ proc drawCircle*(img: BImage, center: Point, radius: float,
   img.pxContext.fillCircle(circle(center.toVec2, radius))
   img.saveState()
 
-proc getTextExtent*(text: string, font: types.Font): TextExtent =
+proc getTextExtent*(_: typedesc[PixieBackend], text: string, font: types.Font): TextExtent =
   # This is for now copied from the TikZ backend until I figure out how to
   # use `computeBounds` from pixie.fonts
   let ptY = font.size
@@ -127,7 +127,7 @@ func getSlant(fs: FontSlant): string =
     of fsItalic: "Italic"
     of fsOblique: "Oblique"
 
-proc setFont(img: BImage, font: types.Font) =
+proc setFont(img: BImage[PixieBackend], font: types.Font) =
   # Find try to find path of the given font, else load a default font
   var pxFont: string
   let path = getFontPath(font.family, font.slant.getSlant)
@@ -139,7 +139,7 @@ proc setFont(img: BImage, font: types.Font) =
 
   img.pxContext.font = pxFont
 
-proc drawText*(img: BImage, text: string, font: types.Font, at: Point,
+proc drawText*(img: BImage[PixieBackend], text: string, font: types.Font, at: Point,
                alignKind: TextAlignKind = taLeft,
                rotate: Option[float] = none[float](),
                rotateInView: Option[(float, Point)] = none[(float, Point)](),
@@ -161,7 +161,7 @@ proc drawText*(img: BImage, text: string, font: types.Font, at: Point,
   img.pxContext.fillText(text, at.toVec2)
   img.saveState()
 
-proc drawRectangle*(img: BImage, left, bottom, width, height: float,
+proc drawRectangle*(img: BImage[PixieBackend], left, bottom, width, height: float,
                     style: Style,
                     rotate: Option[float] = none[float](),
                     rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
@@ -187,7 +187,7 @@ func toColorRGBA(x: uint32): ColorRGBA =
   let b = x and 0xFF'u32
   result = ColorRGBA(r: r.uint8, g: g.uint8, b: b.uint8, a: alpha.uint8)
 
-proc drawRaster*(img: var BImage, left, bottom, width, height: float,
+proc drawRaster*(img: var BImage[PixieBackend], left, bottom, width, height: float,
                  numX, numY: int,
                  drawCb: proc(): seq[uint32],
                  rotate: Option[float] = none[float](),
@@ -202,7 +202,7 @@ proc drawRaster*(img: var BImage, left, bottom, width, height: float,
   if rotate.isSome:
     # Here we only rotate with an angle around the origin if needed
     img.rotate(rotate.get, (left, bottom))
-  
+
   # Initialize our raster
   let
     rasterWidth = abs(width).int32
@@ -224,24 +224,28 @@ proc drawRaster*(img: var BImage, left, bottom, width, height: float,
   img.pxContext.drawImage(raster, pos = vec2(left, bottom))
   img.saveState()
 
-proc initBImage*(filename: string,
+proc initBImage*(_: typedesc[PixieBackend],
+                 filename: string,
                  width, height: int,
-                 fType: FiletypeKind): BImage =
+                 fType: FiletypeKind,
+                 texOptions = TeXOptions()): BImage[PixieBackend] =
   var ctx = newContext(width, height)
 
   case fType
   of fkPng:
     ctx.image.writeFile(filename)
   else:
-    raise newException(Exception, "Unsupported filetype " & $fType & " in `initBImage`")
-  result = BImage(fname: filename,
-                  width: width,
-                  height: height,
-                  backend: bkPixie,
-                  pxContext: ctx,
-                  ftype: fType)
+    raise newException(Exception, "Unsupported filetype " & $fType & " in `initBImage[PixieBackend]`")
+  let backend = PixieBackend(pxContext: ctx)
+  result = BImage[PixieBackend](fname: filename,
+                                width: width,
+                                height: height,
+                                ftype: fType)
 
-proc writeFile*(img: BImage, fname: string) {.inline.} =
+proc writeFile*(img: BImage[PixieBackend], fname: string) {.inline.} =
   # Helper that writes an Image using it's Context to a file
   img.pxContext.image.writeFile(fname)
 
+# destroy is a no-op for Pixie
+## XXX: why though? And why is there a `writeFile` call in the `init` procedure?
+proc destroy*(img: var BImage[PixieBackend]) = discard

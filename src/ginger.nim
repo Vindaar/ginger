@@ -3101,34 +3101,6 @@ proc getCenter*(view: Viewport): (float, float) =
       height(view).toRelative(length = some(pointHeight(view))).val / 2.0
   result = (centerX, centerY)
 
-proc parseFilename*(fname: string): FiletypeKind =
-  let (_, _, ext) = fname.splitFile
-  case ext.normalize
-  of ".pdf":
-    result = fkPdf
-  of ".svg":
-    result = fkSvg
-  of ".png":
-    result = fkPng
-  of ".tex":
-    result = fkTeX
-  else:
-    result = fkPdf
-
-proc toBackend*(fType: FiletypeKind, texOptions: TexOptions): BackendKind =
-  ## TODO: generalize the `texOptions` to variant object for possible other backends
-  case fType
-  of fkSvg: result = bkCairo
-  of fkPng: result = bkCairo
-  of fkTeX: result = bkTikZ
-  of fkPdf:
-    # depends on `texOptions`
-    result = if texOptions.useTeX or texOptions.texTemplate.isSome:
-               bkTikZ
-             else:
-               bkCairo # extend for Pixie
-  of fkVega: doAssert false # not supported
-
 proc draw*(img: var BImage, gobj: GraphObject) =
   ## draws the given graph object on the image
   let globalObj = gobj.toGlobalCoords(img)
@@ -3199,25 +3171,39 @@ proc draw*(img: var BImage, view: Viewport) =
       mchView.rotate = view.rotate
     img.draw(mchView)
 
-when not defined(noCairo):
-  proc draw*(view: Viewport, filename: string, texOptions: TeXOptions = TeXOptions()) =
-    ## draws the given viewport and all its children and stores it in the
-    ## file `filename`
-    let fType = parseFilename(filename)
-    let backend = fType.toBackend(texOptions)
-    var img = initBImage(filename,
-                         width = view.wImg.val.round.int, height = view.hImg.val.round.int,
-                         backend = backend,
-                         ftype = fType,
-                         texOptions = texOptions)
-    img.draw(view)
-    img.destroy()
+proc draw*(view: Viewport, filename: string, texOptions: TeXOptions = TeXOptions()) =
+  ## Handles the drawing of the given `Viewport` and if applicable stores it in the
+  ## given `filename`.
+  ##
+  ## Currently this procedure provides the interface between the runtime based `BackendKind`
+  ## exposed to `ggplotnim` and the internal compile time based dispatch between the different
+  ## supported backends.
+  ##
+  ## Backends need to be activated by demand using `use<Backend>`. The default `nim.cfg`
+  ## shipped with this library activates the Cairo and TikZ backend by default.
+  # TODO: rethink approach of handing a filename and texOptions here. Could instead
+  # be part of a `Backend` that's handed to a generic version of this procedure later.
+  let fType = parseFilename(filename)
+  let bck = fType.toBackend(texOptions)
 
-else:
-  proc draw*(view: Viewport, filename: string, texOptions: TeXOptions = TeXOptions()) =
-    static: echo "Compiling draw as a dummy proc"
-    echo "WARNING: Compiled with `-d:noCairo`. `draw` does not do anything " &
-      "in this compilation mode!"
+  template useBackend(backend: untyped): untyped =
+    when declared(backend):
+      var img = initBImage(backend,
+                           filename,
+                           width = view.wImg.val.round.int, height = view.hImg.val.round.int,
+                           ftype = fType,
+                           texOptions = texOptions)
+      img.draw(view)
+      img.destroy()
+    else:
+      doAssert false, "The binary was compiled without the option to use the `" & $astToStr(backend) &
+        "`. Please compile with `-d:use<Backend>` {Cairo, TikZ, Pixie} to activate it."
+  case bck
+  of bkNone:  useBackend(DummyBackend)
+  of bkCairo: useBackend(CairoBackend)
+  of bkTikZ:  useBackend(TikZBackend)
+  of bkVega:  {.warning: "Vega backend does not exist.".}; useBackend(DummyBackend)
+  of bkPixie: useBackend(PixieBackend)
 
 when isMainModule:
 
@@ -3305,9 +3291,9 @@ when isMainModule:
     img.draw("testView.pdf")
 
   block:
-    var img = initBImage("testEmbed.svg",
+    var img = initBImage(CairoBackend,
+                         "testEmbed.svg",
                          width = 600, height = 400,
-                         backend = bkCairo,
                          ftype = fkSvg)
 
     var view1 = initViewport(left = 0.0,

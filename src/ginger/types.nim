@@ -1,30 +1,5 @@
 import chroma
 import options
-import pixie
-
-when not defined(noCairo):
-  import cairo
-else:
-  type
-    TSurface = object
-      discard
-    PSurface = ptr TSurface
-
-    TTextExtents = object
-      x_bearing*: float64
-      y_bearing*: float64
-      width*: float64
-      height*: float64
-      x_advance*: float64
-      y_advance*: float64
-
-    TPattern = object
-      discard
-    PPattern = ptr TPattern
-
-    TContext = object
-      discard
-    PContext = ptr TContext
 
 type
   BackendKind* = enum
@@ -47,23 +22,14 @@ type
     label*: Option[string]       # optional label for the figure
     placement*: string           # placement option for the figure env ("htbp", ...)
 
-  BImage* = object
+  BImage*[T] = object
     fname*: string
     width*: int
     height*: int
     ftype*: FileTypeKind
-    case backend*: BackendKind
-    of bkCairo:
-      cCanvas*: PSurface
-      ctx*: PContext
-      created*: bool # if surface was created
-    of bkTikZ:
-      data*: string # stores the TikZ commands as a string to be inserted into a LaTeX template
-      options*: TexOptions
-      lastColor*: string # stores the last used color to avoid redefining same color
-    of bkPixie:
-      pxContext*: pixie.Context
-    of bkVega, bkNone: discard
+    backend*: T
+
+  DummyBackend* = object
 
   LineType* = enum
     ltNone, ltSolid, ltDashed, ltDotted, ltDotDash, ltLongDash, ltTwoDash
@@ -77,11 +43,6 @@ type
 
   FontSlant* = enum
     fsNormal, fsItalic, fsOblique
-
-  #FontFamily = enum
-  #  ffSerif, ffSans
-  # helper object to store text extent information
-  TextExtent* = TTextExtents
 
   Font* = object
     family*: string # serif, sans-serif...
@@ -282,6 +243,43 @@ type
     wImg*: Quantity # absolute width, height in points (pixels) of image
     hImg*: Quantity
     backend*: BackendKind
+
+when defined(useCairo) and not defined(noCairo):
+  import cairo
+  # Note: this can be defined here, as we define all Cairo types locally if `noCairo` is defined
+  # as dummies
+  type
+    CairoBackend* = object
+      cCanvas*: PSurface
+      ctx*: PContext
+      created*: bool # if surface was created
+    # helper object to store text extent information
+    TextExtent* = TTextExtents
+else:
+  # define for other backends
+  type
+    TTextExtents* = object
+      x_bearing*: float64
+      y_bearing*: float64
+      width*: float64
+      height*: float64
+      x_advance*: float64
+      y_advance*: float64
+    TextExtent* = TTextExtents
+
+when defined(usePixie):
+  import pixie
+  type
+    PixieBackend* = object
+      pxContext*: pixie.Context
+
+when defined(useTikZ):
+  # TikZ backend type does not involve any external dependencies by itself (backend does though!)
+  type
+    TikZBackend* = object
+      data*: string # stores the TikZ commands as a string to be inserted into a LaTeX template
+      options*: TeXOptions
+      lastColor*: string # stores the last used color to avoid redefining same color
 
 from std / sequtils import mapIt
 proc clone*(g: GraphObject): GraphObject =
