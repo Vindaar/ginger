@@ -4,11 +4,11 @@ import math
 import types
 import options
 
-template withSurface*(img: var BImage, name: untyped, actions: untyped): untyped =
-  if not img.created:
-    img.ctx = create(img.cCanvas)
-    img.created = true
-  template ctx(): untyped = img.ctx
+template withSurface*(img: var BImage[CairoBackend], name: untyped, actions: untyped): untyped =
+  if not img.backend.created:
+    img.backend.ctx = create(img.backend.cCanvas)
+    img.backend.created = true
+  template ctx(): untyped = img.backend.ctx
   # save current context
   ctx.save()
   actions
@@ -21,18 +21,18 @@ template withSurface*(img: var BImage, name: untyped, actions: untyped): untyped
     actions
     `name`.destroy()
 
-template withSurface*(img: var BImage, actions: untyped): untyped =
+template withSurface*(img: var BImage[CairoBackend], actions: untyped): untyped =
   img.withSurface(ctx):
     actions
 
 when false:
-  template withCairo(img: BImage, name: untyped, actions: untyped): untyped =
+  template withCairo(img: BImage[CairoBackend], name: untyped, actions: untyped): untyped =
     var `name` {.inject.} = image_surface_create(FORMAT_ARGB32, img.width, img.height)
     `name`.withSurface:
       actions
     `name`.destroy()
 
-  template withCairo(img: BImage, actions: untyped): untyped =
+  template withCairo(img: BImage[CairoBackend], actions: untyped): untyped =
     img.withCairo(surface):
       actions
 
@@ -72,7 +72,7 @@ func setLineStyle(ctx: PContext, lineType: LineType, lineWidth: float) =
     ctx.set_line_width(0.0)
   else: discard
 
-proc drawLine*(img: var BImage, start, stop: Point,
+proc drawLine*(img: var BImage[CairoBackend], start, stop: Point,
                style: Style,
                rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
   img.withSurface:
@@ -86,7 +86,7 @@ proc drawLine*(img: var BImage, start, stop: Point,
     ctx.line_to(stop.x, stop.y)
     ctx.stroke()
 
-proc drawPolyLine*(img: var BImage, points: seq[Point],
+proc drawPolyLine*(img: var BImage[CairoBackend], points: seq[Point],
                    style: Style,
                    rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
   img.withSurface:
@@ -108,7 +108,7 @@ proc drawPolyLine*(img: var BImage, points: seq[Point],
                         style.fillColor.a)
     ctx.fill()
 
-proc drawCircle*(img: var BImage, center: Point, radius: float,
+proc drawCircle*(img: var BImage[CairoBackend], center: Point, radius: float,
                  lineWidth: float,
                  strokeColor = color(0.0, 0.0, 0.0),
                  fillColor = color(0.0, 0.0, 0.0, 0.0),
@@ -145,7 +145,7 @@ proc getTextExtent*(ctx: PContext, text: string): TextExtent =
   ## bother with pointers
   ctx.text_extents(text, addr result)
 
-proc getTextExtent*(text: string, font: Font): TextExtent =
+proc getTextExtent*(_: typedesc[CairoBackend], text: string, font: Font): TextExtent =
   ## creates a temporary cairo surface and evaluates the given string `text`
   ## under the given `font` for the text extent.
   # create small surface as user space to evaluate on
@@ -161,7 +161,7 @@ proc getTextExtent*(text: string, font: Font): TextExtent =
   ctx.destroy()
   surface.destroy()
 
-proc drawText*(img: var BImage, text: string, font: Font, at: Point,
+proc drawText*(img: var BImage[CairoBackend], text: string, font: Font, at: Point,
                alignKind: TextAlignKind = taLeft,
                rotate: Option[float] = none[float](),
                rotateInView: Option[(float, Point)] = none[(float, Point)]()) =
@@ -212,7 +212,7 @@ proc createGradient(gradient: Gradient,
   for i, c in gradient.colors:
     result.add_color_stop_rgb(i.float / numColors, c.r, c.g, c.b)
 
-proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
+proc drawRectangle*(img: var BImage[CairoBackend], left, bottom, width, height: float,
                     style: Style,
                     rotate: Option[float] = none[float](),
                     rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
@@ -245,7 +245,7 @@ proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
       ctx.set_source_rgba(style.fillColor.r, style.fillColor.g, style.fillColor.b, style.fillColor.a)
     ctx.fill()
 
-proc drawRaster*(img: var BImage, left, bottom, width, height: float,
+proc drawRaster*(img: var BImage[CairoBackend], left, bottom, width, height: float,
                  numX, numY: int,
                  drawCb: proc(): seq[uint32],
                  rotate: Option[float] = none[float](),
@@ -288,9 +288,12 @@ proc drawRaster*(img: var BImage, left, bottom, width, height: float,
     ctx.paint()
     pngSurface.destroy()
 
-proc initBImage*(filename: string,
+proc initBImage*(_: typedesc[CairoBackend],
+                 filename: string,
                  width, height: int,
-                 fType: FiletypeKind): BImage =
+                 fType: FiletypeKind,
+                 texOptions = TeXOptions()
+                ): BImage[CairoBackend] =
   var surface: PSurface
   case fType:
   of fkPng:
@@ -300,14 +303,27 @@ proc initBImage*(filename: string,
   of fkPdf:
     surface = pdf_surface_create(filename, width.float, height.float)
   else:
-    raise newException(Exception, "Unsupported fType " & $fType & " in `initBImage")
-  result = BImage(fname: filename,
-                  backend: bkCairo,
-                  created: false,
-                  cCanvas: surface,
-                  width: width,
-                  height: height,
-                  fType: fType)
+    raise newException(Exception, "Unsupported fType " & $fType & " in `initBImage[CairoBackend]")
+  let backend = CairoBackend(cCanvas: surface,
+                             created: false)
+
+  result = BImage[CairoBackend](fname: filename,
+                                backend: backend,
+                                width: width,
+                                height: height,
+                                fType: fType)
+
+
+proc destroy*(img: var BImage[CairoBackend]) =
+  case img.fType
+  of fkPng:
+    let err = cairo.write_to_png(img.backend.cCanvas, img.fname)
+    if err != cairo.StatusSuccess:
+      echo "WARNING: `write_to_png` returned status code: ", err
+  else: discard # not needed for SVG, PDF
+  if img.backend.created:
+    cairo.destroy(img.backend.ctx)
+  cairo.destroy(img.backend.cCanvas)
 
 when isMainModule:
   # raw Cairo code

@@ -1,222 +1,72 @@
-import chroma, shell
+import chroma
 import types
 import options
-from os import getTempDir
-from strutils import replace
+from os import getTempDir, splitFile
+from strutils import replace, normalize
+from math import round
 
 export types
 export chroma
 
+when defined(noCairo):
+  {.warning: "The `noCairo` option is deprecated. Instead backends must be activated on demand " &
+    "using `-d:use<Backend>` options (typically defined in a `nim.cfg` or `config.nims` file).".}
 
-when not defined(noCairo):
-  # import nothing into scope, so that we avoid overload ambiguity
-  from cairo import nil
-  from backendCairo import nil
-  from backendTikZ import nil
-  from backendPixie import nil
+when defined(useCairo) and not defined(noCairo): # noCairo for backward compat
+  import backendCairo
+  export backendCairo
+when defined(useTikZ):
+  import backendTikZ
+  export backendTikZ
+when defined(usePixie):
+  import backendPixie
+  export backendPixie
+# backend dummy is always available
+import backendDummy
+export backendDummy
 
-  proc drawLine*(img: var BImage, start, stop: Point,
-                 style: Style,
-                 rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
-    case img.backend
-    of bkCairo: backendCairo.drawLine(img, start, stop, style, rotateAngle)
-    of bkTikZ: backendTikz.drawLine(img, start, stop, style, rotateAngle)
-    of bkPixie: backendPixie.drawLine(img, start, stop, style, rotateAngle)
-    else: discard
+proc parseFilename*(fname: string): FiletypeKind =
+  let (_, _, ext) = fname.splitFile
+  case ext.normalize
+  of ".pdf":
+    result = fkPdf
+  of ".svg":
+    result = fkSvg
+  of ".png":
+    result = fkPng
+  of ".tex":
+    result = fkTeX
+  else:
+    result = fkPdf
 
-  proc drawPolyLine*(img: var BImage, points: seq[Point],
-                     style: Style,
-                     rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
-    case img.backend
-    of bkCairo: backendCairo.drawPolyLine(img, points, style, rotateAngle)
-    of bkTikZ: backendTikz.drawPolyLine(img, points, style, rotateAngle)
-    of bkPixie: backendPixie.drawPolyLine(img, points, style, rotateAngle)
-    else: discard
+proc toBackend*(fType: FiletypeKind, texOptions: TexOptions): BackendKind =
+  ## TODO: generalize the `texOptions` to variant object for possible other backends
+  case fType
+  of fkSvg: result = bkCairo
+  of fkPng: result = bkCairo
+  of fkTeX: result = bkTikZ
+  of fkPdf:
+    # depends on `texOptions`
+    result = if texOptions.useTeX or texOptions.texTemplate.isSome:
+               bkTikZ
+             else:
+               bkCairo # extend for Pixie
+  of fkVega: doAssert false # not supported
 
-  proc drawCircle*(img: var BImage, center: Point, radius: float,
-                   lineWidth: float,
-                   strokeColor = color(0.0, 0.0, 0.0),
-                   fillColor = color(0.0, 0.0, 0.0, 0.0),
-                   rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
-    case img.backend
-    of bkCairo:
-      backendCairo.drawCircle(
-        img, center, radius, lineWidth, strokeColor, fillColor, rotateAngle
-      )
-    of bkTikz:
-      backendTikz.drawCircle(
-        img, center, radius, lineWidth, strokeColor, fillColor, rotateAngle
-      )
-    of bkPixie:
-      backendPixie.drawCircle(
-        img, center, radius, lineWidth, strokeColor, fillColor, rotateAngle
-      )
-    else: discard
+proc getTextExtent*(backend: BackendKind, text: string, font: Font): TextExtent =
+  template useBackend(backend: untyped): untyped =
+    when declared(backend):
+      result = backend.getTextExtent(text, font)
+    else:
+      doAssert false, "The binary was compiled without the option to use the `" & $astToStr(backend) &
+        "`. Please compile with `-d:use<Backend>` {Cairo, TikZ, Pixie} to activate it."
 
-  proc getTextExtent*(backend: BackendKind, text: string, font: Font): TextExtent =
-    case backend
-    of bkCairo: result = backendCairo.getTextExtent(text, font)
-    of bkTikZ: result = backendTikZ.getTextExtent(text, font)
-    of bkPixie: discard # TODO
-    else: discard
-
-  proc drawText*(img: var BImage, text: string, font: Font, at: Point,
-                 alignKind: TextAlignKind = taLeft,
-                 rotate: Option[float] = none[float](),
-                 rotateInView: Option[(float, Point)] = none[(float, Point)]()) =
-    case img.backend
-    of bkCairo:
-      backendCairo.drawText(
-        img, text, font, at, alignKind, rotate, rotateInView
-      )
-    of bkTikz:
-      backendTikz.drawText(
-        img, text, font, at, alignKind, rotate, rotateInView
-      )
-    of bkPixie:
-      backendPixie.drawText(
-        img, text, font, at, alignKind, rotate, rotateInView
-      )
-    else: discard
-
-  proc drawRectangle*(img: var BImage, left, bottom, width, height: float,
-                      style: Style,
-                      rotate: Option[float] = none[float](),
-                      rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
-    case img.backend
-    of bkCairo:
-      backendCairo.drawRectangle(
-        img, left, bottom, width, height, style, rotate, rotateInView
-      )
-    of bkTikz:
-      backendTikz.drawRectangle(
-        img, left, bottom, width, height, style, rotate, rotateInView
-      )
-    of bkPixie:
-      backendPixie.drawRectangle(
-        img, left, bottom, width, height, style, rotate, rotateInView
-      )
-
-    else: discard
-
-  # forward declarations to use them in `drawRaster` for `TikZ`
-  proc initBImage*(filename: string,
-                   width, height: int,
-                   backend: BackendKind,
-                   fType: FiletypeKind,
-                   texOptions = TeXOptions()): BImage
-  proc destroy*(img: var BImage)
-  proc drawRaster*(img: var BImage, left, bottom, width, height: float,
-                   numX, numY: int,
-                   drawCb: proc(): seq[uint32],
-                   rotate: Option[float] = none[float](),
-                   rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
-    case img.backend
-    of bkCairo:
-      backendCairo.drawRaster(
-        img, left, bottom, width, height, numX, numY, drawCB, rotate, rotateInView
-      )
-    of bkTikz:
-      let tmpName = getTempDir() & "raster_ggplotnim_tikz_tmp_store.png"
-      var imgC = initBImage(tmpName,
-                            width = width.int, height = height.int,
-                            backend = bkCairo,
-                            ftype = fkPng,
-                            texOptions = TeXOptions())
-      imgC.drawRaster(0, 0, width, height, numX, numY, drawCB, rotate, rotateInView)
-      imgC.destroy()
-      backendTikz.drawRaster(
-        img, tmpName, left, bottom, width, height, numX, numY, drawCB, rotate, rotateInView
-      )
-    of bkPixie:
-      backendPixie.drawRaster(
-        img, left, bottom, width, height, numX, numY, drawCB, rotate, rotateInView
-      )
-    else: discard
-
-  proc initBImage*(filename: string,
-                   width, height: int,
-                   backend: BackendKind,
-                   fType: FiletypeKind,
-                   texOptions = TeXOptions()): BImage =
-    case backend
-    of bkCairo:
-      result = backendCairo.initBImage(
-        filename, width, height, fType
-      )
-    of bkTikz:
-      let fname = if ftype == fkPdf: filename.replace(".pdf", ".tex")
-                  else: filename
-      result = backendTikz.initBImage(
-        fname, width, height, fType, texOptions
-      )
-    of bkPixie:
-      result = backendPixie.initBImage(
-        filename, width, height, fType
-      )
-    else: discard
-
-  from macros import error
-  proc destroy*(img: var BImage) =
-    case img.backend
-    of bkCairo:
-      case img.fType
-      of fkPng:
-        let err = cairo.write_to_png(img.cCanvas, img.fname)
-        if err != cairo.StatusSuccess:
-          echo "WARNING: `write_to_png` returned status code: ", err
-      else: discard # not needed for SVG, PDF
-      if img.created:
-        cairo.destroy(img.ctx)
-      cairo.destroy(img.cCanvas)
-    of bkTikZ:
-      # write to file
-      backendTikZ.writeTeXFile(img)
-      # possibly compile
-      case img.fType
-      of fkTeX: discard # nothing to do
-      of fkPdf:
-        # compile using terminal
-
-        # 1. check if xelatex in PATH
-        when defined(linux) or defined(macosx):
-          let checkCmd = "command -v"
-        elif defined(windows):
-          let checkCmd = "WHERE"
-        else:
-          static: error("Unsupported platform for PDF generation. Please open an issue.")
-
-        var generated = false
-        template checkAndRun(cmd: untyped): untyped =
-          var (res, err) = shellVerbose:
-            ($checkCmd) ($cmd)
-          if err == 0:
-            (res, err) = shellVerbose:
-              ($cmd) ($img.fname)
-            if err == 0:
-              # successfully generated
-              generated = true
-            else:
-              raise newException(IOError, "Could not generate PDF from TeX file `" & $img.fname &
-                & "` using TeX compiler: `" & $cmd & "`. Output was: " &
-                res)
-        checkAndRun("xelatex")
-        if generated: return # success, no need to try `pdflatex`
-        checkAndRun("pdflatex") # currently broken, as we import `unicode-math`
-        if not generated:
-          raise newException(IOError, "Could not generate a PDF from TeX file " &
-            $img.fname & " as neither `xelatex` nor `pdflatex` was found in PATH")
-      else: doAssert false
-    of bkVega, bkNone:
-      discard
-    of bkPixie:
-      discard
-else:
-  proc destroy*(img: var BImage) =
-    echo "Nothing to destroy when compiled without backend."
-
-  import backendDummy
-  export backendDummy
+  case backend
+  of bkCairo: useBackend(CairoBackend)
+  of bkTikZ:  useBackend(TikZBackend)
+  of bkPixie: useBackend(PixieBackend)
+  of bkNone:  useBackend(DummyBackend)
+  else: discard
 
 when isMainModule:
   # backend layer cairo code
