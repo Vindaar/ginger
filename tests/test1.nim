@@ -217,18 +217,10 @@ suite "Viewport":
                              height = 0.5,
                              xScale = some(xScale),
                              yScale = some(yScale))
-    var oldChild: Viewport
-    when defined(gcDestructors):
-      oldChild[] = child[]
-    else:
-      oldChild = deepCopy(child)
+    var oldChild = child.clone()
     block:
       # x ticks and labels
-      var mch: Viewport
-      when defined(gcDestructors):
-        mch[] = oldChild[]
-      else:
-        mch = deepCopy(oldChild)
+      var mch = oldChild.clone()
       let xTicks = child.xticks()
       let xLabel = child.xlabel("X label")
       mch.addObj concat(xticks, @[xlabel])
@@ -245,11 +237,7 @@ suite "Viewport":
 
     block:
       # rotated tick labels and labels, X axis
-      var mch: Viewport
-      when defined(gcDestructors):
-        mch[] = oldChild[]
-      else:
-        mch = deepCopy(oldChild)
+      var mch = oldChild.clone()
       let ticksLabs = block:
                     var locsC: seq[Coord1D]
                     let locs = linspace(0.1, 0.9, 5)
@@ -278,11 +266,7 @@ suite "Viewport":
 
     block:
       # y ticks and labels
-      var mch: Viewport
-      when defined(gcDestructors):
-        mch[] = oldChild[]
-      else:
-        mch = deepCopy(oldChild)
+      var mch = oldChild.clone()
       let yTicks = child.yticks()
       let yLabel = child.ylabel("Y label")
       mch.addObj concat(yticks, @[ylabel])
@@ -299,11 +283,7 @@ suite "Viewport":
 
     block:
       # rotated tick labels and labels, Y axis
-      var mch: Viewport
-      when defined(gcDestructors):
-        mch[] = oldChild[]
-      else:
-        mch = deepCopy(oldChild)
+      var mch = oldChild.clone()
       let ticksLabs = block:
                     var locsC: seq[Coord1D]
                     let locs = linspace(0.1, 0.9, 5)
@@ -332,11 +312,7 @@ suite "Viewport":
 
     block:
       # x ticks and labels, secondary
-      var mch: Viewport
-      when defined(gcDestructors):
-        mch[] = oldChild[]
-      else:
-        mch = deepCopy(oldChild)
+      var mch = oldChild.clone()
       let xTicks = child.xticks(isSecondary = true)
       let xLabel = child.xlabel("X label sec", isSecondary = true)
       mch.addObj concat(xticks, @[xlabel])
@@ -353,11 +329,7 @@ suite "Viewport":
         else: check false
     block:
       # y ticks and labels
-      var mch: Viewport
-      when defined(gcDestructors):
-        mch[] = oldChild[]
-      else:
-        mch = deepCopy(oldChild)
+      var mch = oldChild.clone()
       let yTicks = child.yticks(isSecondary =  true)
       let yLabel = child.ylabel("Y label sec", isSecondary = true)
       mch.addObj concat(yticks, @[ylabel])

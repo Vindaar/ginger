@@ -340,3 +340,28 @@ proc clone*(g: GraphObject): GraphObject =
     result.rstDrawCb = g.rstDrawCb
   of goComposite:
     result.cmpKind = g.cmpKind
+
+proc clone*(v: Viewport): Viewport =
+  ## Clones the given Viewport
+  result = new Viewport
+  result.name = v.name
+  result.parent = v.parent
+  result.style = v.style
+  result.xScale = v.xScale
+  result.yScale = v.yScale
+  result.rotate = v.rotate
+  result.scale = v.scale
+  result.origin = v.origin
+  result.width = v.width
+  result.height = v.height
+  result.objects = newSeq[GraphObject](v.objects.len)
+  for i, o in v.objects:
+    result.objects[i] = o.clone()
+  result.wView = v.wView
+  result.hView = v.hView
+  result.wImg = v.wImg
+  result.hImg = v.hImg
+  result.backend = v.backend
+  result.children = newSeq[Viewport](v.children.len)
+  for i, o in v.children:
+    result.children[i] = o.clone()
