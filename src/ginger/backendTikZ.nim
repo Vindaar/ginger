@@ -270,7 +270,7 @@ when defined(useCairo) and not defined(noCairo):
     latexAdd:
       \node at `atStr` {\includegraphics[width = `w`\textwidth]{`tmpName`}}";"
 else:
-  proc drawRaster*(img: var BImage[TikZBackend], name: string, left, bottom, width, height: float,
+  proc drawRaster*(img: var BImage[TikZBackend], left, bottom, width, height: float,
                    numX, numY: int,
                    drawCb: proc(): seq[uint32],
                    rotate: Option[float] = none[float](),
