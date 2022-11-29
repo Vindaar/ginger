@@ -1,6 +1,12 @@
 import chroma
 import options
 
+## CT variables adjustable via command line arguments (or nim.cfg / config.nims) to (de-)activate
+## different backends
+const useCairo* {.booldefine.} = false
+const useTikZ* {.booldefine.}  = false
+const usePixie* {.booldefine.} = false
+
 type
   BackendKind* = enum
     bkNone, bkCairo, bkVega, bkTikZ, bkPixie
@@ -244,7 +250,7 @@ type
     hImg*: Quantity
     backend*: BackendKind
 
-when defined(useCairo) and not defined(noCairo):
+when useCairo and not defined(noCairo):
   import cairo
   # Note: this can be defined here, as we define all Cairo types locally if `noCairo` is defined
   # as dummies
@@ -267,13 +273,13 @@ else:
       y_advance*: float64
     TextExtent* = TTextExtents
 
-when defined(usePixie):
+when usePixie:
   import pixie
   type
     PixieBackend* = object
       pxContext*: pixie.Context
 
-when defined(useTikZ):
+when useTikZ:
   # TikZ backend type does not involve any external dependencies by itself (backend does though!)
   type
     TikZBackend* = object
