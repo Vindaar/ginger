@@ -382,6 +382,7 @@ proc destroy*(img: var BImage[TikZBackend]) =
   backendTikZ.writeTeXFile(img)
   # possibly compile
   # get the path for the output file
+  let path = img.fname.parentDir
   case img.fType
   of fkTeX: discard # nothing to do
   of fkPdf:
@@ -400,7 +401,7 @@ proc destroy*(img: var BImage[TikZBackend]) =
         ($checkCmd) ($cmd)
       if err == 0:
         (res, err) = shellVerbose:
-          ($cmd) ($img.fname)
+          ($cmd) "-output-directory" ($path) ($img.fname)
         if err == 0:
           # successfully generated
           generated = true
