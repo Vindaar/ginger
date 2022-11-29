@@ -1,18 +1,11 @@
-import math
-import sugar
-import chroma
-import options
+import std / [math, options, sequtils, strformat, strutils]
 export options
 
-import sequtils
-import strformat
+import chroma
 from seqmath import linspace
-import strutils
 
 import ginger / [macroUtils, backends, types]
 export types, backends, macroUtils
-
-from os import splitFile
 
 # TODO: think about renaming `Coord1D` to someting like Unit?
 
