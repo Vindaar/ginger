@@ -2731,18 +2731,14 @@ proc background*(view: Viewport,
 ########## DRAWING FUNCTIONS
 ################################################################################
 
-
-
-
-
-proc drawLine(img: var BImage, gobj: GraphObject) =
+proc drawLine[T](img: var BImage[T], gobj: GraphObject) =
   doAssert gobj.kind == goAxis or gobj.kind == goLine, "object must be a `goAxis` or `goLine`!"
   img.drawLine(gobj.lnStart.point, gobj.lnStop.point,
                gobj.style.get, # if we end up here without a style,
                                # it's a bug!
                rotateAngle = gobj.rotateInView)
 
-proc drawRect(img: var BImage, gobj: GraphObject) =
+proc drawRect[T](img: var BImage[T], gobj: GraphObject) =
   doAssert gobj.kind == goRect, "object must be a `goRect`!"
   img.drawRectangle(gobj.reOrigin.point.x, gobj.reOrigin.point.y,
                     # TODO: make sure we HAVE already converted to points!
@@ -2752,7 +2748,7 @@ proc drawRect(img: var BImage, gobj: GraphObject) =
                     rotate = gobj.rotate,
                     rotateInView = gobj.rotateInView)
 
-proc drawRaster(img: var BImage, gobj: GraphObject) =
+proc drawRaster[T](img: var BImage[T], gobj: GraphObject) =
   doAssert gobj.kind == goRaster, "object must be a `goRaster`!"
   img.drawRaster(gobj.rstOrigin.point.x, gobj.rstOrigin.point.y,
                  # TODO: make sure we HAVE already converted to points!
@@ -2762,8 +2758,8 @@ proc drawRaster(img: var BImage, gobj: GraphObject) =
                  rotate = gobj.rotate,
                  rotateInView = gobj.rotateInView)
 
-proc drawPointImpl(
-  img: var BImage, pos: Point,
+proc drawPointImpl[T](
+  img: var BImage[T], pos: Point,
   style: Option[Style],
   ptMarker: MarkerKind, ptSize: float, ptColor: Color,
   rotateInView: Option[(float, Point)]
@@ -2843,7 +2839,7 @@ proc drawPointImpl(
   else:
     raise newException(Exception, "Not implemented yet!")
 
-proc drawPoint(img: var BImage, gobj: GraphObject) =
+proc drawPoint[T](img: var BImage[T], gobj: GraphObject) =
   doAssert gobj.kind == goPoint, "object must be a `goPoint`!"
   img.drawPointImpl(gobj.ptPos.point,
                     gobj.style,
@@ -2851,7 +2847,7 @@ proc drawPoint(img: var BImage, gobj: GraphObject) =
                     gobj.ptSize, gobj.ptColor,
                     gobj.rotateInView)
 
-proc drawManyPoints(img: var BImage, gobj: GraphObject) =
+proc drawManyPoints[T](img: var BImage[T], gobj: GraphObject) =
   doAssert gobj.kind == goManyPoints, "object must be a `goManyPoints`!"
 
   let
@@ -2895,7 +2891,7 @@ proc drawManyPoints(img: var BImage, gobj: GraphObject) =
                         rotateInView)
 
 
-proc drawPolyLine(img: var BImage, gobj: GraphObject) =
+proc drawPolyLine[T](img: var BImage[T], gobj: GraphObject) =
   doAssert gobj.kind == goPolyLine, "object must be a `goPolyLine`!"
   # TODO: we assume that the coordinates are sorted for now
   img.drawPolyLine(gobj.plPos.mapIt((x: it.x.pos, y: it.y.pos)),
@@ -2903,7 +2899,7 @@ proc drawPolyLine(img: var BImage, gobj: GraphObject) =
                    rotateAngle = gobj.rotateInView)
 
 
-proc drawText(img: var BImage, gobj: GraphObject) =
+proc drawText[T](img: var BImage[T], gobj: GraphObject) =
   doAssert(
     (gobj.kind == goText or gobj.kind == goLabel or gobj.kind == goTickLabel),
     "object must be a `goText`, `goLabel` or `goTickLabel`!"
@@ -2911,7 +2907,7 @@ proc drawText(img: var BImage, gobj: GraphObject) =
   img.drawText(gobj.txtText, gobj.txtFont, gobj.txtPos.point, gobj.txtAlign,
                gobj.rotate)
 
-proc drawTick(img: var BImage, gobj: GraphObject) =
+proc drawTick[T](img: var BImage[T], gobj: GraphObject) =
   ## draw a tick
   doAssert gobj.kind == goTick, "object must be a `goTick`!"
   var style = gobj.style.get() # style *has* to exist
@@ -2956,7 +2952,7 @@ proc drawTick(img: var BImage, gobj: GraphObject) =
                  style,
                  rotateAngle = gobj.rotateInView)
 
-proc drawGrid(img: var BImage, gobj: GraphObject) =
+proc drawGrid[T](img: var BImage[T], gobj: GraphObject) =
   ## draws the (major / minor) grid
   doAssert gobj.kind == goGrid, "object must be a `goGrid`!"
   var style = gobj.style.get() # style *has* to exist
@@ -2976,16 +2972,16 @@ proc scale[T: SomeNumber](p: Point, width, height: T): Point =
   result = (p.x * width.float,
             p.y * height.float)
 
-proc toAbsImage(c: Coord1D, img: BImage, axKind: AxisKind): Coord1D {.inline.} =
+proc toAbsImage[T](c: Coord1D, img: BImage[T], axKind: AxisKind): Coord1D {.inline.} =
   case axKind
   of akX: result = c.to(ukPoint, absLength = some(quant(img.width.float, ukPoint)))
   of akY: result = c.to(ukPoint, absLength = some(quant(img.height.float, ukPoint)))
 
-proc toAbsImage(c: Coord, img: BImage): Coord {.inline.} =
+proc toAbsImage[T](c: Coord, img: BImage[T]): Coord {.inline.} =
   result.x = c.x.toAbsImage(img, akX)
   result.y = c.y.toAbsImage(img, akY)
 
-proc toGlobalCoords(gobj: GraphObject, img: BImage): GraphObject =
+proc toGlobalCoords[T](gobj: GraphObject, img: BImage[T]): GraphObject =
   result = gobj
   case gobj.kind
   of goLine, goAxis:
@@ -3094,7 +3090,7 @@ proc getCenter*(view: Viewport): (float, float) =
       height(view).toRelative(length = some(pointHeight(view))).val / 2.0
   result = (centerX, centerY)
 
-proc draw*(img: var BImage, gobj: GraphObject) =
+proc draw*[T](img: var BImage[T], gobj: GraphObject) =
   ## draws the given graph object on the image
   let globalObj = gobj.toGlobalCoords(img)
 
@@ -3121,7 +3117,7 @@ proc draw*(img: var BImage, gobj: GraphObject) =
     # composite itself has nothing to be drawn, only children handled individually
     discard
 
-proc draw*(img: var BImage, view: Viewport) =
+proc draw*[T](img: var BImage[T], view: Viewport) =
   ## draws the full viewport including all objects and all
   ## children onto the image
   ## NOTE: children are drawn `after` the parent viewport
@@ -3129,7 +3125,7 @@ proc draw*(img: var BImage, view: Viewport) =
   # before we draw stuff apply potential rotation
   let (centerX, centerY) = getCenter(view)
 
-  proc transformAndDraw(img: var BImage, obj: GraphObject, view: Viewport) =
+  proc transformAndDraw[T](img: var BImage[T], obj: GraphObject, view: Viewport) =
     ## performs the embedding of the object into the viewport
     ## and draws the resulting object
     var mobj = obj
