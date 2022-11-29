@@ -1,3 +1,9 @@
+* v0.4.0
+- make backends generic objects to allow to select different backends
+  at compile time and to simplify code
+- avoid checking TeX code in TikZ backend at CT, as it doesn't change
+- place TikZ generated PDFs in location desired by user, not in current
+  working directory
 * v0.3.14
 - export =xaxis= and =yaxis=
 * v0.3.13
