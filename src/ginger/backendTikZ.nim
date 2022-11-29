@@ -3,7 +3,12 @@ import math
 import types
 import options
 
-import os, latexdsl, strformat
+import os, strformat
+# use `latexdsl_nochecks` instead of regular to avoid checking all enum fields.
+# The LaTeX code written here is "write once, compile many", no need to recheck
+# everything. If we allow the user to hand their own LaTeX snippets, those
+# can be checked separately on the user's side.
+import latexdsl_nochecks
 from strutils import `%`, join, contains
 
 #[
