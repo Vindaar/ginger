@@ -3,8 +3,8 @@ import options
 
 ## CT variables adjustable via command line arguments (or nim.cfg / config.nims) to (de-)activate
 ## different backends
-const useCairo* {.booldefine.} = false
-const useTikZ* {.booldefine.}  = false
+const useCairo* {.booldefine.} = true
+const useTikZ* {.booldefine.}  = true
 const usePixie* {.booldefine.} = false
 
 type
