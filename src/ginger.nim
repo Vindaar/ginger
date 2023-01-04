@@ -93,18 +93,27 @@ func formatTickValue*(f: float, scale = 0.0): string =
   ## the zero value on the scale. From e.g. `linspace` we might end up
   ## with `5.1234e-17` for the string representation of zero. The scale
   ## is required to know whether the values aren't inherently this small.
+  ##
+  ## The `{.intdefine.}` compile time constants `TickPrecisionCutoff` and `TickPrecision`
+  ## can be used to adjust the
+  ## - `TickPrecisionCutoff`: decimal of the `10^((-)TickPrecisionCutoff)` value within
+  ##   which the tick labels are printed as decimal values and outside in exp notation
+  ## - `TickPrecision`: the number of digits used as precision as an argument to
+  ##   `formatBiggestFloat`.
+  const TickPrecisionCutoff {.intdefine.} = 6
+  const TickPrecision {.intdefine.} = 5
   if abs(f) < scale / 10.0:
     # IMPORTANT: we make a big assumption here! Namely that our tick positions
     # are "reasonably" placed. If we find a value that's smaller than a
     # `1/10` of the scale it's probably supposed to be a `"0"`. For some weird
     # asymmetric tick posisionts this might actually be wrong!
     result = "0"
-  elif abs(f) >= 1e5 or abs(f) <= 1e-5:
+  elif abs(f) >= pow(10.0, TickPrecisionCutoff) or abs(f) <= pow(10.0, -(TickPrecisionCutoff)):
     result = f.formatBiggestFloat(format = ffScientific,
-                                  precision = 4)
+                                  precision = TickPrecision)
   else:
     result = f.formatBiggestFloat(format = ffDefault,
-                                  precision = 4)
+                                  precision = TickPrecision)
   result.trimZeros()
 
 #template XAxis2YPos*(view: Option[Viewport] = none[Viewport](),
