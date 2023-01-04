@@ -1139,6 +1139,26 @@ proc embedAt*(view: var Viewport, idx: int, viewToEmbed: Viewport) =
     raise newException(IndexError, "`idx` is invalid for " & $view.children.len &
       " children viewports!")
 
+proc relativeTo*(view: Viewport, to: Viewport): Viewport
+proc embedAsRelative*(view: var Viewport, idx: int, viewToEmbed: Viewport) =
+  ## embeds the `viewToEmbed` into `view` at child index `idx` while converting ``all``
+  ## quantities and coordinates into relative coordinates. This should lead to a proper
+  ## scaling, if the viewports are nested, absolute scales are used and/or the aspect ratio
+  ## is different.
+  ##
+  ## This proc updates the widths and heights to the `view.wImg`, `view.hImg` of all
+  ## `viewToEmbed` children. This proc is to be used if one wishes to assign
+  ## to `viewToEmbed` to a child of `view`, which have different sizes.
+  ## Useful to combine two or more finished views to e.g. a grid.
+  if view.children.len > idx:
+    let v = viewToEmbed.relativeTo(view)
+    view[idx] = embedInto(viewToEmbed, view[idx])
+    view.updateSizeNewRoot()
+  else:
+    raise newException(IndexError, "`idx` is invalid for " & $view.children.len &
+      " children viewports!")
+
+
 proc len*(view: Viewport): int = view.children.len
 proc high*(view: Viewport): int = view.len - 1
 
@@ -3095,6 +3115,66 @@ proc embedInto(gobj: GraphObject, view: Viewport): GraphObject =
   #else:
   #  raise newException(Exception, "embedInto not implemented yet for " &
   #    $gobj.kind & "!")
+
+proc toRelative(q: Quantity, view: Viewport, axKind: AxisKind): Quantity =
+  ## Returns a relative quantity of `q` based on the scaling of the parent viewport.
+  case axKind
+  of akX:
+    result = q.toRelative(length = some(pointWidth(view)),
+                          scale = some(view.xScale))
+  of akY:
+    result = q.toRelative(length = some(pointHeight(view)),
+                          scale = some(view.yScale))
+
+proc toRelative(gobj: GraphObject, view: Viewport): GraphObject =
+  ## Returns a version of the given `gobj`, which only uses relative coordinates.
+  result = gobj
+  case gobj.kind
+  of goLine, goAxis:
+    result.lnStart = result.lnStart.toRelative()
+    result.lnStop = result.lnStop.toRelative()
+  of goRect:
+    result.reOrigin = result.reOrigin.toRelative()
+    result.reWidth = result.reWidth.toRelative(view, akX)
+    result.reHeight = result.reHeight.toRelative(view, akY)
+  of goRaster:
+    result.rstOrigin = result.rstOrigin.toRelative()
+    result.rstPixWidth = result.rstPixWidth.toRelative(view, akX)
+    result.rstPixHeight = result.rstPixHeight.toRelative(view, akY)
+  of goPoint:
+    result.ptPos = result.ptPos.toRelative()
+  of goManyPoints:
+    for pos in mitems(gobj.ptsPos):
+      pos = pos.toRelative()
+  of goPolyLine:
+    for pos in mitems(gobj.plPos):
+      pos = pos.toRelative()
+  of goLabel, goText, goTickLabel:
+    result.txtPos = gobj.txtPos.toRelative()
+  of goTick:
+    result.tkPos = gobj.tkPos.toRelative()
+  of goGrid:
+    # assign and convert origin and diagonal origin
+    result.gdOrigin = result.gdOrigin.toRelative()
+    result.gdOriginDiag = result.gdOriginDiag.toRelative()
+    result.gdXPos = result.gdXPos.mapIt(it.toRelative(length = some(pointWidth(view))))
+    result.gdYPos = result.gdYPos.mapIt(it.toRelative(length = some(pointHeight(view))))
+  of goComposite:
+    # composite itself contains nothing to draw, only children.
+    # children will be drawn and embedded individually
+    discard
+
+proc relativeTo*(view: Viewport, to: Viewport): Viewport =
+  ## Returns a version of the given `view` that has all coordinates expressed in
+  ## relative coordinates.
+  result = view
+  result.origin = result.origin.toRelative()
+  result.width = result.width.toRelative(to, akX)
+  result.height = result.height.toRelative(to, akY)
+  for gobj in mitems(result.objects):
+    gobj = gobj.toRelative(result)
+  for ch in mitems(result.children):
+    ch = ch.relativeTo(result)
 
 proc getCenter*(view: Viewport): (float, float) =
   ## returns the center position of the given viewport in relative coordinates
