@@ -207,6 +207,9 @@ proc drawText*(img: var BImage[TikZBackend], text: string, font: Font, at: Point
   if font.bold:
     textStr = latex:
       \textbf{`text`}
+  elif font.family == "monospace":
+    textStr = latex:
+      \texttt{`text`}
   else:
     textStr = latex:
       `text`
