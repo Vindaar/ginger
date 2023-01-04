@@ -266,8 +266,9 @@ proc drawRaster*(img: var BImage[CairoBackend], left, bottom, width, height: flo
     let
       width = abs(width)
       height = abs(height)
-    let wImg = width.round.int32
-    let hImg = height.round.int32
+    # we *truncate* the width / height here. Better one pixel short than too much
+    let wImg = width.floor.int32
+    let hImg = height.floor.int32
     var pngSurface = imageSurfaceCreate(FORMAT_ARGB32, wImg, hImg)
 
     pngSurface.flush()
