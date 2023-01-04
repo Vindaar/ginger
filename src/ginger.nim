@@ -2693,17 +2693,25 @@ proc layout*(view: Viewport,
       ## Margins are 2 times given margin in relative units relative to the width of a single
       ## viewport in the resulting layout!
       ## TODO: possibly given `colWidths`?
+      ## XXX: fix up the spacing so that first / last rows / columns have less spacing, e.g.
+      ## for a plot layout with facets, no need to leave more space on left of first plot.
+      ## Sadly not as simple as below commented out!
+      let factorW = 2.0#if j == 0 or j == (cols - 1): 1.0
+                    #else: 2.0
+      let factorH = 2.0#if i == 0 or i == (rows - 1): 1.0
+                    #else: 2.0
       let width = sub(widths[j],
-                      times(quant(2.0, ukRelative), marginX,
+                      times(quant(factorW, ukRelative), marginX,
                             length = some(quant(pointWidth(view).val / cols.float,
                                                 ukPoint)),
                             scale = some(view.xScale)),
                       length = some(pointWidth(view)),
                       scale = some(view.xScale))
-      let height = sub(heights[i], times(quant(2.0, ukRelative), marginY,
-                                         length = some(quant(pointHeight(view).val / rows.float,
-                                                             ukPoint)),
-                                         scale = some(view.yScale)),
+      let height = sub(heights[i],
+                       times(quant(factorH, ukRelative), marginY,
+                             length = some(quant(pointHeight(view).val / rows.float,
+                                                 ukPoint)),
+                             scale = some(view.yScale)),
                        length = some(pointHeight(view)),
                        scale = some(view.yScale))
       ## TODO: fix margin. Currently cannot work, since we do not apply the margin
