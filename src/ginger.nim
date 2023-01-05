@@ -901,6 +901,22 @@ proc `-`*(c1, c2: Coord1D): Coord1D =
       result = Coord1D(pos: c1.toRelative.pos - c2.toRelative.pos,
                        kind: ukRelative)
 
+proc `-`*(c: Coord1D, q: Quantity): Coord1D =
+  if c.kind == q.unit:
+    result = c
+    result.pos -= q.val
+  else:
+    raise newException(ValueError, "Subtraction of a quantity from a Coord1D currently " &
+      "only supported for the same quantity kind in each.")
+
+proc `+`*(c: Coord1D, q: Quantity): Coord1D =
+  if c.kind == q.unit:
+    result = c
+    result.pos += q.val
+  else:
+    raise newException(ValueError, "Subtraction of a quantity from a Coord1D currently " &
+      "only supported for the same quantity kind in each.")
+
 proc `*`*(c1, c2: Coord1D): Coord1D =
   ## subtracts two Coord1D by converting to relative coordinates if necessary.
   ## If both coordinates have the same kind and their potential scales
