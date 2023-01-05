@@ -226,7 +226,7 @@ proc toRelative*(q: Quantity,
     if scale.isSome:
       let sc = scale.unsafeGet
       # NOTE: we do ``not`` subtract the lower scale from `q.val`, because this is
-      # a ``quantity`` and not a ccoordinate!
+      # a ``quantity`` and not a coordinate!
       result = quant(q.val / (sc.high - sc.low), ukRelative)
     else:
       raise newException(Exception, "Need a scale to convert quantity of kind " &
