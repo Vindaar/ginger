@@ -6,11 +6,15 @@
     ~formatBiggestFloat~.
 - handle monospace font family in TikZ backend via ~\texttt~
 - change backends to default to Cairo + TikZ activated
-- add `embedAsRelative`, `toRelative` to convert Viewport to relative
+- add ~embedAsRelative~, ~toRelative~ to convert Viewport to relative
   Allows to embed a viewport using relative size, which makes it easier
   to merge a final plot into a viewport of different aspect ratio and
   size than expected, as the relative size will remain and not the
   absolute ones (if any).
+- fix a bug of drawing error bars in ~T~ style, which did not take
+  data scale correctly into account resulting in too large or too
+  small "side" bars.
+- add ~+~ and ~-~ between ~Coord1D~ and ~Quantity~ for the same kind
 * v0.4.0
 - make backends generic objects to allow to select different backends
   at compile time and to simplify code
