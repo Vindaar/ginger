@@ -1950,19 +1950,12 @@ proc initErrorBar*(view: Viewport,
                   x2 = errorDown,
                   y1 = pt.y,
                   y2 = pt.y)
-      ## NOTE: convert point size of error bar `T` into absolute scale
-      ## of the Y position. We do this, because otherwise we run into
-      ## a problem, as the result will be `ukRelative`, causing the lines
-      ## to be drawn inverted. Ref downstream:
-      ## https://github.com/Vindaar/ggplotnim/issues/94
-      ## This fixes the downstream bug, but I'm a bit unclear why it breaks.
-      ## Does `ukRelative` simply always refer to position from *top*? That
-      ## would of course be wrong for the y axis.
+      # convert size of `T` to size in data scale coordinates
       let sc = some(pt.y.scale)
-      let locAbs = view.c1(locStyle.size, akY, ukPoint)
+      let locAbs = quant(locStyle.size, ukPoint)
         .to(ukData,
-            datScale = sc,
-            datAxis = some(akY))
+            scale = sc,
+            length = some(view.pointHeight()))
       let pLow = pt.y - locAbs
       let pHigh = pt.y + locAbs
       let chRight = view.initLine(
@@ -1987,15 +1980,11 @@ proc initErrorBar*(view: Viewport,
                   y1 = errorUp,
                   y2 = errorDown)
       let sc = some(pt.x.scale)
-      ## Conversion to absolute (ukPoint) coordinates. For the same (equivalent)
-      ## reason as mentioned above. If an `xMargin` is added without this conversion,
-      ## the resulting error bar top lines (that make the 'T'), are shifted. End up
-      ## at the location in pixel coordinates that would be correct without a margin.
-      ## By converting here the placement is correct including a margin. Weird.
-      let locAbs = view.c1(locStyle.size, akX, ukPoint)
+      # convert size of `T` to size in data scale coordinates
+      let locAbs = quant(locStyle.size, ukPoint)
         .to(ukData,
-            datScale = sc,
-            datAxis = some(akX))
+            scale = sc,
+            length = some(view.pointWidth()))
       let pLeft = pt.x - locAbs
       let pRight = pt.x + locAbs
       let chUp = view.initLine(
