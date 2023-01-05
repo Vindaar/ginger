@@ -235,6 +235,23 @@ proc toRelative*(q: Quantity,
     raise newException(Exception, "Cannot convert quantity " & $q & " to " &
       "relative quantity!")
 
+proc toData*(q: Quantity,
+             scale: Scale,
+             length: Option[Quantity] = none[Quantity](),
+             ): Quantity =
+  ## Returns quantity `q` as a quantity in the given data `scale`, a `ukData` quantity.
+  case q.unit
+  of ukData:
+    result = q
+  of ukPoint, ukCentimeter, ukInch:
+    result = quant((scale.high - scale.low) * q.toRelative(length = length, scale = some(scale)).val,
+                   ukData)
+  of ukRelative:
+    result = quant((scale.high - scale.low) * q.val,
+                   ukData)
+  else:
+    raise newException(Exception, "Cannot convert quantity " & $q & " to " &
+      "`ukData` quantity!")
 
 func to*(q: Quantity, kind: UnitKind,
          length = none[Quantity](),
@@ -243,9 +260,13 @@ func to*(q: Quantity, kind: UnitKind,
   case kind
   of ukPoint: q.toPoints(length = length)
   of ukInch: q.toInch()
-  of ukCentimeter: q.toCentimeter
+  of ukCentimeter: q.toCentimeter()
   of ukRelative: q.toRelative(length = length, scale = scale)
-  #of ukData:
+  of ukData:
+    if scale.isNone:
+      raise newException(ValueError, "Cannot convert a quantity to a `ukData` quantity " &
+        "without a valid data scale!")
+    q.toData(scale = scale.get, length = length)
   else: raise newException(ValueError, "Cannot convert to `" & $kind & "`!")
 
 proc `+`*(c1, c2: Coord1D): Coord1D
