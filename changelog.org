@@ -1,3 +1,5 @@
+* v0.4.2
+- handle tilde =~= in given filenames to expand to home directory
 * v0.4.1
 - adds two CT variables that can be adjusted (~{.intdefine.}~)
   - ~TickPrecisionCutoff~: decimal of the ~10^((-)TickPrecisionCutoff)~ value within
