@@ -1,5 +1,6 @@
 import std / [math, options, sequtils, strformat, strutils]
 export options
+from std / os import expandTilde
 
 import chroma
 from seqmath import linspace
@@ -3295,6 +3296,7 @@ proc draw*(view: Viewport, filename: string, texOptions: TeXOptions = TeXOptions
   ## shipped with this library activates the Cairo and TikZ backend by default.
   # TODO: rethink approach of handing a filename and texOptions here. Could instead
   # be part of a `Backend` that's handed to a generic version of this procedure later.
+  let filename = filename.expandTilde()
   let fType = parseFilename(filename)
   let bck = fType.toBackend(texOptions)
 
