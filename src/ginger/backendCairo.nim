@@ -282,7 +282,19 @@ proc drawRaster*(img: var BImage[CairoBackend], left, bottom, width, height: flo
       for x in 0 ..< wImg:
         var tX = (x.float / blockSizeX).floor.int
         var tY = (y.float / blockSizeY).floor.int
-        data[y * wImg + x] = toDraw[tY * numX + tX]
+        var cVal = toDraw[tY * numX + tX]
+        let α = 0xFF'u32 and (cVal shr 24)
+        if α != 0xFF'u32 and cVal > 0'u32: # If non-trival alpha & a color, need to pre-multiply all colors!
+          # get individual channels
+          let r = 0x00FF'u32 and (cVal shr 16)
+          let g = 0x0000FF'u32 and (cVal shr 8)
+          let b = 0x000000FF'u32 and cVal
+          # pre-multiply and reassemble
+          cVal = (α shl 24) or
+                 (r * α div 255 shl 16) or
+                 (g * α div 255 shl 8) or
+                 (b * α div 255)
+        data[y * wImg + x] = cVal
     pngSurface.markDirty()
     # apply the new surface to the image surface
     ctx.set_source(pngSurface, left, bottom)
