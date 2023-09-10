@@ -1,4 +1,5 @@
 * v0.4.2
+- update LatexDSL package (PR #44 and further in #45)
 - handle tilde =~= in given filenames to expand to home directory
 - allow alpha channel in raster plots (for Cairo backend for now)  
 * v0.4.1
