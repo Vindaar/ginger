@@ -9,7 +9,7 @@ const usePixie* {.booldefine.} = false
 
 type
   BackendKind* = enum
-    bkNone, bkCairo, bkVega, bkTikZ, bkPixie
+    bkNone, bkDummy, bkCairo, bkVega, bkTikZ, bkPixie
   FiletypeKind* = enum
     fkSvg, fkPng, fkPdf, fkVega, fkTeX
 
