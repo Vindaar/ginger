@@ -1,3 +1,6 @@
+* v0.4.3
+- add ~bkDummy~ backend enum field to differentiate between none given
+  and dummy selected
 * v0.4.2
 - update LatexDSL package (PR #44 and further in #45)
 - handle tilde =~= in given filenames to expand to home directory
