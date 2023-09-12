@@ -3298,7 +3298,8 @@ proc draw*(view: Viewport, filename: string, texOptions: TeXOptions = TeXOptions
   # be part of a `Backend` that's handed to a generic version of this procedure later.
   let filename = filename.expandTilde()
   let fType = parseFilename(filename)
-  let bck = fType.toBackend(texOptions)
+  let bck = if view.backend == bkNone: fType.toBackend(texOptions)
+            else: view.backend # Honor the backend if explcitly given
 
   template useBackend(backend: untyped): untyped =
     when declared(backend):
@@ -3313,11 +3314,12 @@ proc draw*(view: Viewport, filename: string, texOptions: TeXOptions = TeXOptions
       doAssert false, "The binary was compiled without the option to use the `" & $astToStr(backend) &
         "`. Please compile with `-d:use<Backend>` {Cairo, TikZ, Pixie} to activate it."
   case bck
-  of bkNone:  useBackend(DummyBackend)
+  of bkDummy: useBackend(DummyBackend)
   of bkCairo: useBackend(CairoBackend)
   of bkTikZ:  useBackend(TikZBackend)
   of bkVega:  {.warning: "Vega backend does not exist.".}; useBackend(DummyBackend)
   of bkPixie: useBackend(PixieBackend)
+  of bkNone: doAssert false, "Invalid branch. We determined the backend from the filename."
 
 when isMainModule:
 

@@ -63,10 +63,10 @@ proc getTextExtent*(backend: BackendKind, text: string, font: Font): TextExtent 
         "`. Please compile with `-d:use<Backend>` {Cairo, TikZ, Pixie} to activate it."
 
   case backend
-  of bkCairo: useBackend(CairoBackend)
-  of bkTikZ:  useBackend(TikZBackend)
-  of bkPixie: useBackend(PixieBackend)
-  of bkNone:  useBackend(DummyBackend)
+  of bkCairo:         useBackend(CairoBackend)
+  of bkTikZ:          useBackend(TikZBackend)
+  of bkPixie:         useBackend(PixieBackend)
+  of bkNone, bkDummy: useBackend(DummyBackend)
   else: discard
 
 when isMainModule:
