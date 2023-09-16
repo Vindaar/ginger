@@ -2779,8 +2779,10 @@ proc layout*(view: Viewport,
   ## TODO: update width and height of the parent viewport
 
 proc background*(view: Viewport,
-                 style: Option[Style] = none[Style]()) =
-  var r = GraphObject(kind: goRect,
+                 style: Option[Style] = none[Style](),
+                 name = "") =
+  var r = GraphObject(name: name,
+                      kind: goRect,
                       reOrigin: initCoord(0.0, 0.0),
                       reWidth: quant(1.0, ukRelative),
                       reHeight: quant(1.0, ukRelative))
@@ -2804,13 +2806,32 @@ proc drawLine[T](img: var BImage[T], gobj: GraphObject) =
 
 proc drawRect[T](img: var BImage[T], gobj: GraphObject) =
   doAssert gobj.kind == goRect, "object must be a `goRect`!"
-  img.drawRectangle(gobj.reOrigin.point.x, gobj.reOrigin.point.y,
-                    # TODO: make sure we HAVE already converted to points!
-                    gobj.reWidth.val, gobj.reHeight.val,
-                    gobj.style.get, # if we end up here without a style,
-                                    # it's a bug!
-                    rotate = gobj.rotate,
-                    rotateInView = gobj.rotateInView)
+  let
+    x = gobj.reOrigin.point.x
+    y = gobj.reOrigin.point.y
+    width = gobj.reWidth.val
+    height = gobj.reHeight.val
+  when T isnot TikZBackend:
+    img.drawRectangle(x, y,
+                      # TODO: make sure we HAVE already converted to points!
+                      width, height,
+                      gobj.style.get, # if we end up here without a style,
+                                      # it's a bug!
+                      rotate = gobj.rotate,
+                      rotateInView = gobj.rotateInView)
+  else:
+    # special case the canvas background for TikZ plots! This is to be able to draw a rectangle that covers
+    # the entire image no matter if there are overflows
+    if gobj.name == "canvasBackground":
+      img.drawBackground(gobj.style.get)
+    else:
+      img.drawRectangle(x, y,#  TODO: make sure we HAVE already converted to points!
+                        width, height,
+                        gobj.style.get, # if we end up here without a style,
+                                        # it's a bug!
+                        rotate = gobj.rotate,
+                        rotateInView = gobj.rotateInView)
+
 
 proc drawRaster[T](img: var BImage[T], gobj: GraphObject) =
   doAssert gobj.kind == goRaster, "object must be a `goRaster`!"
