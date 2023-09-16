@@ -284,6 +284,8 @@ when useTikZ:
   type
     TikZBackend* = object
       data*: string # stores the TikZ commands as a string to be inserted into a LaTeX template
+      header*: string # Additional TeX code to be inserted after the header of `\usepackage` calls
+      bodyHeader*: string # Additional TeX code to be inserted at beginning of `\begin{document}`
       options*: TeXOptions
       lastColor*: string # stores the last used color to avoid redefining same color
 

@@ -249,6 +249,17 @@ proc drawRectangle*(img: var BImage[TikZBackend], left, bottom, width, height: f
     latexAdd:
       \draw `lineSt` `atStr` rectangle `sizeStr` ";"
 
+proc drawBackground*(img: var BImage[TikZBackend], style: Style) =
+  ## TikZ specific helper to draw the background. This is simply because LaTeX may extend the
+  ## size of the page over our initial restriction if an element overflows. Therefore
+  ## use use `xcolor` to set the page color explicitly.
+  let colorDef = defColor("backgroundColor", style.fillColor)
+  let color = "backgroundColor"
+  let toAdd = latex:
+    `colorDef`
+    \pagecolor{`color`}
+  img.backend.bodyHeader = toAdd
+
 when useCairo and not defined(noCairo):
   from backendCairo import initBImage, drawRaster, destroy
   proc drawRaster*(img: var BImage[TikZBackend], left, bottom, width, height: float,
@@ -289,7 +300,9 @@ proc getStandaloneTmpl(): string =
     \usepackage{amsmath}
     \usepackage{siunitx}
     \usepackage{tikz}
+    "$#"
     document:
+      "$#"
       tikzpicture:
         "$#"
 
@@ -346,7 +359,9 @@ proc getArticleTmpl(): string =
     \usepackage{amsmath}
     \usepackage{siunitx}
     \usepackage{tikz}
+    "$#"
     document:
+      "$#"
       center:
         tikzpicture:
           "$#"
@@ -355,15 +370,16 @@ proc writeTeXFile*(img: BImage[TikZBackend]) =
   var tmpl: string
   if img.backend.options.texTemplate.isNone:
     if img.backend.options.onlyTikZ:
-      tmpl = getOnlyTikZTmpl(img.backend.options)
+      # Does not support `header` or `bodyHeader`
+      tmpl = getOnlyTikZTmpl(img.backend.options) % img.backend.data
     elif img.backend.options.standalone:
-      tmpl = getStandaloneTmpl()
+      tmpl = getStandaloneTmpl() % [img.backend.header, img.backend.bodyHeader, img.backend.data]
     else:
-      tmpl = getArticleTmpl()
+      tmpl = getArticleTmpl() % [img.backend.header, img.backend.bodyHeader, img.backend.data]
   else:
-    tmpl = img.backend.options.texTemplate.get
+    tmpl = img.backend.options.texTemplate.get % [img.backend.header, img.backend.bodyHeader, img.backend.data]
   var f = open(img.fname, fmWrite)
-  f.write(tmpl % img.backend.data)
+  f.write(tmpl)
   f.close()
 
 proc initBImage*(_: typedesc[TikZBackend],
