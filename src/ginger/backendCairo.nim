@@ -145,6 +145,7 @@ proc getTextExtent*(ctx: PContext, text: string): TextExtent =
   ## bother with pointers
   ctx.text_extents(text, addr result)
 
+from std / os import getTempDir, `/`
 proc getTextExtent*(_: typedesc[CairoBackend], fType: FileTypeKind, text: string, font: Font): TextExtent =
   ## creates a temporary cairo surface and evaluates the given string `text`
   ## under the given `font` for the text extent.
@@ -156,8 +157,8 @@ proc getTextExtent*(_: typedesc[CairoBackend], fType: FileTypeKind, text: string
   # information for that backend!
   case fType
   of fkPng: surface = image_surface_create(FORMAT_ARGB32, width.int32, height.int32)
-  of fkSvg: surface = svg_surface_create("/tmp/testme.svg", width.float, height.float)
-  of fkPdf: surface = pdf_surface_create("/tmp/testme.pdf", width.float, height.float)
+  of fkSvg: surface = svg_surface_create(getTempDir() / "text_extent_surface.svg", width.float, height.float)
+  of fkPdf: surface = pdf_surface_create(getTempDir() / "text_extent_surface.pdf", width.float, height.float)
   else:
     raise newException(ValueError, "Invalid file type for the Cairo backend: " & $fType)
   var ctx = create(surface)
