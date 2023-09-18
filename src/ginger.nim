@@ -1729,10 +1729,10 @@ proc drawBoundary*(view: Viewport,
     view.addObj text
 
 proc strHeight*(backend: BackendKind, fType: FileTypeKind, val: float, font: Font,
-                text = "W"): Coord1D =
+                text = "M"): Coord1D =
   ## returns a Coord1D of kind `ukStrHeight` for the given
   ## number of times the string height `val` for font `font`.
-  ## We use `'W'` to determine the height of the given font
+  ## We use `'M'` to determine the height of the given font
   result = Coord1D(pos: val, kind: ukStrHeight,
                    backend: backend,
                    text: text,
@@ -1744,10 +1744,10 @@ proc strHeight*(view: Viewport, val: float, font: Font, text = "W"): Coord1D =
 
 
 proc strWidth*(backend: BackendKind, fType: FileTypeKind, val: float, font: Font,
-               text = "W"): Coord1D =
+               text = "M"): Coord1D =
   ## returns a Coord1D of kind `ukStrWidth` for the given
   ## number of times the string height `val` for font `font`.
-  ## We use `'W'` to determine the height of the given font
+  ## We use `'M'` to determine the height of the given font
   result = Coord1D(pos: val, kind: ukStrWidth,
                    backend: backend,
                    text: text,
