@@ -2864,30 +2864,20 @@ proc drawRect[T](img: var BImage[T], gobj: GraphObject) =
     y = gobj.reOrigin.point.y
     width = gobj.reWidth.val
     height = gobj.reHeight.val
-  when T isnot TikZBackend:
-    img.drawRectangle(x, y,
-                      # TODO: make sure we HAVE already converted to points!
+  template rect(): untyped {.dirty.} =
+    img.drawRectangle(x, y,#  TODO: make sure we HAVE already converted to points!
                       width, height,
                       gobj.style.get, # if we end up here without a style,
                                       # it's a bug!
                       rotate = gobj.rotate,
                       rotateInView = gobj.rotateInView)
+  when T isnot TikZBackend:
+    rect()
   else:
     # special case the canvas background for TikZ plots! This is to be able to draw a rectangle that covers
     # the entire image no matter if there are overflows
-    template rect(): untyped {.dirty.} =
-      img.drawRectangle(x, y,#  TODO: make sure we HAVE already converted to points!
-                        width, height,
-                        gobj.style.get, # if we end up here without a style,
-                                        # it's a bug!
-                        rotate = gobj.rotate,
-                        rotateInView = gobj.rotateInView)
-
-    when T is TikZBackend:
-      if gobj.name == "canvasBackground":
-        img.drawBackground(gobj.style.get)
-      else:
-        rect()
+    if gobj.name == "canvasBackground":
+      img.drawBackground(gobj.style.get)
     else:
       rect()
 
