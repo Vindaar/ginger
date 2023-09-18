@@ -732,8 +732,12 @@ func toPoints*(p: Coord1D,
         "a backend!")
     let extents = getTextExtent(p.backend, p.fType, p.text, p.font)
     ## without bearing & advance the width / height will be off if spaces are involved
-    let relevantDim = if p.kind == ukStrWidth: extents.x_bearing + extents.x_advance
-                      else: extents.y_advance - extents.y_bearing
+    let relevantDim = if p.kind == ukStrWidth:
+                        if p.includeBearing: extents.width + extents.x_bearing
+                        else: extents.width
+                      else:
+                        if p.includeBearing: extents.height + extents.y_bearing
+                        else: extents.height#extents.y_advance - extents.y_bearing
     result = Coord1D(pos: p.pos * relevantDim,
                      kind: ukPoint)
 
