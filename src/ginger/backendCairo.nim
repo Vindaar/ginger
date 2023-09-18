@@ -145,14 +145,21 @@ proc getTextExtent*(ctx: PContext, text: string): TextExtent =
   ## bother with pointers
   ctx.text_extents(text, addr result)
 
-proc getTextExtent*(_: typedesc[CairoBackend], text: string, font: Font): TextExtent =
+proc getTextExtent*(_: typedesc[CairoBackend], fType: FileTypeKind, text: string, font: Font): TextExtent =
   ## creates a temporary cairo surface and evaluates the given string `text`
   ## under the given `font` for the text extent.
   # create small surface as user space to evaluate on
   let width = text.len.float * font.size * 2.0
   let height = font.size * 2.0
-  var surface = image_surface_create(FORMAT_ARGB32, width.int32, height.int32)
-  #surface.withSurface:
+  var surface: PSurface
+  # Create the correct surface for the file type. This is important to get precise text size
+  # information for that backend!
+  case fType
+  of fkPng: surface = image_surface_create(FORMAT_ARGB32, width.int32, height.int32)
+  of fkSvg: surface = svg_surface_create("/tmp/testme.svg", width.float, height.float)
+  of fkPdf: surface = pdf_surface_create("/tmp/testme.pdf", width.float, height.float)
+  else:
+    raise newException(ValueError, "Invalid file type for the Cairo backend: " & $fType)
   var ctx = create(surface)
   ctx.select_font_face(font.family, font.toCairoFontSlant, font.toCairoFontWeight)
   ctx.set_font_size(font.size)

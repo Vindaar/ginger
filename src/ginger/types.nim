@@ -214,6 +214,7 @@ type
       # to be taken
       text*: string
       font*: Font
+      fType*: FileTypeKind # need to render the text on the correct file type backend!
       backend*: BackendKind # string based values are only defined given a backend
     #of ckMixed:
     #  # all outstanding variables still need to be
@@ -249,6 +250,7 @@ type
     wImg*: Quantity # absolute width, height in points (pixels) of image
     hImg*: Quantity
     backend*: BackendKind
+    fType*: FileTypeKind
 
 when useCairo and not defined(noCairo):
   import cairo
@@ -364,6 +366,7 @@ proc clone*(v: Viewport): Viewport =
   result.wImg = v.wImg
   result.hImg = v.hImg
   result.backend = v.backend
+  result.fType = v.fType
   result.children = newSeq[Viewport](v.children.len)
   for i, o in v.children:
     result.children[i] = o.clone()

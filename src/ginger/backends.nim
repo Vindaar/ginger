@@ -54,10 +54,10 @@ proc toBackend*(fType: FiletypeKind, texOptions: TexOptions): BackendKind =
                bkCairo # extend for Pixie
   of fkVega: doAssert false # not supported
 
-proc getTextExtent*(backend: BackendKind, text: string, font: Font): TextExtent =
+proc getTextExtent*(backend: BackendKind, fType: FileTypeKind, text: string, font: Font): TextExtent =
   template useBackend(backend: untyped): untyped =
     when declared(backend):
-      result = backend.getTextExtent(text, font)
+      result = backend.getTextExtent(fType, text, font)
     else:
       doAssert false, "The binary was compiled without the option to use the `" & $astToStr(backend) &
         "`. Please compile with `-d:use<Backend>` {Cairo, TikZ, Pixie} to activate it."
