@@ -186,6 +186,7 @@ proc getTextExtent*(_: typedesc[TikZBackend], text: string, font: Font): TextExt
   ## XXX: HACK
   let ptY = font.size
   let ptX = ptY * 0.5 ## TODO: ideally we need the correct font height to width ratio!
+proc getTextExtent*(_: typedesc[TikZBackend], fType: FileTypeKind, text: string, font: Font): TextExtent =
   result = TextExtent(
     x_bearing: 0.0,
     y_bearing: 0.0,

@@ -99,7 +99,7 @@ proc drawCircle*(img: BImage[PixieBackend], center: Point, radius: float,
   img.pxContext.fillCircle(circle(center.toVec2, radius))
   img.saveState()
 
-proc getTextExtent*(_: typedesc[PixieBackend], text: string, font: types.Font): TextExtent =
+proc getTextExtent*(_: typedesc[PixieBackend], fType: FileTypeKind, text: string, font: types.Font): TextExtent =
   # This is for now copied from the TikZ backend until I figure out how to
   # use `computeBounds` from pixie.fonts
   let ptY = font.size

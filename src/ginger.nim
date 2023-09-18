@@ -679,7 +679,7 @@ func toRelative*(p: Coord1D,
     if p.backend == bkNone:
       raise newException(ValueError, "Cannot convert " & $p.kind & " to relative without " &
         "a backend!")
-    let extents = getTextExtent(p.backend, p.text, p.font)
+    let extents = getTextExtent(p.backend, p.fType, p.text, p.font)
     let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
                       else: extents.height #extents.y_advance - extents.y_bearing
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
@@ -730,7 +730,7 @@ func toPoints*(p: Coord1D,
     if p.backend == bkNone:
       raise newException(ValueError, "Cannot convert " & $p.kind & " to relative without " &
         "a backend!")
-    let extents = getTextExtent(p.backend, p.text, p.font)
+    let extents = getTextExtent(p.backend, p.fType, p.text, p.font)
     ## without bearing & advance the width / height will be off if spaces are involved
     let relevantDim = if p.kind == ukStrWidth: extents.x_bearing + extents.x_advance
                       else: extents.y_advance - extents.y_bearing
@@ -1458,7 +1458,8 @@ proc initViewport*(origin: Coord,
                    hImg = 480.0,
                    wParentView: Option[Quantity] = none[Quantity](),
                    hParentView: Option[Quantity] = none[Quantity](),
-                   backend = bkCairo): Viewport =
+                   backend = bkCairo,
+                   fType = fkPng): Viewport =
   ## initializes a `Viewport` with `origin` in any coordinate system
   ## with 1D coordinates providing width and height
   ## Uses Coord1D to allow to define sizes in arbitrary units
@@ -1471,7 +1472,8 @@ proc initViewport*(origin: Coord,
                     scale: scale,
                     wImg: quant(wImg, ukPoint),
                     hImg: quant(hImg, ukPoint),
-                    backend: backend)
+                    backend: backend,
+                    fType: fType)
   debug "[DEBUG]: Initing viewport ", width.toRelative(some(result.wImg))
   if wParentView.isSome and hParentView.isSome:
     doAssert wParentView.get.unit == ukPoint and
@@ -1500,7 +1502,8 @@ proc initViewport*(left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
                    parent = "",
                    wImg = 640.0,
                    hImg = 480.0,
-                   backend = bkCairo): Viewport =
+                   backend = bkCairo,
+                   fType = fkPng): Viewport =
   ## convenience init function for Viewport using relative coordinates
   ## NOTE: this function should only be used to create a Viewport within the
   ## main image viewport! Otherwise use the `addViewport` procs on a viewport!
@@ -1514,7 +1517,8 @@ proc initViewport*(left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
                         rotate = rotate, scale = scale,
                         name = name, parent = parent,
                         wImg = wImg, hImg = hImg,
-                        backend = backend)
+                        backend = backend,
+                        fType = fType)
 
 proc addViewport*(view: Viewport,
                   origin: Coord,
@@ -1538,7 +1542,8 @@ proc addViewport*(view: Viewport,
                                # TODO: clean this up
                                wParentView = some(pointWidth(view)),
                                hParentView = some(pointHeight(view)),
-                               backend = view.backend)
+                               backend = view.backend,
+                               fType = view.fType)
   # override width and height
   ## echo "TODO: make sure we want to give child viewport scaled (wImg, hImg)!"
   #viewChild.wImg = quant(view.wImg.val * width.toRelative(view.wImg).val, ukPoint)
@@ -1723,25 +1728,35 @@ proc drawBoundary*(view: Viewport,
                              alignKind = taCenter)
     view.addObj text
 
-proc strHeight*(backend: BackendKind, val: float, font: Font): Coord1D =
+proc strHeight*(backend: BackendKind, fType: FileTypeKind, val: float, font: Font,
+                text = "W"): Coord1D =
   ## returns a Coord1D of kind `ukStrHeight` for the given
   ## number of times the string height `val` for font `font`.
   ## We use `'W'` to determine the height of the given font
   result = Coord1D(pos: val, kind: ukStrHeight,
                    backend: backend,
-                   text: "W",
-                   font: font)
+                   text: text,
+                   font: font,
+                   fType: fType)
 
-proc strWidth*(backend: BackendKind, val: float, font: Font): Coord1D =
+proc strHeight*(view: Viewport, val: float, font: Font, text = "W"): Coord1D =
+  result = strHeight(view.backend, view.fType, val, font, text)
+
+
+proc strWidth*(backend: BackendKind, fType: FileTypeKind, val: float, font: Font,
+               text = "W"): Coord1D =
   ## returns a Coord1D of kind `ukStrWidth` for the given
   ## number of times the string height `val` for font `font`.
   ## We use `'W'` to determine the height of the given font
   result = Coord1D(pos: val, kind: ukStrWidth,
                    backend: backend,
-                   text: "W",
-                   font: font)
+                   text: text,
+                   font: font,
+                   fType: fType)
 
-proc getStrHeight*(backend: BackendKind, text: string, font: Font): Quantity =
+proc strWidth*(view: Viewport, val: float, font: Font, text = "W"): Coord1D =
+  result = strWidth(view.backend, view.fType, val, font, text)
+proc getStrHeight*(backend: BackendKind, fType: FileTypeKind, text: string, font: Font): Quantity =
   ## returns a quantity of the height of the given `text` under
   ## the given `font`, taking into account multiple lines. The
   ## result is of kind `ukPoint`.
@@ -1758,7 +1773,10 @@ proc getStrHeight*(backend: BackendKind, text: string, font: Font): Quantity =
     unit = ukPoint
   )
 
-proc getStrWidth*(backend: BackendKind, text: string, font: Font): Quantity =
+proc getStrHeight*(view: Viewport, text: string, font: Font): Quantity =
+  result = getStrHeight(view.backend, view.fType, text, font)
+
+proc getStrWidth*(backend: BackendKind, fType: FileTypeKind, text: string, font: Font): Quantity =
   ## returns a Quantity of kind `ukStrWidth` for the given
   ## string under the font `font` of unit kind `ukPoint`
   result = quant(
@@ -1766,10 +1784,14 @@ proc getStrWidth*(backend: BackendKind, text: string, font: Font): Quantity =
       Coord1D(pos: 1.0, kind: ukStrWidth,
               backend: backend,
               text: text,
-              font: font)
+              font: font,
+              fType: fType)
     ).pos,
     unit = ukPoint
   )
+
+proc getStrWidth*(view: Viewport, text: string, font: Font): Quantity =
+  result = getStrWidth(view.backend, view.fType, text, font)
 
 proc initMultiLineText*(view: Viewport,
                         origin: Coord,
