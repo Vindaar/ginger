@@ -1,3 +1,34 @@
+* v0.4.4
+- change internal DPI from 72.27 to 72
+- extend viewport by FileTypeKind field for TextExtent information,
+  required for correct text placement on Cairo
+  - now uses the correct file type for the Cairo surface needed to
+    compute the text extents
+- ~strWidth / strHeight~ now allow to set the text that will be
+  used, not only the ~getStrWidth/Height~ procs
+- change default letter to check string height / width based on to ~M~
+- add (currently unused) ~includeBearing~ field to ~Coord1D~ for
+  string height calculation
+- significantly improve placement & height calc of multi line text.
+  -> This is now consistent between `initMultilineText` and `getStrHeight`
+  with multiple lines.
+- fix distance of tick labels for x and y axes
+  -> Now they really have the same distance from the top of the
+  character (x axis) and the right side of the character (y axis)!
+- add ~QuietTikZ~ bool define CT option (~-d:QuietTikZ=true~) to disable
+  the shell output when using the TikZ backend to compile TeX to PDF.
+- massive TikZ backend improvements:
+  - disable bounds around text nodes to get accurate placement of
+    where the coordinates say the text should be placed
+  - make the output PDF have the correct size in pixels as demanded
+    from the ~ggsave~ call (i.e. the BImage size) by adding a
+    rectangle of exactly ~(width bp , height bp)~ points, using the
+    TeX unit ~bp~ which matches 72 DPI.
+  - replace relative coordinates used on the TikZ backend by absolute
+    coordinates in ~bp~ (i.e. pixels). Makes for much easier reasoning
+    about the coordinates.
+  - fix ~TextExtent~ logic for TikZ. We now talk to a TeX compiler
+    running in the background about sizes for text pieces.
 * v0.4.3
 - add ~bkDummy~ backend enum field to differentiate between none given
   and dummy selected
