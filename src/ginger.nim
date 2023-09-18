@@ -2875,9 +2875,7 @@ proc drawRect[T](img: var BImage[T], gobj: GraphObject) =
   else:
     # special case the canvas background for TikZ plots! This is to be able to draw a rectangle that covers
     # the entire image no matter if there are overflows
-    if gobj.name == "canvasBackground":
-      img.drawBackground(gobj.style.get)
-    else:
+    template rect(): untyped {.dirty.} =
       img.drawRectangle(x, y,#  TODO: make sure we HAVE already converted to points!
                         width, height,
                         gobj.style.get, # if we end up here without a style,
@@ -2885,6 +2883,13 @@ proc drawRect[T](img: var BImage[T], gobj: GraphObject) =
                         rotate = gobj.rotate,
                         rotateInView = gobj.rotateInView)
 
+    when T is TikZBackend:
+      if gobj.name == "canvasBackground":
+        img.drawBackground(gobj.style.get)
+      else:
+        rect()
+    else:
+      rect()
 
 proc drawRaster[T](img: var BImage[T], gobj: GraphObject) =
   doAssert gobj.kind == goRaster, "object must be a `goRaster`!"
