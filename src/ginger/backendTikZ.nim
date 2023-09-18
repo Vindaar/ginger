@@ -19,20 +19,19 @@ contains color definitons?
 proc toTikZCoord(img: BImage[TikZBackend], p: Point, isLength: static bool = false): Point =
   let ratio = img.height.float / img.width.float
   when isLength:
-    result = (x: p.x / img.width.float, y: p.y / img.height.float)
+    result = p
   else:
-    result = (x: p.x / img.width.float, y: (img.height.float - p.y) / img.height.float)
-  result.y = result.y * ratio
+    result = (x: p.x, y: img.height.float - p.y)
 
 func toStr(img: BImage[TikZBackend], p: Point, isLength: static bool = false): string =
   block:
     let pst = img.toTikZCoord(p, isLength = isLength)
-    var tmp = &"({pst.x:.4f}\\textwidth, {pst.y:.4f}\\textwidth)"
+    var tmp = &"({pst.x:.4f}bp, {pst.y:.4f}bp)"
     tmp
 
 func toStrDirect(p: Point, isLength: static bool = false): string =
   block:
-    var tmp = &"({p.x:.4f}\\textwidth, {p.y:.4f}\\textwidth)"
+    var tmp = &"({p.x:.4f}bp, {p.y:.4f}bp)"
     tmp
 
 proc toStr(alignKind: TextAlignKind): string =
@@ -112,26 +111,26 @@ func getLineStyle(lineType: LineType, lineWidth: float): string =
   case lineType
   of ltDashed:
     result = latex:
-      dash pattern = on $(dash())pt off $(dashSpace())pt
+      dash pattern = on $(dash())bp off $(dashSpace())bp
   of ltDotted:
     result = latex:
-      dash pattern = on $(dot())pt off $(dotSpace())pt
+      dash pattern = on $(dot())bp off $(dotSpace())bp
   of ltDotDash:
     result = latex:
-      dash pattern = on $(dot())pt off $(dotSpace()) on $(dash())pt off $(dotSpace())
+      dash pattern = on $(dot())bp off $(dotSpace()) on $(dash())bp off $(dotSpace())
   of ltLongDash:
     result = latex:
-      dash pattern = on $(longDash())pt off $(dashSpace())
+      dash pattern = on $(longDash())bp off $(dashSpace())
   of ltTwoDash:
     result = latex:
-      dash pattern = on $(dash())pt off $(dotSpace() * 2.0) on $(longDash())pt off $(dotSpace() * 2.0)
+      dash pattern = on $(dash())bp off $(dotSpace() * 2.0) on $(longDash())bp off $(dotSpace() * 2.0)
   else: discard
 
 proc lineStyle(style: Style, drawColor = "drawColor", fillColor = "fillColor"): string =
   let fillOp = &"fill opacity = {style.fillColor.a}"
   let colorOp = &"draw opacity = {style.color.a}"
   let lineDash = getLineStyle(style.lineType, style.lineWidth)
-  result = &"[color = {drawColor}, fill = {fillColor}, {colorOp}, {fillOp}, line width = {style.lineWidth}pt"
+  result = &"[color = {drawColor}, fill = {fillColor}, {colorOp}, {fillOp}, line width = {style.lineWidth}bp"
   if lineDash.len > 0:
     result.add ", " & lineDash & "]"
   else:
