@@ -80,6 +80,20 @@ proc nodeProperties(img: BImage[TikZBackend], at: Point, alignKind: TextAlignKin
   if result.len > 0:
     result = "[" & result & "]"
 
+proc applyStyle(text: string, font: Font): string =
+  ## Applies the correct style to the given text, depending on the font.
+  if font.bold:
+    result = latex:
+      \textbf{`text`}
+  elif font.family == "monospace":
+    # replace spaces by `\ ` to get explicit spaces where spaces are found to
+    # get correct size for text with spaces.
+    let text = text.replace(" ", r"\ ")
+    result = latex:
+      \texttt{`text`}
+  else:
+    result = text
+
 template latexAdd(body: untyped): untyped {.dirty.} =
   block:
     let toAdd = latex:
@@ -203,16 +217,7 @@ proc drawText*(img: var BImage[TikZBackend], text: string, font: Font, at: Point
   let alignStr = img.nodeProperties(at, alignKind, rotate, font,
                                     alignLeft = alignLeft,
                                     useAlignOverAnchor = useAlignOverAnchor)
-  var textStr: string
-  if font.bold:
-    textStr = latex:
-      \textbf{`text`}
-  elif font.family == "monospace":
-    textStr = latex:
-      \texttt{`text`}
-  else:
-    textStr = latex:
-      `text`
+  let textStr = applyStyle(text, font)
   latexAdd:
     \node `alignStr` at $(img.toStr(at)) {`textStr`} ";"
 
