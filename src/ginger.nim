@@ -30,7 +30,7 @@ const
   black* = color(0.0, 0.0, 0.0)
   white* = color(1.0, 1.0, 1.0)
   transparent* = color(0.0, 0.0, 0.0, 0.0)
-  DPI* = 72.27
+  DPI* = 72.0
 
 proc pointWidth*(view: Viewport): Quantity {.inline.}
 proc pointHeight*(view: Viewport): Quantity {.inline.}
