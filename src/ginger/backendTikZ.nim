@@ -373,21 +373,19 @@ proc getArticleTmpl(img: BImage[TikZBackend]): string =
           \path["use as bounding box"] (0,0) rectangle (`w`, `h`) ";"
           "$#"
 
-proc writeTeXFile*(img: BImage[TikZBackend]) =
+proc genTeXFile*(img: BImage[TikZBackend]): string =
   var tmpl: string
   if img.backend.options.texTemplate.isNone:
     if img.backend.options.onlyTikZ:
       # Does not support `header` or `bodyHeader`
       tmpl = getOnlyTikZTmpl(img.backend.options) % img.backend.data
     elif img.backend.options.standalone:
-      tmpl = getStandaloneTmpl() % [img.backend.header, img.backend.bodyHeader, img.backend.data]
+      tmpl = img.getStandaloneTmpl() % [img.backend.header, img.backend.bodyHeader, img.backend.data]
     else:
       tmpl = getArticleTmpl() % [img.backend.header, img.backend.bodyHeader, img.backend.data]
   else:
     tmpl = img.backend.options.texTemplate.get % [img.backend.header, img.backend.bodyHeader, img.backend.data]
-  var f = open(img.fname, fmWrite)
-  f.write(tmpl)
-  f.close()
+  result = tmpl
 
 proc initBImage*(_: typedesc[TikZBackend],
                  filename: string,
@@ -402,43 +400,15 @@ proc initBImage*(_: typedesc[TikZBackend],
                                width: width, height: height,
                                fType: fType)
 
-import shell
+const QuietTikZ {.booldefine.} = false
 proc destroy*(img: var BImage[TikZBackend]) =
   # write to file
-  backendTikZ.writeTeXFile(img)
+  let body = backendTikZ.genTeXFile(img)
   # possibly compile
   # get the path for the output file
   let path = img.fname.parentDir
   case img.fType
   of fkTeX: discard # nothing to do
   of fkPdf:
-    # compile using terminal
-    # 1. check if xelatex in PATH
-    when defined(linux) or defined(macosx):
-      let checkCmd = "command -v"
-    elif defined(windows):
-      let checkCmd = "WHERE"
-    else:
-      {.error: "Unsupported platform for PDF generation. Please open an issue.".}
-
-    var generated = false
-    template checkAndRun(cmd: untyped): untyped =
-      var (res, err) = shellVerbose:
-        ($checkCmd) ($cmd)
-      if err == 0:
-        (res, err) = shellVerbose:
-          ($cmd) "-output-directory" ($path) ($img.fname)
-        if err == 0:
-          # successfully generated
-          generated = true
-        else:
-          raise newException(IOError, "Could not generate PDF from TeX file `" & $img.fname &
-            & "` using TeX compiler: `" & $cmd & "`. Output was: " &
-            res)
-    checkAndRun("xelatex")
-    if generated: return # success, no need to try `pdflatex`
-    checkAndRun("pdflatex") # currently broken, as we import `unicode-math`
-    if not generated:
-      raise newException(IOError, "Could not generate a PDF from TeX file " &
-        $img.fname & " as neither `xelatex` nor `pdflatex` was found in PATH")
+    compile(img.fname, body, path = path, fullBody = true, verbose = QuietTikZ)
   else: doAssert false
