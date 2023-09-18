@@ -2239,22 +2239,27 @@ proc ylabel*(view: Viewport,
                               isSecondary = isSecondary,
                               rotate = rotate)
 
-template xLabelOriginOffset(backend: BackendKind, fnt: Font, isSecondary = false): untyped =
+template xLabelOriginOffset(view: Viewport, txt: string, fnt: Font, isSecondary = false): untyped =
+  ## Required offset along the `y` axis for tick labels of the `x` axis!
   if not isSecondary:
     # uses `W` as default
-    strWidth(backend, -1.15, fnt)
+    strHeight(view, -1.25, fnt)
       .toRelative(length = some(pointWidth(view)))
   else:
-    strWidth(backend, 1.15, fnt)
+    strHeight(view, 1.25, fnt)
       .toRelative(length = some(pointWidth(view)))
 
-template yLabelOriginOffset(backend: BackendKind, fnt: Font, isSecondary = false): untyped =
+proc halfHeight(view: Viewport, txt: string, fnt: Font): Quantity =
+  result = view.getStrHeight(txt, fnt)
+  result.val = result.val / 2.0
+
+template yLabelOriginOffset(view: Viewport, txt: string, fnt: Font, isSecondary = false): untyped =
+  ## Required offset along the `y` axis for tick labels of the `x` axis!
   if not isSecondary:
-    # uses `W` as default
-    strHeight(backend, 1.75, fnt)
+    (strHeight(view, 1.25, fnt).toPoints() + view.halfHeight(txt, fnt))
       .toRelative(length = some(pointHeight(view)))
   else:
-    strHeight(backend, -1.75, fnt)
+    (strHeight(view, -1.25, fnt).toPoints() - view.halfHeight(txt, fnt))
       .toRelative(length = some(pointHeight(view)))
 
 proc setTextAlignKind(axKind: AxisKind,
@@ -2293,7 +2298,7 @@ proc initTickLabel(view: Viewport,
   case tick.tkAxis
   of akX:
     let yOffset = if margin.isSome: margin.unsafeGet
-                  else: yLabelOriginOffset(view.backend, mfont, isSecondary)
+                  else: yLabelOriginOffset(view, labelTxt, mfont, isSecondary)
     origin = Coord(x: loc.x,
                    y: (loc.y + yOffset).toRelative)
     if gobjName == "tickLabel":
@@ -2307,7 +2312,7 @@ proc initTickLabel(view: Viewport,
                            name = gobjName)
   of akY:
     let xOffset = if margin.isSome: margin.unsafeGet
-                  else: xLabelOriginOffset(view.backend, mfont, isSecondary)
+                  else: xLabelOriginOffset(view, labelTxt, mfont, isSecondary)
     origin = Coord(x: (loc.x + xOffset).toRelative,
                    y: loc.y)
     if gobjName == "tickLabel":
@@ -2642,7 +2647,7 @@ proc yticks*(view: Viewport,
                           updateScale = updateScale,
                           isSecondary = isSecondary)
 
-func calcMinorTicks(ticks: seq[GraphObject], axKind: AxisKind): seq[Coord1D] =
+proc calcMinorTicks(ticks: seq[GraphObject], axKind: AxisKind): seq[Coord1D] =
   ## calculates the position in the middle between each tick and
   ## the successive tick
   doAssert ticks[0].kind == goTick, "Elements for grid lines must be `goTick`!"
