@@ -721,6 +721,7 @@ func toPoints*(p: Coord1D,
                      length: resLength,
                      kind: ukPoint)
   of ukData:
+    result = p
     result = result.toRelative.toPoints(length = length)
   of ukStrWidth, ukStrHeight:
     # can either use cairo's internals, e.g. get the extent of the string in a
