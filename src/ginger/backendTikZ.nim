@@ -9,7 +9,9 @@ import os, strformat
 # everything. If we allow the user to hand their own LaTeX snippets, those
 # can be checked separately on the user's side.
 import latexdsl_nochecks
-from strutils import `%`, join, contains
+from strutils import `%`, join, contains, replace, strip, splitLines
+
+
 
 #[
 Maybe we have to collect all colors in a table or seq and create a custom 'preamble' that
@@ -195,18 +197,90 @@ proc drawCircle*(img: var BImage[TikZBackend], center: Point, radius: float,
   latexAdd:
     \draw `lineSt` `p` circle [radius = `radius`] ";"
 
-proc getTextExtent*(_: typedesc[TikZBackend], text: string, font: Font): TextExtent =
-  ## XXX: HACK
-  let ptY = font.size
-  let ptX = ptY * 0.5 ## TODO: ideally we need the correct font height to width ratio!
+
+from std/os import getTempDir, `/`
+import std/[tables, strscans]
+var cacheTab = initTable[(string, Font), (float, float, float)]()
+import latexdsl / tex_daemon
+var Daemon: TeXDaemon
+
+proc checkSize*(td: TeXDaemon, style, arg: string): (float, float, float) =
+  ## Checks the of the given argument if formatted by LaTeX
+  const sizeCommands = """
+\typeout{\the\wd\mybox} % Width
+\typeout{\the\ht\mybox} % Height
+\typeout{\the\dp\mybox} % Depth
+"""
+  let boxArg = """$#
+\sbox{\mybox}{$#}
+""" % [style, arg]
+  td.process(boxArg)
+  # after processing write the size commands and read back the data
+  var
+    w: float
+    h: float
+    d: float
+    matched = false
+    idx = 0
+  for cmd in sizeCommands.strip.splitLines():
+    td.write(cmd)
+    var res = td.read()
+    while "pt" notin res: ## If there is some more data in the stream before, make all read
+      res = td.read()
+    case idx
+    of 0: (matched, w) = res.strip().scanTuple("$fpt")
+    of 1: (matched, h) = res.strip().scanTuple("$fpt")
+    of 2: (matched, d) = res.strip().scanTuple("$fpt")
+    else: doAssert false, "Why at index : " & $idx
+    doAssert matched, "Did not match '$fpt', input was: " & $res
+    inc idx
+  result = (w, h, d)
+
+proc getExtents(text: string, font: Font): (float, float, float) =
+  const setup = """
+\documentclass[draft]{article}
+
+\usepackage{unicode-math}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage{tikz}
+
+\newbox\mybox
+% \newlength\mywidth
+% \newlength\myheight
+% \newlength\mydepth
+
+\begin{document}
+"""
+  if not Daemon.isReady: ## If not already set up, do so now
+    Daemon = initTeXDaemon()
+    # process the setup to be ready to return sizes
+    Daemon.process(setup)
+
+  let textStr = applyStyle(text, font)
+  if (textStr, font) notin cacheTab:
+    let fs = font.size
+    let fontSize = latex:
+      \fontsize{$(fs)}{$(fs * 1.2)}\selectfont
+    var (w, h, d) = Daemon.checkSize(fontSize, textStr)
+    ## Convert the `pt` values we get to `bp` values (72.27 dpi for pt, 72.0 for bp)
+    let r = 72.27 / 72.0
+    (w, h, d) = (w * r, h * r, d * r)
+    cacheTab[(textStr, font)] = (w, h, d)
+    result = (w, h, d)
+  else:
+    result = cacheTab[(textStr, font)]
+
 proc getTextExtent*(_: typedesc[TikZBackend], fType: FileTypeKind, text: string, font: Font): TextExtent =
+  ## Uses a TeX compiler in the background to determine the real sizes of the given text and font.
+  let (w, h, d) = getExtents(text, font)
   result = TextExtent(
     x_bearing: 0.0,
-    y_bearing: 0.0,
-    width: ptX * text.len.float,
-    height: ptY)
-  result.x_advance = result.width
-  result.y_advance = result.height
+    y_bearing: -d, ## XXX: not sure if this should be on bearing
+    width: w,
+    height: h,
+    x_advance: w,
+    y_advance: h)
 
 proc drawText*(img: var BImage[TikZBackend], text: string, font: Font, at: Point,
                alignKind: TextAlignKind = taLeft,
@@ -412,3 +486,7 @@ proc destroy*(img: var BImage[TikZBackend]) =
   of fkPdf:
     compile(img.fname, body, path = path, fullBody = true, verbose = QuietTikZ)
   else: doAssert false
+
+  # close the TeXDaemon
+  Daemon.close()
+  Daemon.isReady = false
