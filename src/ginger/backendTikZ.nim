@@ -291,11 +291,12 @@ else:
                    rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
     {.warning: "`drawRaster` is not supported as the code was compiled without `-d:useCairo`.".}
 
-proc getStandaloneTmpl(): string =
+proc getStandaloneTmpl(img: BImage[TikZBackend]): string =
+  let w = $(img.width.float ) & "bp"
+  let h = $(img.height.float) & "bp"
   result = latex:
-    \documentclass[tikz,border = "2mm"]{standalone}
+    \documentclass[tikz,border="0mm"]{standalone}
     \usepackage[utf8]{inputenc}
-    \usepackage[margin="2.5cm"]{geometry}
     \usepackage{unicode-math} # for unicode support in math environments
     \usepackage{amsmath}
     \usepackage{siunitx}
@@ -303,10 +304,13 @@ proc getStandaloneTmpl(): string =
     "$#"
     document:
       "$#"
-      tikzpicture:
+      tikzpicture["every node/.style={outer sep=0pt, inner sep=0pt}"]:
+        \path["use as bounding box"] (0,0) rectangle (`w`, `h`) ";"
         "$#"
 
-proc getOnlyTikZTmpl(texOptions: TeXOptions): string =
+proc getOnlyTikZTmpl(img: BImage[TikZBackend], texOptions: TeXOptions): string =
+  let w = $(img.width.float ) & "bp"
+  let h = $(img.height.float) & "bp"
   if texOptions.caption.isSome and texOptions.label.isSome:
     let plc = texOptions.placement
     let cap = texOptions.caption.get
@@ -314,7 +318,8 @@ proc getOnlyTikZTmpl(texOptions: TeXOptions): string =
     result = latex:
       figure[`plc`]:
         \centering
-        tikzpicture:
+        tikzpicture["every node/.style={outer sep=0pt, inner sep=0pt}"]:
+          \path["use as bounding box"] (0,0) rectangle (`w`, `h`) ";"
           "$#"
         \label{`lab`}
         \caption{`cap`}
@@ -324,7 +329,8 @@ proc getOnlyTikZTmpl(texOptions: TeXOptions): string =
     result = latex:
       figure[`plc`]:
         \centering
-        tikzpicture:
+        tikzpicture["every node/.style={outer sep=0pt, inner sep=0pt}"]:
+          \path["use as bounding box"] (0,0) rectangle (`w`, `h`) ";"
           "$#"
         \caption{`cap`}
   elif texOptions.label.isSome:
@@ -333,24 +339,19 @@ proc getOnlyTikZTmpl(texOptions: TeXOptions): string =
     result = latex:
       figure[`plc`]:
         \centering
-        tikzpicture:
+        tikzpicture["every node/.style={outer sep=0pt, inner sep=0pt}"]:
+          \path["use as bounding box"] (0,0) rectangle (`w`, `h`) ";"
           "$#"
         \label{`lab`}
   else:
     result = latex:
-      tikzpicture:
+      tikzpicture["every node/.style={outer sep=0pt, inner sep=0pt}"]:
+        \path["use as bounding box"] (0,0) rectangle (`w`, `h`) ";"
         "$#"
 
-#proc getOnlyTikZTmpl(): string =
-#  result = latex:
-#    figure:
-#      \centering
-#      tikzpicture:
-#        "$#"
-#      \caption{test caption}
-#      \label{test_label}
-
-proc getArticleTmpl(): string =
+proc getArticleTmpl(img: BImage[TikZBackend]): string =
+  let w = $(img.width.float ) & "bp"
+  let h = $(img.height.float) & "bp"
   result = latex:
     \documentclass[a4paper]{article}
     \usepackage[utf8]{inputenc}
@@ -363,7 +364,8 @@ proc getArticleTmpl(): string =
     document:
       "$#"
       center:
-        tikzpicture:
+        tikzpicture["every node/.style={outer sep=0pt, inner sep=0pt}"]:
+          \path["use as bounding box"] (0,0) rectangle (`w`, `h`) ";"
           "$#"
 
 proc writeTeXFile*(img: BImage[TikZBackend]) =
