@@ -378,11 +378,11 @@ proc genTeXFile*(img: BImage[TikZBackend]): string =
   if img.backend.options.texTemplate.isNone:
     if img.backend.options.onlyTikZ:
       # Does not support `header` or `bodyHeader`
-      tmpl = getOnlyTikZTmpl(img.backend.options) % img.backend.data
+      tmpl = img.getOnlyTikZTmpl(img.backend.options) % img.backend.data
     elif img.backend.options.standalone:
       tmpl = img.getStandaloneTmpl() % [img.backend.header, img.backend.bodyHeader, img.backend.data]
     else:
-      tmpl = getArticleTmpl() % [img.backend.header, img.backend.bodyHeader, img.backend.data]
+      tmpl = img.getArticleTmpl() % [img.backend.header, img.backend.bodyHeader, img.backend.data]
   else:
     tmpl = img.backend.options.texTemplate.get % [img.backend.header, img.backend.bodyHeader, img.backend.data]
   result = tmpl
