@@ -552,6 +552,12 @@ proc initCoord*(view: Viewport, x, y: float,
 template c*(view: Viewport, x, y: float, kind: UnitKind = ukRelative): Coord =
   initCoord(view, x, y, kind)
 
+proc c*(cx, cy: Coord1D): Coord =
+  if cx.kind != cy.kind:
+    raise newException(ValueError, "Can only construct a Coord from two Coord1D of the same " &
+      "kind. cx = " & $cx.kind & ", cy = " & $cy.kind)
+  else:
+    result = Coord(x: cx, y: cy)
 
 func ggColorHue*(num: int,
                  hueStart = 15.0,
@@ -637,7 +643,7 @@ func pretty*(gobj: GraphObject, indent = 0): string =
 func `$`*(gobj: GraphObject): string =
   result = gobj.pretty
 
-func toRelative*(p: Coord1D,
+proc toRelative*(p: Coord1D,
                  length: Option[Quantity] = none[Quantity](),
                  backend = none[BackendKind]()): Coord1D =
   ## converts the given coordinate to a relative coordinate
@@ -690,7 +696,7 @@ func toRelative*(p: Coord1D,
       raise newException(Exception,
                          "Conversion from StrWidth to relative requires a length scale!")
 
-func toPoints*(p: Coord1D,
+proc toPoints*(p: Coord1D,
                length: Option[Quantity] = none[Quantity](),
                backend = none[BackendKind]()): Coord1D =
   ## converts the given coordinate to point based absolute values
@@ -741,7 +747,7 @@ func toPoints*(p: Coord1D,
     result = Coord1D(pos: p.pos * relevantDim,
                      kind: ukPoint)
 
-func toRelative*(p: Coord): Coord =
+proc toRelative*(p: Coord): Coord =
   ## converts the given coordinate to a relative coordinate
   result = Coord(x: p.x.toRelative,
                  y: p.y.toRelative)
@@ -1760,6 +1766,9 @@ proc strWidth*(backend: BackendKind, fType: FileTypeKind, val: float, font: Font
 
 proc strWidth*(view: Viewport, val: float, font: Font, text = "W"): Coord1D =
   result = strWidth(view.backend, view.fType, val, font, text)
+
+## Default line spread to use for multi line text. Feel free to override!
+var LineSpread* = 1.4
 proc getStrHeight*(backend: BackendKind, fType: FileTypeKind, text: string, font: Font): Quantity =
   ## returns a quantity of the height of the given `text` under
   ## the given `font`, taking into account multiple lines. The
@@ -1767,12 +1776,16 @@ proc getStrHeight*(backend: BackendKind, fType: FileTypeKind, text: string, font
   ## NOTE: This currently uses a hardcoded line spacing, which is
   ## the same as the one used in `initMultiLineText` below!
   let numLines = text.splitLines.len
-  # ``N lines + (N - 1) * (LineSpacing - 1.0)``
+  ## If multiple lines multiply height of the string as a single line by the `LineSpread`
+  ## and number of lines.
+  var scale = if numLines > 1: LineSpread else: 1.0
   result = quant(
     val = toPoints(
-      strHeight(backend, numLines.float * 1.5, font),
-      #strHeight((numLines).float + (numLines - 1).float * 0.75, font)
-      #strHeight((numLines.float - 1.0) * 1.75, font)
+      Coord1D(pos: numLines.float * scale, kind: ukStrHeight,
+                  backend: backend,
+                  text: text,
+                  font: font,
+                  includeBearing: false)
     ).pos,
     unit = ukPoint
   )
@@ -1819,18 +1832,26 @@ proc initMultiLineText*(view: Viewport,
   let font = if fontOpt.isSome: fontOpt.unsafeGet else: defaultFont()
   let lines = text.splitLines # TODO: extend to allow detection of latex `\\`?
   let numLines = lines.len
+  ## Make sure the origin is given in Points. Easier to debug the text placement
+  let origin = c(origin.x.toPoints(length = some(pointWidth(view))),
+                 origin.y.toPoints(length = some(pointHeight(view))))
+
   for idx, line in lines:
-    # calculate new y position based on previous position and
-    # number of lines
-    # we subtract -1.0 * height for (N - 1) spacings
-    # and an additional (-0.5 * height) to account for current text being
-    # centered on center of line, not bottom
-    let newY = origin.y - toRelative(
-      strHeight(view.backend, (numLines.float - idx.float - 0.5).float * 1.5, font),
-      length = some(view.pointHeight)
-    )
-    let newOrigin = Coord(x: origin.x,
-                          y: newY)
+    # calculate new y position based on previous position and number of lines
+    # we subtract -1.0 * height for (N - 1) spacings, where `height` is
+    # the height of a line times `LineSpread` (1.4 by default)
+    # An additional (-0.5 * height) to account for current text being
+    # centered on center of line, not bottom.
+    let lineIdx = numLines.float - idx.float # lines start at top
+    ## Get real height of this line
+    let strH = getStrHeight(view, line, font)
+    ## Assuming between lines (LineSpread) get the position offset of this line
+    let linesH = times(strH, quant(lineIdx.float * LineSpread, ukPoint))
+    ## Get half a line taking into account LineSpread (text centered around middle)
+    let halfH = times(times(strH, quant(LineSpread, ukPoint)), quant(0.5, ukPoint))
+    ## Compute new position
+    let newY = origin.y + halfH - linesH
+    let newOrigin = Coord(x: origin.x, y: newY)
     result.add view.initText(origin = newOrigin,
                              text = line,
                              textKind = textKind,
