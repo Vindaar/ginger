@@ -216,6 +216,7 @@ type
       font*: Font
       fType*: FileTypeKind # need to render the text on the correct file type backend!
       backend*: BackendKind # string based values are only defined given a backend
+      includeBearing*: bool
     #of ckMixed:
     #  # all outstanding variables still need to be
     #  outstanding: seq[Coord1D]
