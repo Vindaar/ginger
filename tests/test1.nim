@@ -65,7 +65,7 @@ suite "Coordinate transformations":
     let
       qcm = quant(2.54, ukCentimeter)
       qin = quant(1.0, ukInch)
-      qpt = quant(72.27, ukPoint)
+      qpt = quant(72.0, ukPoint)
     check almostEqual(qcm, qin.toCentimeter)
     check almostEqual(qcm, qpt.toCentimeter)
     check almostEqual(qin, qpt.toInch)
@@ -77,8 +77,8 @@ suite "Coordinate transformations":
       c1pt = initCoord1D(1.0, ukPoint)
       # floating point error due to conversion
       c1Rel = initCoord1D(0.09999999999999999)
-    check almostEqual(c1cm.toRelative(length = some(quant(722.7 / 2.54, ukPoint))), c1Rel)
-    check almostEqual(c1in.toRelative(length = some(quant(722.7, ukPoint))), c1Rel)
+    check almostEqual(c1cm.toRelative(length = some(quant(720.0 / 2.54, ukPoint))), c1Rel)
+    check almostEqual(c1in.toRelative(length = some(quant(720.0, ukPoint))), c1Rel)
 
   test "Math with ukStrWidth":
     # Adding to a ukStrWidth can be useful
@@ -93,7 +93,7 @@ suite "Coordinate transformations":
     let c3 = c1 + c2
     check c3.kind == ukPoint
     when defined(linux): ## on other platforms different default fonts break this
-      check abs(c3.pos - 77.5358267) < 1e-4
+      check abs(c3.pos - 79.33987450787401) < 1e-4
 
 suite "Embeddings":
   test "Dummy":
