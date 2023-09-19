@@ -1,4 +1,4 @@
-* v0.4.4
+* v0.5.0
 - change internal DPI from 72.27 to 72
 - extend viewport by FileTypeKind field for TextExtent information,
   required for correct text placement on Cairo
