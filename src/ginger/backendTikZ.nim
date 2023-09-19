@@ -484,7 +484,7 @@ proc destroy*(img: var BImage[TikZBackend]) =
   case img.fType
   of fkTeX: writeFile(img.fname, body) # only write the TeX file, do not compile
   of fkPdf:
-    compile(img.fname, body, path = path, fullBody = true, verbose = QuietTikZ)
+    compile(img.fname, body, path = path, fullBody = true, verbose = not QuietTikZ)
   else: doAssert false
 
   # close the TeXDaemon
