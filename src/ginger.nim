@@ -2239,14 +2239,15 @@ proc ylabel*(view: Viewport,
                               isSecondary = isSecondary,
                               rotate = rotate)
 
+const LabelOffset = 1.5
 template xLabelOriginOffset(view: Viewport, txt: string, fnt: Font, isSecondary = false): untyped =
   ## Required offset along the `y` axis for tick labels of the `x` axis!
   if not isSecondary:
     # uses `W` as default
-    strHeight(view, -1.25, fnt)
+    strHeight(view, -LabelOffset, fnt)
       .toRelative(length = some(pointWidth(view)))
   else:
-    strHeight(view, 1.25, fnt)
+    strHeight(view, LabelOffset, fnt)
       .toRelative(length = some(pointWidth(view)))
 
 proc halfHeight(view: Viewport, txt: string, fnt: Font): Quantity =
@@ -2256,10 +2257,10 @@ proc halfHeight(view: Viewport, txt: string, fnt: Font): Quantity =
 template yLabelOriginOffset(view: Viewport, txt: string, fnt: Font, isSecondary = false): untyped =
   ## Required offset along the `y` axis for tick labels of the `x` axis!
   if not isSecondary:
-    (strHeight(view, 1.25, fnt).toPoints() + view.halfHeight(txt, fnt))
+    (strHeight(view, LabelOffset, fnt).toPoints() + view.halfHeight(txt, fnt))
       .toRelative(length = some(pointHeight(view)))
   else:
-    (strHeight(view, -1.25, fnt).toPoints() - view.halfHeight(txt, fnt))
+    (strHeight(view, -LabelOffset, fnt).toPoints() - view.halfHeight(txt, fnt))
       .toRelative(length = some(pointHeight(view)))
 
 proc setTextAlignKind(axKind: AxisKind,
