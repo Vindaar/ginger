@@ -2243,7 +2243,7 @@ const LabelOffset = 1.5
 template xLabelOriginOffset(view: Viewport, txt: string, fnt: Font, isSecondary = false): untyped =
   ## Required offset along the `y` axis for tick labels of the `x` axis!
   if not isSecondary:
-    # uses `W` as default
+    # uses `M` as default
     strHeight(view, -LabelOffset, fnt)
       .toRelative(length = some(pointWidth(view)))
   else:
