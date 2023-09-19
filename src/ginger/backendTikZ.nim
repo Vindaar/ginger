@@ -482,7 +482,7 @@ proc destroy*(img: var BImage[TikZBackend]) =
   # get the path for the output file
   let path = img.fname.parentDir
   case img.fType
-  of fkTeX: discard # nothing to do
+  of fkTeX: writeFile(img.fname, body) # only write the TeX file, do not compile
   of fkPdf:
     compile(img.fname, body, path = path, fullBody = true, verbose = QuietTikZ)
   else: doAssert false
