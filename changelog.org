@@ -1,3 +1,7 @@
+* v0.5.1
+- fix TikZ regression: write a ~.tex~ file if the user explicitly
+  requests a TeX file instead of doing nothing
+- change default tick label offset from 1.25 'M' height to 1.5 'M' height
 * v0.5.0
 - change internal DPI from 72.27 to 72
 - extend viewport by FileTypeKind field for TextExtent information,
