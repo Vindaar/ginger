@@ -2879,6 +2879,9 @@ proc drawRect[T](img: var BImage[T], gobj: GraphObject) =
     # the entire image no matter if there are overflows
     if gobj.name == "canvasBackground":
       img.drawBackground(gobj.style.get)
+      # *Also* apply our rectangle as background. GS and Inkscape like to ignore the background color
+      # if it's white by default
+      rect()
     else:
       rect()
 
