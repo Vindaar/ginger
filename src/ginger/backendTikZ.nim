@@ -474,7 +474,7 @@ proc initBImage*(_: typedesc[TikZBackend],
                                width: width, height: height,
                                fType: fType)
 
-const QuietTikZ {.booldefine.} = false
+const QuietTikZ {.booldefine.} = true
 proc destroy*(img: var BImage[TikZBackend]) =
   # write to file
   let body = backendTikZ.genTeXFile(img)
