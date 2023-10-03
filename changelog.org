@@ -1,3 +1,10 @@
+* v0.5.2
+- also draw rectangle in addition to setting page color
+- invert ~QuietTikZ~ logic and let latex compilation output be quiet
+  by default.
+  Note: the only downside of being quiet by default is that we hide
+  TeX compilation errors. We need to handle this better in the future
+  using the TeXDaemon.
 * v0.5.1
 - fix TikZ regression: write a ~.tex~ file if the user explicitly
   requests a TeX file instead of doing nothing
