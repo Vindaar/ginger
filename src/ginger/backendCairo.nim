@@ -195,7 +195,7 @@ proc drawText*(img: var BImage[CairoBackend], text: string, font: Font, at: Poin
       ctx.rotate(rotate.get(), (rotAtX, rotAtY))
     case alignKind
     of taLeft:
-      x = at.x
+      x = at.x - extents.x_bearing
       y = at.y - (extents.height / 2.0 + extents.y_bearing)
     of taCenter:
       x = at.x - (extents.width / 2.0 + extents.x_bearing)
