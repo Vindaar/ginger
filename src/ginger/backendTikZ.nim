@@ -303,15 +303,14 @@ proc drawRectangle*(img: var BImage[TikZBackend], left, bottom, width, height: f
   let sizePt = img.toTikZCoord((x: left + width, y: bottom + height), isLength = false)
   if style.gradient.isSome:
     let gradient = style.gradient.get
-    let heightRel = height / img.width.float
-    let sliceHeight = heightRel / (gradient.colors.len.float - 1)
-    var curBottom = atPt.y - heightRel
+    let sliceHeight = height / (gradient.colors.len.float) # - 1)
+    var curBottom = atPt.y - height
     for i, c in gradient.colors:
       let n = "color" & $i
       let atStr = (x: atPt.x, y: curBottom).toStrDirect # left bottom coords
       let sizeStr = (
         x: sizePt.x,
-        y: curBottom + sliceHeight + 1e-3               # add some ε for overlap
+        y: curBottom + sliceHeight + 0.5                # add some ε for overlap
       ).toStrDirect                                     # end coords
       let curColor = defColor(n, c)
       let curLineStyle = style.lineStyle(fillColor = n)
@@ -359,9 +358,9 @@ when useCairo and not defined(noCairo):
     imgC.destroy()
     # embedding a picture using a node places ``center`` of picture at `atStr` coord
     let atStr = img.toStr((x: left + width / 2.0, y: bottom + height / 2.0))
-    let w = width / img.width.float
+    let w = $width & "bp"
     latexAdd:
-      \node at `atStr` {\includegraphics[width = `w`\textwidth]{`tmpName`}}";"
+      \node at `atStr` {\includegraphics[width = `w`]{`tmpName`}}";"
 else:
   proc drawRaster*(img: var BImage[TikZBackend], left, bottom, width, height: float,
                    numX, numY: int,
