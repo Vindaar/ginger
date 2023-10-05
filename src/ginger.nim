@@ -2439,7 +2439,9 @@ proc tickLabels*(view: Viewport,
                  isSecondary = false,
                  rotate = none[float](),
                  margin = none[Coord1D](),
-                 alignToOverride = none[TextAlignKind]()
+                 alignToOverride = none[TextAlignKind](),
+                 style = none[Style](),
+                 tickKind: TickKind = tkOneSide
                 ): (seq[GraphObject], seq[GraphObject]) =
   ## Overload of `tickLabels`, which allows to define custom tick label
   ## texts for ticks at positions `tickPos`
@@ -2452,7 +2454,9 @@ proc tickLabels*(view: Viewport,
     let tick = view.initTick(axKind = axKind,
                              at = axisCoord(tickPos[i], axKind, isSecondary),
                              major = true,
-                             isSecondary = isSecondary)
+                             isSecondary = isSecondary,
+                             tickKind = tickKind,
+                             style = style)
     result[0][i] = tick
     result[1][i] = view.initTickLabel(tick = tick, font = mfont,
                                       labelTxt = tickLabels[i],
