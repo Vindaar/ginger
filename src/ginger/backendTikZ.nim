@@ -187,7 +187,7 @@ proc drawCircle*(img: var BImage[TikZBackend], center: Point, radius: float,
                  fillColor = color(0.0, 0.0, 0.0, 0.0),
                  rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
   let p = img.toStr(center)
-  let radius = $(radius / img.width.float) & "\\textwidth"# / img.width.float
+  let radius = $radius & "bp"
   let style = Style(lineWidth: lineWidth,
                     color: strokeColor,
                     fillColor: fillColor)
