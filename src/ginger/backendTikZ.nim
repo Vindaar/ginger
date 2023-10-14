@@ -82,6 +82,7 @@ proc nodeProperties(img: BImage[TikZBackend], at: Point, alignKind: TextAlignKin
   if result.len > 0:
     result = "[" & result & "]"
 
+from std / strutils import split, strip
 proc applyStyle(text: string, font: Font): string =
   ## Applies the correct style to the given text, depending on the font.
   if font.bold:
@@ -91,8 +92,20 @@ proc applyStyle(text: string, font: Font): string =
     # replace spaces by `\ ` to get explicit spaces where spaces are found to
     # get correct size for text with spaces.
     let text = text.replace(" ", r"\ ")
-    result = latex:
-      \texttt{`text`}
+    # if multiple lines, split them
+    if r"\\" notin text:
+      result = latex:
+        \texttt{`text`}
+    else:
+      var multiline = ""
+      for l in split(text.strip(chars = {'\n', '\\'}), r"\\"):
+        let nl = latex:
+          \texttt{`l`} "\\\\"
+        multiline.add nl
+      result = latex: # multi lines: embed in `tabular` environemnt with padding removed!
+        tabular{"@{}l@{}"}:
+          `multiline`
+      echo result
   else:
     result = text
 
