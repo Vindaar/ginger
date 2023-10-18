@@ -148,7 +148,10 @@ type
       reOrigin*: Coord
       reWidth*: Quantity
       reHeight*: Quantity
-    of goRaster:
+    of goRaster: ## XXX: add option to somehow allow ggplotnim to store any plot as raster if too many
+                 ## objects are contained in it. Maybe add a filename argument that will instead be
+                 ## used? In ggplotnim could check if df.len > N, then produce PNG of only the
+                 ## plot viewport and then hand that as a raster?
       # raw pixel raster object, used for high pixel density heatmaps etc.
       rstOrigin*: Coord
       rstPixWidth*: Quantity
