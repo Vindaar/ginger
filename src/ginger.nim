@@ -686,6 +686,7 @@ proc toRelative*(p: Coord1D,
       raise newException(ValueError, "Cannot convert " & $p.kind & " to relative without " &
         "a backend!")
     let extents = getTextExtent(p.backend, p.fType, p.text, p.font)
+    ## XXX: think again if we might want to include bearing and advance
     let relevantDim = if p.kind == ukStrWidth: extents.width #extents.x_bearing + extents.x_advance
                       else: extents.height #extents.y_advance - extents.y_bearing
     # TODO: assume we can only use `width` here. Maybe have to consider bearing too!
@@ -740,10 +741,10 @@ proc toPoints*(p: Coord1D,
     ## without bearing & advance the width / height will be off if spaces are involved
     let relevantDim = if p.kind == ukStrWidth:
                         if p.includeBearing: extents.width + extents.x_bearing
-                        else: extents.width
+                        else: extents.width #extents.x_bearing + extents.x_advance
                       else:
                         if p.includeBearing: extents.height + extents.y_bearing
-                        else: extents.height#extents.y_advance - extents.y_bearing
+                        else: extents.height #extents.y_advance - extents.y_bearing
     result = Coord1D(pos: p.pos * relevantDim,
                      kind: ukPoint)
 
