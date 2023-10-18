@@ -2246,10 +2246,10 @@ template xLabelOriginOffset(view: Viewport, txt: string, fnt: Font, isSecondary 
   if not isSecondary:
     # uses `M` as default
     strHeight(view, -LabelOffset, fnt)
-      .toRelative(length = some(pointWidth(view)))
+      .toPoints
   else:
     strHeight(view, LabelOffset, fnt)
-      .toRelative(length = some(pointWidth(view)))
+      .toPoints
 
 proc halfHeight(view: Viewport, txt: string, fnt: Font): Quantity =
   result = view.getStrHeight(txt, fnt)
@@ -2259,10 +2259,10 @@ template yLabelOriginOffset(view: Viewport, txt: string, fnt: Font, isSecondary 
   ## Required offset along the `y` axis for tick labels of the `x` axis!
   if not isSecondary:
     (strHeight(view, LabelOffset, fnt).toPoints() + view.halfHeight(txt, fnt))
-      .toRelative(length = some(pointHeight(view)))
+      .toPoints
   else:
     (strHeight(view, -LabelOffset, fnt).toPoints() - view.halfHeight(txt, fnt))
-      .toRelative(length = some(pointHeight(view)))
+      .toPoints
 
 proc setTextAlignKind(axKind: AxisKind,
                       isSecondary = false,
@@ -2302,7 +2302,7 @@ proc initTickLabel(view: Viewport,
     let yOffset = if margin.isSome: margin.unsafeGet
                   else: yLabelOriginOffset(view, labelTxt, mfont, isSecondary)
     origin = Coord(x: loc.x,
-                   y: (loc.y + yOffset).toRelative)
+                   y: (loc.y.toPoints(length = some(pointHeight(view))) + yOffset).toRelative(length = some(pointHeight(view))))
     if gobjName == "tickLabel":
       gobjName = "x" & name
       if isSecondary:
@@ -2315,7 +2315,7 @@ proc initTickLabel(view: Viewport,
   of akY:
     let xOffset = if margin.isSome: margin.unsafeGet
                   else: xLabelOriginOffset(view, labelTxt, mfont, isSecondary)
-    origin = Coord(x: (loc.x + xOffset).toRelative,
+    origin = Coord(x: (loc.x.toPoints(length = some(pointWidth(view))) + xOffset).toRelative(length = some(pointWidth(view))),
                    y: loc.y)
     if gobjName == "tickLabel":
       gobjName = "y" & name
