@@ -1,3 +1,8 @@
+* v0.5.3
+- fix raster procedures on TikZ backend for ~bp~ units
+- allow to hand custom style to ~tickLabels~
+- fix circle radius for TikZ backend
+- fix multiline text with monospace font on TikZ backend
 * v0.5.2
 - also draw rectangle in addition to setting page color
 - invert ~QuietTikZ~ logic and let latex compilation output be quiet
