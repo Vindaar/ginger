@@ -105,7 +105,6 @@ proc applyStyle(text: string, font: Font): string =
       result = latex: # multi lines: embed in `tabular` environemnt with padding removed!
         tabular{"@{}l@{}"}:
           `multiline`
-      echo result
   else:
     result = text
 
