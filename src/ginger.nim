@@ -1837,30 +1837,46 @@ proc initMultiLineText*(view: Viewport,
   let origin = c(origin.x.toPoints(length = some(pointWidth(view))),
                  origin.y.toPoints(length = some(pointHeight(view))))
 
-  for idx, line in lines:
-    # calculate new y position based on previous position and number of lines
-    # we subtract -1.0 * height for (N - 1) spacings, where `height` is
-    # the height of a line times `LineSpread` (1.4 by default)
-    # An additional (-0.5 * height) to account for current text being
-    # centered on center of line, not bottom.
-    let lineIdx = numLines.float - idx.float # lines start at top
-    ## Get real height of this line
-    let strH = getStrHeight(view, line, font)
-    ## Assuming between lines (LineSpread) get the position offset of this line
-    let linesH = times(strH, quant(lineIdx.float * LineSpread, ukPoint))
-    ## Get half a line taking into account LineSpread (text centered around middle)
-    let halfH = times(times(strH, quant(LineSpread, ukPoint)), quant(0.5, ukPoint))
-    ## Compute new position
-    let newY = origin.y + halfH - linesH
-    let newOrigin = Coord(x: origin.x, y: newY)
-    result.add view.initText(origin = newOrigin,
-                             text = line,
+  let hasLatexMulti = r"\\" in text # manual line breaks
+  if hasLatexMulti: # This is needed because loop below would shift by half a text line height
+    result.add view.initText(origin = origin,
+                             text = text,
                              textKind = textKind,
                              alignKind = alignKind,
                              font = some(font),
                              rotate = rotate,
-                             name = $name & $idx
+                             name = $name & "TeX"
     )
+  else:
+    for idx, line in lines:
+      # calculate new y position based on previous position and number of lines
+      # we subtract -1.0 * height for (N - 1) spacings, where `height` is
+      # the height of a line times `LineSpread` (1.4 by default)
+      # An additional (-0.5 * height) to account for current text being
+      # centered on center of line, not bottom.
+      let lineIdx = numLines.float - idx.float # lines start at top
+      ## Get real height of this line
+      let strH =
+        if useRealText:
+          getStrHeight(view, line, font)
+        else:
+          # use a default piece of text that both has a tall letter and something going below baseline
+          getStrHeight(view, "My", font)
+      ## Assuming between lines (LineSpread) get the position offset of this line
+      let linesH = times(strH, quant(lineIdx.float * LineSpread, ukPoint))
+      ## Get half a line taking into account LineSpread (text centered around middle)
+      let halfH = times(times(strH, quant(LineSpread, ukPoint)), quant(0.5, ukPoint))
+      ## Compute new position
+      let newY = origin.y + halfH - linesH
+      let newOrigin = Coord(x: origin.x, y: newY)
+      result.add view.initText(origin = newOrigin,
+                               text = line,
+                               textKind = textKind,
+                               alignKind = alignKind,
+                               font = some(font),
+                               rotate = rotate,
+                               name = $name & $idx
+      )
 
 proc scaleTo(p: Point, view: Viewport): Point =
   ## scales the point from data coordinates to viewport coordinates
