@@ -1,3 +1,31 @@
+* v0.5.4
+- add opt-in escaping for strings handed to TikZ
+  Can be set either via ~EscapeLaTeX~ compile time option:
+
+  ~-d:EscapeLaTeX=true~
+  
+  or via RT environment variable
+  
+  ~ESCAPE_LATEX=true~
+- include ~depth~ for height calculation, needed for ~tabular~
+  environments
+- turn multiline strings into ~tabular~ not only for ~texttt~    
+- draw multiline text with explicit ~\\~ using single text element (in
+  tabular)
+- [TikZ] handle number of lines for getStrHeight for TikZ dep on escaping
+
+  If input is being escaped and thus ~\n~ replaced by ~\\~ we will
+  get the correct height reported by LaTeX directly. This is despite us
+  still printing each line in the output 'by hand' as individual lines
+  of text.
+  
+  If the input is explicitly ~\\~ multiline the text is seen as single
+  line anywany and we write a ~tabular~ environment and a single text
+  element on the ginger side.
+- allow to debug TeX daemon usage for text extents by setting
+  ~DEBUG_TEX=true~ environment variable
+- allow to adjust the default TeX compiler to use to determine text
+  extents. Defaults to ~lualatex~  
 * v0.5.3
 - fix raster procedures on TikZ backend for ~bp~ units
 - allow to hand custom style to ~tickLabels~
@@ -26,7 +54,7 @@
 - add (currently unused) ~includeBearing~ field to ~Coord1D~ for
   string height calculation
 - significantly improve placement & height calc of multi line text.
-  -> This is now consistent between `initMultilineText` and `getStrHeight`
+  -> This is now consistent between ~initMultilineText~ and ~getStrHeight~
   with multiple lines.
 - fix distance of tick labels for x and y axes
   -> Now they really have the same distance from the top of the
