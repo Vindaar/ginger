@@ -90,9 +90,25 @@ proc nodeProperties(img: BImage[TikZBackend], at: Point, alignKind: TextAlignKin
 from std / strutils import split, strip
 proc applyStyle(text: string, font: Font): string =
   ## Applies the correct style to the given text, depending on the font.
+  template ml(body: untyped): untyped {.dirty.} =
+    ## Helper to turn multiline text into a tabular environment. This makes it work
+    ## regardless of being inside of a TikZ node
+    var multiline = ""
+    let lines = split(text.strip(chars = {'\n', '\\'}), r"\\")
+    for i, l {.inject.} in lines:
+      let nl = body
+      multiline.add nl
+    result = latex: # multi lines: embed in `tabular` environemnt with padding removed!
+      tabular{"@{}l@{}"}:
+        `multiline`
   if font.bold:
-    result = latex:
-      \textbf{`text`}
+    if r"\\" notin text:
+      result = latex:
+        \textbf{`text`}
+    else:
+      ml:
+        latex:
+          \textbf{`l`} "\\\\"
   elif font.family == "monospace":
     # replace spaces by `\ ` to get explicit spaces where spaces are found to
     # get correct size for text with spaces.
@@ -102,16 +118,16 @@ proc applyStyle(text: string, font: Font): string =
       result = latex:
         \texttt{`text`}
     else:
-      var multiline = ""
-      for l in split(text.strip(chars = {'\n', '\\'}), r"\\"):
-        let nl = latex:
+      ml:
+        latex:
           \texttt{`l`} "\\\\"
-        multiline.add nl
-      result = latex: # multi lines: embed in `tabular` environemnt with padding removed!
-        tabular{"@{}l@{}"}:
-          `multiline`
   else:
-    result = text
+    if r"\\" notin text:
+      result = text
+    else:
+      ml:
+        latex:
+          `l` "\\\\"
 
 template latexAdd(body: untyped): untyped {.dirty.} =
   block:
