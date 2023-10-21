@@ -236,9 +236,22 @@ import std/[tables, strscans]
 var cacheTab = initTable[(string, Font), (float, float, float)]()
 import latexdsl / tex_daemon
 var Daemon: TeXDaemon
+import std / [envvars]
+var DebugTexDaemon = getEnv("DEBUG_TEX", "false").parseBool
+
+## The following CT and RT variables decide if we escape LaTeX snippets for the
+## user. RT overrides possible CT setting. Default is we do not.
+const EscapeLaTeX {.booldefine.} = false
+let EscapeLaTeXEnv = getEnv("ESCAPE_LATEX", "false").parseBool
+let ToEscape* = when EscapeLaTeX: true
+                else: EscapeLaTeXEnv
+
 
 proc checkSize*(td: TeXDaemon, style, arg: string): (float, float, float) =
   ## Checks the of the given argument if formatted by LaTeX
+  ## XXX: We should really implement some character escaping, because in particular
+  ## `%` can break our TeX Daemon logic, because it might cause a `}` to be eaten!
+  ## -> Implemented in basic way, but currently opt in!
   const sizeCommands = """
 \typeout{\the\wd\mybox} % Width
 \typeout{\the\ht\mybox} % Height
@@ -285,12 +298,60 @@ proc getExtents(text: string, font: Font): (float, float, float) =
 
 \begin{document}
 """
+
+proc escapeLatex(s: string): string =
+  ## XXX: Before we actually commit this to master, we need to make this more sane, i.e.
+  ## check if user _already_ escaped stuff, how to properly handle math etc.
+  ##
+  ## For now: We simply do not escape unless the user asks for it via CT or RT
+  ## setting.
+  ## We also only escape "safe" things. I.e. anything math related we leave as is
+  ## and only replace `\n` by `\\` and `%`, `#`, `&` by their `\` prefixed versions.
+  if not ToEscape:
+    result = s
+  else:
+    result = newStringOfCap(s.len)
+    template addIf(res, arg): untyped =
+      doAssert arg.len == 2
+      if last != '\\':
+        res.add arg
+      else:
+        res.add arg[^1]
+    var last = '\0'
+    var inMath = false
+    for c in s:
+      case c
+      of '\n': result.addIf r"\\"
+      of '%': result.addIf r"\%"
+      of '#': result.addIf r"\#"
+      #of '{':
+      #  if not inMath:
+      #    result.addIf r"\{"
+      #  else:
+      #    result.add c
+      #of '}':
+      #  if not inMath:
+      #    result.addIf r"\}"
+      #  else:
+      #    result.add c
+      of '&': result.addIf r"\&"
+      #of '^':
+      #  if not inMath:
+      #    result.addIf r"\^"
+      #  else:
+      #    result.add c
+      of '$':
+        inMath = not inMath
+        result.add c
+      else: result.add c
+      last = c
+
   if not Daemon.isReady: ## If not already set up, do so now
     Daemon = initTeXDaemon()
     # process the setup to be ready to return sizes
     Daemon.process(setup)
 
-  let textStr = applyStyle(text, font)
+  let textStr = applyStyle(text.escapeLatex(), font)
   if (textStr, font) notin cacheTab:
     let fs = font.size
     let fontSize = latex:
