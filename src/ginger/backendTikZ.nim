@@ -309,11 +309,11 @@ proc getTextExtent*(_: typedesc[TikZBackend], fType: FileTypeKind, text: string,
   let (w, h, d) = getExtents(text, font)
   result = TextExtent(
     x_bearing: 0.0,
-    y_bearing: -d, ## XXX: not sure if this should be on bearing
-    width: w,
-    height: h,
+    y_bearing: 0.0, ## XXX: not sure if this should be on bearing
+    width: w,       # -> No, I don't think so. For `tabular` for example the depth needs to be included in the height!
+    height: h + d,
     x_advance: w,
-    y_advance: h)
+    y_advance: h + d)
 
 proc drawText*(img: var BImage[TikZBackend], text: string, font: Font, at: Point,
                alignKind: TextAlignKind = taLeft,
