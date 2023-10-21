@@ -279,10 +279,16 @@ proc checkSize*(td: TeXDaemon, style, arg: string): (float, float, float) =
     matched = false
     idx = 0
   for cmd in sizeCommands.strip.splitLines():
+    if DebugTexDaemon:
+      echo "Writing: ", cmd
     td.write(cmd)
     var res = td.read()
+    if DebugTexDaemon:
+      echo "Read: ", res
     while "pt" notin res: ## If there is some more data in the stream before, make all read
       res = td.read()
+      if DebugTexDaemon:
+        echo "WhileRead: ", res
     case idx
     of 0: (matched, w) = res.strip().scanTuple("$fpt")
     of 1: (matched, h) = res.strip().scanTuple("$fpt")
