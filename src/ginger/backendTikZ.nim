@@ -56,7 +56,8 @@ proc toAnchorStr(alignKind: TextAlignKind): string =
 proc nodeProperties(img: BImage[TikZBackend], at: Point, alignKind: TextAlignKind, rotate: Option[float],
                     font: Font,
                     alignLeft = false,
-                    useAlignOverAnchor = false): string =
+                    useAlignOverAnchor = false,
+                    isMultiline = false): string =
   ## If `useAlignOverAnchor` is true, we do not use `anchor=`, but rather `align=`. This is
   ## the case if text is put that contains manual line breaks. Those are not supported with `anchor`
   ## for whatever reason.
@@ -75,9 +76,13 @@ proc nodeProperties(img: BImage[TikZBackend], at: Point, alignKind: TextAlignKin
     if alignKind == taLeft: res.add "align=left"
     elif alignKind == taRight: res.add "align=right"
   else:
-    let anchor = alignKind.toAnchorStr
-    if anchor.len > 0:
-      res.add &"anchor={anchor}"
+    # Use `anchor = south west` for multiline text that ends up inside of a `tabular` environment!
+    if isMultiline:
+      res.add "anchor=south west"
+    else:
+      let anchor = alignKind.toAnchorStr
+      if anchor.len > 0:
+        res.add &"anchor={anchor}"
   result = res.join(", ")
   if result.len > 0:
     result = "[" & result & "]"
@@ -298,12 +303,15 @@ proc drawText*(img: var BImage[TikZBackend], text: string, font: Font, at: Point
                alignKind: TextAlignKind = taLeft,
                rotate: Option[float] = none[float](),
                rotateInView: Option[(float, Point)] = none[(float, Point)]()) =
-  let alignLeft = if r"\\" in text: true else: false # for manual line breaks, need left alignment
-  let useAlignOverAnchor = r"\\" in text
+  let isMultiline = r"\\" in text
+  let alignLeft = isMultiline # for manual line breaks, need left alignment
+  let useAlignOverAnchor = false #
   let alignStr = img.nodeProperties(at, alignKind, rotate, font,
                                     alignLeft = alignLeft,
-                                    useAlignOverAnchor = useAlignOverAnchor)
-  let textStr = applyStyle(text, font)
+                                    useAlignOverAnchor = useAlignOverAnchor,
+                                    isMultiline = isMultiline)
+  let escText = escapeLatex(text)
+  let textStr = applyStyle(escText, font)
   latexAdd:
     \node `alignStr` at $(img.toStr(at)) {`textStr`} ";"
 
