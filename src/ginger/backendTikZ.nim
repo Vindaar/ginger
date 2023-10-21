@@ -9,14 +9,24 @@ import os, strformat
 # everything. If we allow the user to hand their own LaTeX snippets, those
 # can be checked separately on the user's side.
 import latexdsl_nochecks
-from strutils import `%`, join, contains, replace, strip, splitLines
-
-
+from strutils import `%`, join, contains, replace, strip, splitLines, parseBool, multiReplace
 
 #[
 Maybe we have to collect all colors in a table or seq and create a custom 'preamble' that
 contains color definitons?
 ]#
+
+proc commonTeXPreamble(): string =
+  if PreambleText.len > 0:
+    result = PreambleText # from `latexdsl/PreambleText` via `~/.config/latexdsl/common_preamble.tex`
+  else:
+    result = latex:
+      \usepackage[utf8]{inputenc}
+      \usepackage{unicode-math} # for unicode support in math environments
+      \usepackage{amsmath}
+      \usepackage{siunitx}
+      \sisetup{"mode=text,range-phrase = {\text{~to~}}, range-units=single, print-unity-mantissa=false"}
+      \usepackage{tikz}
 
 proc toTikZCoord(img: BImage[TikZBackend], p: Point, isLength: static bool = false): Point =
   let ratio = img.height.float / img.width.float
@@ -282,14 +292,11 @@ proc checkSize*(td: TeXDaemon, style, arg: string): (float, float, float) =
     inc idx
   result = (w, h, d)
 
-proc getExtents(text: string, font: Font): (float, float, float) =
-  const setup = """
+func getSetup(): string =
+  result = """
 \documentclass[draft]{article}
 
-\usepackage{unicode-math}
-\usepackage{amsmath}
-\usepackage{siunitx}
-\usepackage{tikz}
+$#
 
 \newbox\mybox
 % \newlength\mywidth
@@ -346,8 +353,20 @@ proc escapeLatex(s: string): string =
       else: result.add c
       last = c
 
+## The TeX compiler to use. For now if you wish to change it just
+## adjust the global variable here.
+var TexCompiler* = "lualatex" #"xelatex"
+
+proc getExtents(text: string, font: Font): (float, float, float) =
+  const setup = getSetup()
   if not Daemon.isReady: ## If not already set up, do so now
-    Daemon = initTeXDaemon()
+    let fontSettings =
+      case TexCompiler
+      of "lualatex": lualatexFontSettings() # via `latexdsl/latex_compiler` reading `~/.config/latexdsl/lualatex_fonts.tex`
+      of "xelatex": xelatexFontSettings()   # via `latexdsl/latex_compiler` reading `~/.config/latexdsl/xelatex_fonts.tex`
+      else: ""
+    let setup = setup % (commonTexPreamble() & "\n" & fontSettings)
+    Daemon = initTeXDaemon(TexCompiler)
     # process the setup to be ready to return sizes
     Daemon.process(setup)
 
@@ -471,11 +490,7 @@ proc getStandaloneTmpl(img: BImage[TikZBackend]): string =
   let h = $(img.height.float) & "bp"
   result = latex:
     \documentclass[tikz,border="0mm"]{standalone}
-    \usepackage[utf8]{inputenc}
-    \usepackage{unicode-math} # for unicode support in math environments
-    \usepackage{amsmath}
-    \usepackage{siunitx}
-    \usepackage{tikz}
+    "$#"
     "$#"
     document:
       "$#"
@@ -529,12 +544,8 @@ proc getArticleTmpl(img: BImage[TikZBackend]): string =
   let h = $(img.height.float) & "bp"
   result = latex:
     \documentclass[a4paper]{article}
-    \usepackage[utf8]{inputenc}
     \usepackage[margin="2.5cm"]{geometry}
-    \usepackage{unicode-math} # for unicode support in math environments
-    \usepackage{amsmath}
-    \usepackage{siunitx}
-    \usepackage{tikz}
+    "$#"
     "$#"
     document:
       "$#"
@@ -550,9 +561,9 @@ proc genTeXFile*(img: BImage[TikZBackend]): string =
       # Does not support `header` or `bodyHeader`
       tmpl = img.getOnlyTikZTmpl(img.backend.options) % img.backend.data
     elif img.backend.options.standalone:
-      tmpl = img.getStandaloneTmpl() % [img.backend.header, img.backend.bodyHeader, img.backend.data]
+      tmpl = img.getStandaloneTmpl() % [commonTexPreamble(), img.backend.header, img.backend.bodyHeader, img.backend.data]
     else:
-      tmpl = img.getArticleTmpl() % [img.backend.header, img.backend.bodyHeader, img.backend.data]
+      tmpl = img.getArticleTmpl() % [commonTexPreamble(), img.backend.header, img.backend.bodyHeader, img.backend.data]
   else:
     tmpl = img.backend.options.texTemplate.get % [img.backend.header, img.backend.bodyHeader, img.backend.data]
   result = tmpl
