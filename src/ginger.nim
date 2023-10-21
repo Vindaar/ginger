@@ -1779,14 +1779,26 @@ proc getStrHeight*(backend: BackendKind, fType: FileTypeKind, text: string, font
   let numLines = text.splitLines.len
   ## If multiple lines multiply height of the string as a single line by the `LineSpread`
   ## and number of lines.
-  var scale = if numLines > 1: LineSpread else: 1.0
+  var scale =
+    case backend
+    of bkTikZ:
+      if ToEscape:
+        1.0 # For TikZ 2 cases: 1. input has `\n` -> replaced in `backendTikZ` via `escapeLatex`
+            # 2. input has `\\` -> `numLines` is 1 anyway
+            # in either case the `TeX` compiler tells us the correct height.
+      else: # if we do *not* escape latex (default) then we treat it like
+            # cairo, because in that case we manually split and place lines anyway
+        numLines.float * LineSpread
+    else:
+      if numLines > 1: numLines.float * LineSpread
+      else: 1.0
   result = quant(
     val = toPoints(
-      Coord1D(pos: numLines.float * scale, kind: ukStrHeight,
-                  backend: backend,
-                  text: text,
-                  font: font,
-                  includeBearing: false)
+      Coord1D(pos: scale, kind: ukStrHeight,
+              backend: backend,
+              text: text,
+              font: font,
+              includeBearing: false)
     ).pos,
     unit = ukPoint
   )
@@ -1818,7 +1830,8 @@ proc initMultiLineText*(view: Viewport,
                         alignKind: TextAlignKind,
                         fontOpt: Option[Font] = none[Font](),
                         rotate = none[float](),
-                        name = "multiLineText"): seq[GraphObject] =
+                        name = "multiLineText",
+                        useRealText = true): seq[GraphObject] =
   ## Creates a text based `GraphObject` of kind `textKind`.
   ## This proc will split the input `text` by lines and return
   ## a properly spaced sequence of text objects, which conform to
