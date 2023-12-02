@@ -256,7 +256,6 @@ let EscapeLaTeXEnv = getEnv("ESCAPE_LATEX", "false").parseBool
 let ToEscape* = when EscapeLaTeX: true
                 else: EscapeLaTeXEnv
 
-
 proc checkSize*(td: TeXDaemon, style, arg: string): (float, float, float) =
   ## Checks the of the given argument if formatted by LaTeX
   ## XXX: We should really implement some character escaping, because in particular
@@ -356,6 +355,11 @@ proc escapeLatex(s: string): string =
       of '$':
         inMath = not inMath
         result.add c
+      of '_':
+        if not inMath:
+          result.addIf r"\_"
+        else:
+          result.add c
       else: result.add c
       last = c
 
