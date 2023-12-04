@@ -224,6 +224,9 @@ proc drawRaster*(img: var BImage[PixieBackend], left, bottom, width, height: flo
   img.pxContext.drawImage(raster, pos = vec2(left, bottom))
   img.saveState()
 
+proc insertRaster*(img: var BImage[PixieBackend], tmpName: string, left, bottom, width, height: float) =
+  raise newException(Defect, "`insertRaster` not implemenetd for Pixie backend yet.")
+
 proc initBImage*(_: typedesc[PixieBackend],
                  filename: string,
                  width, height: int,
