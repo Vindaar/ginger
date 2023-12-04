@@ -51,3 +51,6 @@ proc initBImage*(_: typedesc[DummyBackend],
 
 proc destroy*(img: var BImage[DummyBackend]) =
   debugecho "WARNING: `destroy` of dummy backend is being called!"
+
+proc insertRaster*(img: var BImage[DummyBackend], tmpName: string, left, bottom, width, height: float) =
+  debugecho "WARNING: `insertRaster` of dummy backend is being called!"

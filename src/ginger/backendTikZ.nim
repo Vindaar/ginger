@@ -467,6 +467,13 @@ proc drawBackground*(img: var BImage[TikZBackend], style: Style) =
     \pagecolor{`color`}
   img.backend.bodyHeader = toAdd
 
+proc insertRaster*(img: var BImage[TikZBackend], tmpName: string, left, bottom, width, height: float) =
+  # embedding a picture using a node places ``center`` of picture at `atStr` coord
+  let atStr = img.toStr((x: left + width / 2.0, y: bottom + height / 2.0))
+  let w = $width & "bp"
+  latexAdd:
+    \node at `atStr` {\includegraphics[width = `w`]{`tmpName`}}";"
+
 when useCairo and not defined(noCairo):
   from backendCairo import initBImage, drawRaster, destroy
   proc drawRaster*(img: var BImage[TikZBackend], left, bottom, width, height: float,
