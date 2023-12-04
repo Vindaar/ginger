@@ -1470,7 +1470,8 @@ proc initViewport*(origin: Coord,
                    wParentView: Option[Quantity] = none[Quantity](),
                    hParentView: Option[Quantity] = none[Quantity](),
                    backend = bkCairo,
-                   fType = fkPng): Viewport =
+                   fType = fkPng,
+                   dataAsBitmap = false): Viewport =
   ## initializes a `Viewport` with `origin` in any coordinate system
   ## with 1D coordinates providing width and height
   ## Uses Coord1D to allow to define sizes in arbitrary units
@@ -1484,7 +1485,8 @@ proc initViewport*(origin: Coord,
                     wImg: quant(wImg, ukPoint),
                     hImg: quant(hImg, ukPoint),
                     backend: backend,
-                    fType: fType)
+                    fType: fType,
+                    dataAsBitmap: dataAsBitmap)
   debug "[DEBUG]: Initing viewport ", width.toRelative(some(result.wImg))
   if wParentView.isSome and hParentView.isSome:
     doAssert wParentView.get.unit == ukPoint and
@@ -1514,7 +1516,9 @@ proc initViewport*(left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
                    wImg = 640.0,
                    hImg = 480.0,
                    backend = bkCairo,
-                   fType = fkPng): Viewport =
+                   fType = fkPng,
+                   dataAsBitmap = false
+                  ): Viewport =
   ## convenience init function for Viewport using relative coordinates
   ## NOTE: this function should only be used to create a Viewport within the
   ## main image viewport! Otherwise use the `addViewport` procs on a viewport!
@@ -1529,7 +1533,8 @@ proc initViewport*(left = 0.0, bottom = 0.0, width = 1.0, height = 1.0,
                         name = name, parent = parent,
                         wImg = wImg, hImg = hImg,
                         backend = backend,
-                        fType = fType)
+                        fType = fType,
+                        dataAsBitmap = dataAsBitmap)
 
 proc addViewport*(view: Viewport,
                   origin: Coord,
@@ -1539,7 +1544,8 @@ proc addViewport*(view: Viewport,
                   yScale = none[Scale](),
                   rotate = none[float](),
                   scale = none[float](),
-                  name = ""): Viewport =
+                  name = "",
+                  dataAsBitmap = false): Viewport =
   ## add a new viewport with the given settings to the `view`
   ## TODO: do not return viewchild???
   var viewChild = initViewport(origin = origin.patchCoord(view),
@@ -1554,7 +1560,8 @@ proc addViewport*(view: Viewport,
                                wParentView = some(pointWidth(view)),
                                hParentView = some(pointHeight(view)),
                                backend = view.backend,
-                               fType = view.fType)
+                               fType = view.fType,
+                               dataAsBitmap = dataAsBitmap)
   # override width and height
   ## echo "TODO: make sure we want to give child viewport scaled (wImg, hImg)!"
   #viewChild.wImg = quant(view.wImg.val * width.toRelative(view.wImg).val, ukPoint)
@@ -1571,7 +1578,8 @@ proc addViewport*(view: Viewport,
                   yScale = none[Scale](),
                   rotate = none[float](),
                   scale = none[float](),
-                  name = ""): Viewport =
+                  name = "",
+                  dataAsBitmap = false): Viewport =
   ## add a new viewport with the given settings to the `view`, set at relative
   ## coordinates (left, bottom), (width, height)
   ## TODO: Do not return viewchild???
@@ -1594,7 +1602,8 @@ proc addViewport*(view: Viewport,
   result = view.addViewport(origin = origin, width = widthCoord, height = heightCoord,
                             style = style, xScale = xSc, yScale = ySc,
                             rotate = rotate, scale = scale,
-                            name = name)
+                            name = name,
+                            dataAsBitmap = dataAsBitmap)
 
 proc initAxis(view: Viewport,
               axKind: AxisKind,
@@ -3350,12 +3359,46 @@ proc draw*[T](img: var BImage[T], gobj: GraphObject) =
     # composite itself has nothing to be drawn, only children handled individually
     discard
 
+from std / os import getTempDir
+proc draw*[T](img: var BImage[T], view: Viewport)
+proc drawDataAsBitmap[T](img: var BImage[T], view: Viewport) =
+  # Embed the actual data of the plot into the vector graphic as a Cairo bitmap
+  var mView = view
+  let tmpName = getTempDir() & "bitmap_as_raster_ggplotnim_tikz_tmp_store.png"
+  # get the width, height and position in pixels
+  let iW = some(quant(img.width.float, ukPoint))
+  let iH = some(quant(img.height.float, ukPoint))
+  let width = mView.width.toPoints(length = iW)
+  let height = mView.height.toPoints(length = iH)
+  let x = mView.origin.x.toPoints(length = iW).pos
+  let y = mView.origin.y.toPoints(length = iH).pos
+  # create a Cairo backend image
+  ## XXX: we might want to make the raster backend adjustable in the future!
+  echo (x, y, width, height)
+  var imgC = initBImage(CairoBackend,
+                        tmpName,
+                        width = width.val.int, height = height.val.int,
+                        ftype = fkPng,
+                        texOptions = TeXOptions())
+  # reset the sizes of the plot viewport to act as a full plot
+  mView.origin = c(0.0, 0.0)
+  mView.width = quant(1.0, ukRelative)
+  mView.height = quant(1.0, ukRelative)
+  mView.dataAsBitmap = false
+  imgC.draw(mView)
+  imgC.destroy()
+  img.insertRaster(tmpName, x, y, width.val, height.val)
+
 proc draw*[T](img: var BImage[T], view: Viewport) =
   ## draws the full viewport including all objects and all
   ## children onto the image
   ## NOTE: children are drawn `after` the parent viewport
   # draw objects
   # before we draw stuff apply potential rotation
+  if view.dataAsBitmap:
+    img.drawDataAsBitmap(view)
+    return
+
   let (centerX, centerY) = getCenter(view)
 
   proc transformAndDraw[T](img: var BImage[T], obj: GraphObject, view: Viewport) =

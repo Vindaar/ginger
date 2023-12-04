@@ -255,6 +255,9 @@ type
     hImg*: Quantity
     backend*: BackendKind
     fType*: FileTypeKind
+    dataAsBitmap*: bool ## If true will write the data viewport that contains the actual ggplotnim
+                        ## data as a bitmap. Mainly makes sense for vector graphic targets
+
 
 when useCairo and not defined(noCairo):
   import cairo
