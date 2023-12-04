@@ -3374,7 +3374,6 @@ proc drawDataAsBitmap[T](img: var BImage[T], view: Viewport) =
   let y = mView.origin.y.toPoints(length = iH).pos
   # create a Cairo backend image
   ## XXX: we might want to make the raster backend adjustable in the future!
-  echo (x, y, width, height)
   var imgC = initBImage(CairoBackend,
                         tmpName,
                         width = width.val.int, height = height.val.int,
