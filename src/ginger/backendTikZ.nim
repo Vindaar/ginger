@@ -106,8 +106,11 @@ proc applyStyle(text: string, font: Font): string =
     var multiline = ""
     let lines = split(text.strip(chars = {'\n', '\\'}), r"\\")
     for i, l {.inject.} in lines:
-      let nl = body
-      multiline.add nl
+      let nl = body.strip()
+      if i < lines.high:
+        multiline.add nl & "\\\\"
+      else:
+        multiline.add nl
     result = latex: # multi lines: embed in `tabular` environemnt with padding removed!
       tabular{"@{}l@{}"}:
         `multiline`
@@ -118,7 +121,7 @@ proc applyStyle(text: string, font: Font): string =
     else:
       ml:
         latex:
-          \textbf{`l`} "\\\\"
+          \textbf{`l`}
   elif font.family == "monospace":
     # replace spaces by `\ ` to get explicit spaces where spaces are found to
     # get correct size for text with spaces.
@@ -130,14 +133,14 @@ proc applyStyle(text: string, font: Font): string =
     else:
       ml:
         latex:
-          \texttt{`l`} "\\\\"
+          \texttt{`l`}
   else:
     if r"\\" notin text:
       result = text
     else:
       ml:
         latex:
-          `l` "\\\\"
+          `l`
 
 template latexAdd(body: untyped): untyped {.dirty.} =
   block:
