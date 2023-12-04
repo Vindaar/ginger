@@ -1786,9 +1786,11 @@ proc getStrHeight*(backend: BackendKind, fType: FileTypeKind, text: string, font
         1.0 # For TikZ 2 cases: 1. input has `\n` -> replaced in `backendTikZ` via `escapeLatex`
             # 2. input has `\\` -> `numLines` is 1 anyway
             # in either case the `TeX` compiler tells us the correct height.
-      else: # if we do *not* escape latex (default) then we treat it like
+      elif numLines > 1: # if we do *not* escape latex (default) then we treat it like
             # cairo, because in that case we manually split and place lines anyway
         numLines.float * LineSpread
+      else: # for a single line, no scaling!
+        1.0
     else:
       if numLines > 1: numLines.float * LineSpread
       else: 1.0
