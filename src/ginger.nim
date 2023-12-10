@@ -3376,10 +3376,13 @@ proc drawDataAsBitmap[T](img: var BImage[T], view: Viewport) =
   ## XXX: we might want to make the raster backend adjustable in the future!
   var imgC = initBImage(CairoBackend,
                         tmpName,
-                        width = width.val.int, height = height.val.int,
+                        width = width.val.int * 4, height = height.val.int * 4, # oversample by factor 4 to get good looking image
                         ftype = fkPng,
                         texOptions = TeXOptions())
   # reset the sizes of the plot viewport to act as a full plot
+  mView.scale = some(4.0)
+  for mv in mitems(mView.children):
+    mv.scale = some(4.0)
   mView.origin = c(0.0, 0.0)
   mView.width = quant(1.0, ukRelative)
   mView.height = quant(1.0, ukRelative)
@@ -3387,6 +3390,31 @@ proc drawDataAsBitmap[T](img: var BImage[T], view: Viewport) =
   imgC.draw(mView)
   imgC.destroy()
   img.insertRaster(tmpName, x, y, width.val, height.val)
+
+proc scale(obj: var GraphObject, scale: float) =
+  if obj.style.isSome: # scale style
+    var st = obj.style.get
+    st.size = st.size * scale
+    st.lineWidth = st.lineWidth * scale
+    st.font.size = st.font.size * scale
+    obj.style = some(st)
+  case obj.kind
+  of goLine, goAxis: discard # nothing to scale
+  of goLabel, goText, goTickLabel: # scale font size
+    obj.txtFont.size = obj.txtFont.size * scale
+  of goGrid: discard # nothing to scale
+  of goTick: discard # nothing to scale
+  of goPoint: # scale size
+    obj.ptSize = obj.ptSize * scale
+  of goManyPoints: # scale size
+    obj.ptsSize = obj.ptsSize * scale
+  of goPolyLine: discard # nothing to scale
+  of goRect: discard # nothing to scale
+  of goRaster: discard # nothing to scale
+  of goComposite: discard # nothing to scale
+  # now for all children
+  for mch in mitems(obj.children):
+    mch.scale(scale)
 
 proc draw*[T](img: var BImage[T], view: Viewport) =
   ## draws the full viewport including all objects and all
@@ -3408,6 +3436,8 @@ proc draw*[T](img: var BImage[T], view: Viewport) =
     if view.rotate.isSome:
       mobj.rotateInView = some((view.rotate.get,
                                  (centerX, centerY).scale(img.width, img.height)))
+    if view.scale.isSome: # scale data
+      mobj.scale(view.scale.get)
     img.draw(mobj.embedInto(view))
 
   for obj in view.objects:
