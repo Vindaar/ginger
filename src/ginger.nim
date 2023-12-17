@@ -3428,6 +3428,9 @@ proc draw*[T](img: var BImage[T], view: Viewport) =
   ## NOTE: children are drawn `after` the parent viewport
   # draw objects
   # before we draw stuff apply potential rotation
+  when declared(DEBUG_PLOT):
+    view.drawBoundary()
+
   if view.dataAsBitmap:
     img.drawDataAsBitmap(view)
     return
