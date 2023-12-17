@@ -3388,8 +3388,14 @@ proc drawDataAsBitmap[T](img: var BImage[T], view: Viewport) =
   mView.height = quant(1.0, ukRelative)
   mView.dataAsBitmap = false
   imgC.draw(mView)
-  imgC.destroy()
-  img.insertRaster(tmpName, x, y, width.val, height.val)
+  when T is CairoBackend:
+    img.insertRaster(imgC.backend.cCanvas, x, y, width.val, height.val)
+    imgC.destroy()
+  elif T is TikZBackend:
+    imgC.destroy()
+    img.insertRaster(tmpName, x, y, width.val, height.val)
+  else: # for TikZ
+    raise newException(Defect, "`dataAsBitmap` not implemenetd for " & $T & " backend yet.")
 
 proc scale(obj: var GraphObject, scale: float) =
   if obj.style.isSome: # scale style
