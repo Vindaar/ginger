@@ -97,6 +97,27 @@ proc nodeProperties(img: BImage[TikZBackend], at: Point, alignKind: TextAlignKin
   if result.len > 0:
     result = "[" & result & "]"
 
+template latexAdd(body: untyped): untyped {.dirty.} =
+  block:
+    let toAdd = latex:
+      body
+    img.backend.data.add toAdd
+
+proc defColor(name: string, c: Color): string =
+  let color = &"{c.r}, {c.g}, {c.b}"
+  result = latex:
+    \definecolor{`name`}{rgb}{`color`}
+
+func addColorIfNew(img: var BImage[TikZBackend], color: string) =
+  if color != img.backend.lastColor:
+    latexAdd:
+      `color`
+    img.backend.lastColor = color
+
+proc colorStr(style: Style): string =
+  result.add defColor("drawColor", style.color)
+  result.add defColor("fillColor", style.fillColor)
+
 from std / strutils import split, strip
 proc applyStyle(text: string, font: Font): string =
   ## Applies the correct style to the given text, depending on the font.
@@ -141,27 +162,12 @@ proc applyStyle(text: string, font: Font): string =
       ml:
         latex:
           `l`
-
-template latexAdd(body: untyped): untyped {.dirty.} =
-  block:
-    let toAdd = latex:
-      body
-    img.backend.data.add toAdd
-
-proc defColor(name: string, c: Color): string =
-  let color = &"{c.r}, {c.g}, {c.b}"
-  result = latex:
-    \definecolor{`name`}{rgb}{`color`}
-
-func addColorIfNew(img: var BImage[TikZBackend], color: string) =
-  if color != img.backend.lastColor:
-    latexAdd:
+  # finally apply possible color
+  if font.color != color(0.0, 0.0, 0.0, 1.0):
+    let color = defColor("TextColor", font.color)
+    result = latex:
       `color`
-    img.backend.lastColor = color
-
-proc colorStr(style: Style): string =
-  result.add defColor("drawColor", style.color)
-  result.add defColor("fillColor", style.fillColor)
+      \textcolor{"TextColor"}{`result`}
 
 func getLineStyle(lineType: LineType, lineWidth: float): string =
   template dash: untyped = lineWidth * 4.0
