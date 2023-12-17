@@ -309,8 +309,12 @@ proc drawRaster*(img: var BImage[CairoBackend], left, bottom, width, height: flo
     ctx.paint()
     pngSurface.destroy()
 
-proc insertRaster*(img: var BImage[CairoBackend], tmpName: string, left, bottom, width, height: float) =
-  raise newException(Defect, "`insertRaster` not implemenetd for Cairo backend yet.")
+proc insertRaster*(img: var BImage[CairoBackend], surface: PSurface, left, bottom, width, height: float) =
+  # apply the new surface to the image surface
+  img.withSurface:
+    ctx.scale(0.25, 0.25)
+    ctx.set_source(surface, left * 4.0, bottom * 4.0)
+    ctx.paint()
 
 proc initBImage*(_: typedesc[CairoBackend],
                  filename: string,
