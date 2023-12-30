@@ -1,5 +1,5 @@
+import std/[options, strformat, random]
 import chroma
-import std/[options, strformat]
 import pixie
 import types
 import fontim
@@ -243,7 +243,8 @@ proc initBImage*(_: typedesc[PixieBackend],
   result = BImage[PixieBackend](fname: filename,
                                 width: width,
                                 height: height,
-                                ftype: fType)
+                                ftype: fType,
+                                rnd: initRand(0x1337))
 
 proc writeFile*(img: BImage[PixieBackend], fname: string) {.inline.} =
   # Helper that writes an Image using it's Context to a file
