@@ -1,4 +1,4 @@
-import std / [math, options, sequtils, strformat, strutils]
+import std / [math, options, sequtils, strformat, strutils, random]
 export options
 from std / os import expandTilde
 
@@ -3364,7 +3364,8 @@ proc draw*[T](img: var BImage[T], view: Viewport)
 proc drawDataAsBitmap[T](img: var BImage[T], view: Viewport) =
   # Embed the actual data of the plot into the vector graphic as a Cairo bitmap
   var mView = view
-  let tmpName = getTempDir() & "bitmap_as_raster_ggplotnim_tikz_tmp_store.png"
+  let id = img.rnd.rand(int.high)
+  let tmpName = &"{getTempDir()}_bitmap_as_raster_ggplotnim_tikz_tmp_store_{id}.png"
   # get the width, height and position in pixels
   let iW = some(quant(img.width.float, ukPoint))
   let iH = some(quant(img.height.float, ukPoint))

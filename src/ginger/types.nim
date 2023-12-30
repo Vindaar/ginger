@@ -1,3 +1,4 @@
+from std / random import Rand
 import chroma
 import options
 
@@ -34,6 +35,7 @@ type
     height*: int
     ftype*: FileTypeKind
     backend*: T
+    rnd*: Rand ## Random number generator to produce filenames if `dataAsBitmap` or raster used
 
   DummyBackend* = object
 

@@ -1,15 +1,14 @@
-import chroma
-import math
-import types
-import options
+import std / [os, strformat, random, options, math]
+from strutils import `%`, join, contains, replace, strip, splitLines, parseBool, multiReplace
 
-import os, strformat
+import chroma
+import types
 # use `latexdsl_nochecks` instead of regular to avoid checking all enum fields.
 # The LaTeX code written here is "write once, compile many", no need to recheck
 # everything. If we allow the user to hand their own LaTeX snippets, those
 # can be checked separately on the user's side.
 import latexdsl_nochecks
-from strutils import `%`, join, contains, replace, strip, splitLines, parseBool, multiReplace
+
 
 #[
 Maybe we have to collect all colors in a table or seq and create a custom 'preamble' that
@@ -483,7 +482,8 @@ when useCairo and not defined(noCairo):
                    rotateInView: Option[(float, Point),] = none[(float, Point)]()) =
     ## draw raster by using Cairo to draw the actual raster and store it as a png. That we
     ## include here
-    let tmpName = getTempDir() & "raster_ggplotnim_tikz_tmp_store.png"
+    let id = img.rnd.rand(int.high)
+    let tmpName = &"{getTempDir()}_raster_ggplotnim_tikz_tmp_store_{id}.png"
     # create a Cairo backend image
     var imgC = initBImage(CairoBackend,
                           tmpName,
@@ -599,7 +599,8 @@ proc initBImage*(_: typedesc[TikZBackend],
   result = BImage[TikZBackend](fname: fname,
                                backend: backend,
                                width: width, height: height,
-                               fType: fType)
+                               fType: fType,
+                               rnd: initRand(0x1337))
 
 const QuietTikZ {.booldefine.} = true
 proc destroy*(img: var BImage[TikZBackend]) =

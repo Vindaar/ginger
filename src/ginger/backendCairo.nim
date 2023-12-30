@@ -1,8 +1,7 @@
+import std / [math, options, random]
 import cairo
 import chroma
-import math
 import types
-import options
 
 template withSurface*(img: var BImage[CairoBackend], name: untyped, actions: untyped): untyped =
   if not img.backend.created:
@@ -339,7 +338,8 @@ proc initBImage*(_: typedesc[CairoBackend],
                                 backend: backend,
                                 width: width,
                                 height: height,
-                                fType: fType)
+                                fType: fType,
+                                rnd: initRand(0x1337))
 
 
 proc destroy*(img: var BImage[CairoBackend]) =
