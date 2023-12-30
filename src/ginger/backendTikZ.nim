@@ -193,15 +193,18 @@ func getLineStyle(lineType: LineType, lineWidth: float): string =
       dash pattern = on $(dash())bp off $(dotSpace() * 2.0) on $(longDash())bp off $(dotSpace() * 2.0)
   else: discard
 
-proc lineStyle(style: Style, drawColor = "drawColor", fillColor = "fillColor"): string =
+proc drawStyle(img: BImage[TikZBackend], style: Style, drawColor = "drawColor", fillColor = "fillColor",
+               rotateInView = none((float, Point))): string =
   let fillOp = &"fill opacity = {style.fillColor.a}"
   let colorOp = &"draw opacity = {style.color.a}"
   let lineDash = getLineStyle(style.lineType, style.lineWidth)
   result = &"[color = {drawColor}, fill = {fillColor}, {colorOp}, {fillOp}, line width = {style.lineWidth}bp"
   if lineDash.len > 0:
-    result.add ", " & lineDash & "]"
-  else:
-    result.add "]"
+    result.add ", " & lineDash
+  if rotateInView.isSome:
+    let rot = rotateInView.get
+    result.add ", " & "rotate around = {" & &"{rot[0]}:{img.toStr(rot[1])}" & "}"
+  result.add "]"
 
 proc drawLine*(img: var BImage[TikZBackend], start, stop: Point,
                style: Style,
@@ -209,7 +212,7 @@ proc drawLine*(img: var BImage[TikZBackend], start, stop: Point,
   let p0 = img.toStr(start)
   let p1 = img.toStr(stop)
   let color = style.colorStr
-  let lineSt = style.lineStyle
+  let lineSt = img.drawStyle(style)
   img.addColorIfNew(color)
   latexAdd:
     \draw `lineSt` `p0` -- `p1` ";"
@@ -217,7 +220,7 @@ proc drawLine*(img: var BImage[TikZBackend], start, stop: Point,
 proc drawPolyLine*(img: var BImage[TikZBackend], points: seq[Point],
                    style: Style,
                    rotateAngle: Option[(float, Point)] = none[(float, Point)]()) =
-  let lineSt = style.lineStyle
+  let lineSt = img.drawStyle(style)
   let color = style.colorStr
   img.addColorIfNew(color)
   latexAdd:
@@ -244,7 +247,7 @@ proc drawCircle*(img: var BImage[TikZBackend], center: Point, radius: float,
                     fillColor: fillColor)
   let color = style.colorStr
   img.addColorIfNew(color)
-  let lineSt = style.lineStyle
+  let lineSt = img.drawStyle(style)
   latexAdd:
     \draw `lineSt` `p` circle [radius = `radius`] ";"
 
@@ -441,14 +444,14 @@ proc drawRectangle*(img: var BImage[TikZBackend], left, bottom, width, height: f
         y: curBottom + sliceHeight + 0.5                # add some ε for overlap
       ).toStrDirect                                     # end coords
       let curColor = defColor(n, c)
-      let curLineStyle = style.lineStyle(fillColor = n)
+      let curLineStyle = img.drawStyle(style, fillColor = n)
       latexAdd:
         `curColor`
         \draw `curLineStyle` `atStr` rectangle `sizeStr` ";"
       curBottom += sliceHeight
   else:
     let color = style.colorStr
-    let lineSt = style.lineStyle
+    let lineSt = img.drawStyle(style, rotateInView = rotateInView)
     let sizeStr = sizePt.toStrDirect
     let atStr = atPt.toStrDirect
     img.addColorIfNew(color)
@@ -465,6 +468,7 @@ proc drawBackground*(img: var BImage[TikZBackend], style: Style) =
     `colorDef`
     \pagecolor{`color`}
   img.backend.bodyHeader = toAdd
+
 
 proc insertRaster*(img: var BImage[TikZBackend], tmpName: string, left, bottom, width, height: float) =
   # embedding a picture using a node places ``center`` of picture at `atStr` coord
