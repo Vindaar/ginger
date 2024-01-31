@@ -1,4 +1,12 @@
-* v0.5.4
+* v0.6.0
+- add option ~dataAsBitmap~ to draw Viewport to bitmap. Useful for
+  plots with large amounts of data. The rest of the plot can remain a
+  vector graphic, but the actual data portion is a bitmap. Similar to
+  ~geom_raster~ plots. Supported on Cairo and TikZ.
+- implement ~dataAsBitmap~ using ~insertRaster~ for Cairo
+- implement downsampling of bitmap included images
+- [TikZ] apply text color on TikZ backend  
+- add debugging ~drawBoundary~ for every Viewport
 - add opt-in escaping for strings handed to TikZ
   Can be set either via ~EscapeLaTeX~ compile time option:
 
