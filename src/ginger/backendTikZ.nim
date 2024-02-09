@@ -257,7 +257,10 @@ import std/[tables, strscans]
 var cacheTab = initTable[(string, Font), (float, float, float)]()
 import latexdsl / tex_daemon
 var Daemon: TeXDaemon
-import std / [envvars]
+when (NimMajor, NimMinor, NimPatch) >= (2, 0, 0):
+  import std / [envvars]
+else:
+  import std / os
 var DebugTexDaemon = getEnv("DEBUG_TEX", "false").parseBool
 
 ## The following CT and RT variables decide if we escape LaTeX snippets for the
