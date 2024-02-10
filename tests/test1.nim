@@ -87,6 +87,7 @@ suite "Coordinate transformations":
                      font: Font(family: "sans-serif",
                                 size: 16.0,
                                 color: black),
+                     fType: fkSvg,
                      backend: bkCairo)
 
     let c2 = Coord1D(pos: 0.3, kind: ukCentimeter)
