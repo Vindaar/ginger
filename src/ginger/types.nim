@@ -12,7 +12,7 @@ type
   BackendKind* = enum
     bkNone, bkDummy, bkCairo, bkVega, bkTikZ, bkPixie
   FiletypeKind* = enum
-    fkSvg, fkPng, fkPdf, fkVega, fkTeX
+    fkNone, fkDummy, fkSvg, fkPng, fkPdf, fkVega, fkTeX
 
   Point* = tuple[x, y: float]
   IPoint* = tuple[x, y: int]
