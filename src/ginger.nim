@@ -3362,42 +3362,46 @@ proc draw*[T](img: var BImage[T], gobj: GraphObject) =
 
 from std / os import getTempDir
 proc draw*[T](img: var BImage[T], view: Viewport)
-proc drawDataAsBitmap[T](img: var BImage[T], view: Viewport) =
-  # Embed the actual data of the plot into the vector graphic as a Cairo bitmap
-  var mView = view
-  let id = img.rnd.rand(int.high)
-  let tmpName = &"{getTempDir()}_bitmap_as_raster_ggplotnim_tikz_tmp_store_{id}.png"
-  # get the width, height and position in pixels
-  let iW = some(quant(img.width.float, ukPoint))
-  let iH = some(quant(img.height.float, ukPoint))
-  let width = mView.width.toPoints(length = iW)
-  let height = mView.height.toPoints(length = iH)
-  let x = mView.origin.x.toPoints(length = iW).pos
-  let y = mView.origin.y.toPoints(length = iH).pos
-  # create a Cairo backend image
-  ## XXX: we might want to make the raster backend adjustable in the future!
-  var imgC = initBImage(CairoBackend,
-                        tmpName,
-                        width = width.val.int * 4, height = height.val.int * 4, # oversample by factor 4 to get good looking image
-                        ftype = fkPng,
-                        texOptions = TeXOptions())
-  # reset the sizes of the plot viewport to act as a full plot
-  mView.scale = some(4.0)
-  for mv in mitems(mView.children):
-    mv.scale = some(4.0)
-  mView.origin = c(0.0, 0.0)
-  mView.width = quant(1.0, ukRelative)
-  mView.height = quant(1.0, ukRelative)
-  mView.dataAsBitmap = false
-  imgC.draw(mView)
-  when T is CairoBackend:
-    img.insertRaster(imgC.backend.cCanvas, x, y, width.val, height.val)
-    imgC.destroy()
-  elif T is TikZBackend:
-    imgC.destroy()
-    img.insertRaster(tmpName, x, y, width.val, height.val)
-  else: # for TikZ
-    raise newException(Defect, "`dataAsBitmap` not implemenetd for " & $T & " backend yet.")
+when not defined(noCairo):
+  proc drawDataAsBitmap[T](img: var BImage[T], view: Viewport) =
+    # Embed the actual data of the plot into the vector graphic as a Cairo bitmap
+    var mView = view
+    let id = img.rnd.rand(int.high)
+    let tmpName = &"{getTempDir()}_bitmap_as_raster_ggplotnim_tikz_tmp_store_{id}.png"
+    # get the width, height and position in pixels
+    let iW = some(quant(img.width.float, ukPoint))
+    let iH = some(quant(img.height.float, ukPoint))
+    let width = mView.width.toPoints(length = iW)
+    let height = mView.height.toPoints(length = iH)
+    let x = mView.origin.x.toPoints(length = iW).pos
+    let y = mView.origin.y.toPoints(length = iH).pos
+    # create a Cairo backend image
+    ## XXX: we might want to make the raster backend adjustable in the future!
+    var imgC = initBImage(CairoBackend,
+                          tmpName,
+                          width = width.val.int * 4, height = height.val.int * 4, # oversample by factor 4 to get good looking image
+                          ftype = fkPng,
+                          texOptions = TeXOptions())
+    # reset the sizes of the plot viewport to act as a full plot
+    mView.scale = some(4.0)
+    for mv in mitems(mView.children):
+      mv.scale = some(4.0)
+    mView.origin = c(0.0, 0.0)
+    mView.width = quant(1.0, ukRelative)
+    mView.height = quant(1.0, ukRelative)
+    mView.dataAsBitmap = false
+    imgC.draw(mView)
+    when T is CairoBackend:
+      img.insertRaster(imgC.backend.cCanvas, x, y, width.val, height.val)
+      imgC.destroy()
+    elif T is TikZBackend:
+      imgC.destroy()
+      img.insertRaster(tmpName, x, y, width.val, height.val)
+    else: # for TikZ
+      raise newException(Defect, "`dataAsBitmap` not implemenetd for " & $T & " backend yet.")
+else:
+  proc drawDataAsBitmap[T](img: var BImage[T], view: Viewport) =
+    echo "[WARNING] Not doing anything for `drawDataAsBitmap`, because `noCairo` is defined."
 
 proc scale(obj: var GraphObject, scale: float) =
   if obj.style.isSome: # scale style
