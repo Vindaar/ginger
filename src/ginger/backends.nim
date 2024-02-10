@@ -53,6 +53,9 @@ proc toBackend*(fType: FiletypeKind, texOptions: TexOptions): BackendKind =
              else:
                bkCairo # extend for Pixie
   of fkVega: doAssert false # not supported
+  of fkDummy: result = bkDummy
+  of fkNone:
+    raise newException(ValueError, "File type fkNone cannot be converted to a backend.")
 
 proc getTextExtent*(backend: BackendKind, fType: FileTypeKind, text: string, font: Font): TextExtent =
   template useBackend(backend: untyped): untyped =

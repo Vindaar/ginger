@@ -1809,6 +1809,7 @@ proc getStrHeight*(backend: BackendKind, fType: FileTypeKind, text: string, font
               backend: backend,
               text: text,
               font: font,
+              fType: fType,
               includeBearing: false)
     ).pos,
     unit = ukPoint
