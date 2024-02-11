@@ -1,3 +1,9 @@
+* v0.6.1
+- add ~fkNull~, ~fkDummy~ as ~FileTypeKind~ fields to make sure we
+  always use the correct file type kind as a target to determine the
+  text extents.
+- make ~dataAsBitmap~ do nothing when not compiled with Cairo support
+  (i.e. ~noCairo~ is set)  
 * v0.6.0
 - add option ~dataAsBitmap~ to draw Viewport to bitmap. Useful for
   plots with large amounts of data. The rest of the plot can remain a
