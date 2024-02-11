@@ -1,0 +1,4 @@
+* =ginger=
+
+=ginger= is a library similar to R's =grid= library.
+

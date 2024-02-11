@@ -1,0 +1,100 @@
+nimTitle	types	ginger/types.html	module src/ginger/types		0
+nim	useCairo	ginger/types.html#useCairo	const useCairo		7
+nim	useTikZ	ginger/types.html#useTikZ	const useTikZ		8
+nim	usePixie	ginger/types.html#usePixie	const usePixie		9
+nim	bkNone	ginger/types.html#bkNone	BackendKind.bkNone		12
+nim	bkDummy	ginger/types.html#bkDummy	BackendKind.bkDummy		12
+nim	bkCairo	ginger/types.html#bkCairo	BackendKind.bkCairo		12
+nim	bkVega	ginger/types.html#bkVega	BackendKind.bkVega		12
+nim	bkTikZ	ginger/types.html#bkTikZ	BackendKind.bkTikZ		12
+nim	bkPixie	ginger/types.html#bkPixie	BackendKind.bkPixie		12
+nim	BackendKind	ginger/types.html#BackendKind	enum BackendKind		12
+nim	fkNull	ginger/types.html#fkNull	FiletypeKind.fkNull		14
+nim	fkDummy	ginger/types.html#fkDummy	FiletypeKind.fkDummy		14
+nim	fkSvg	ginger/types.html#fkSvg	FiletypeKind.fkSvg		14
+nim	fkPng	ginger/types.html#fkPng	FiletypeKind.fkPng		14
+nim	fkPdf	ginger/types.html#fkPdf	FiletypeKind.fkPdf		14
+nim	fkVega	ginger/types.html#fkVega	FiletypeKind.fkVega		14
+nim	fkTeX	ginger/types.html#fkTeX	FiletypeKind.fkTeX		14
+nim	FiletypeKind	ginger/types.html#FiletypeKind	enum FiletypeKind		14
+nim	Point	ginger/types.html#Point	tuple Point		17
+nim	IPoint	ginger/types.html#IPoint	tuple IPoint		18
+nim	akX	ginger/types.html#akX	AxisKind.akX		20
+nim	akY	ginger/types.html#akY	AxisKind.akY		20
+nim	AxisKind	ginger/types.html#AxisKind	enum AxisKind		20
+nim	TeXOptions	ginger/types.html#TeXOptions	object TeXOptions		23
+nim	BImage	ginger/types.html#BImage	object BImage		32
+nim	DummyBackend	ginger/types.html#DummyBackend	object DummyBackend		40
+nim	ltNone	ginger/types.html#ltNone	LineType.ltNone		42
+nim	ltSolid	ginger/types.html#ltSolid	LineType.ltSolid		42
+nim	ltDashed	ginger/types.html#ltDashed	LineType.ltDashed		42
+nim	ltDotted	ginger/types.html#ltDotted	LineType.ltDotted		42
+nim	ltDotDash	ginger/types.html#ltDotDash	LineType.ltDotDash		42
+nim	ltLongDash	ginger/types.html#ltLongDash	LineType.ltLongDash		42
+nim	ltTwoDash	ginger/types.html#ltTwoDash	LineType.ltTwoDash		42
+nim	LineType	ginger/types.html#LineType	enum LineType		42
+nim	ebLines	ginger/types.html#ebLines	ErrorBarKind.ebLines		45
+nim	ebLinesT	ginger/types.html#ebLinesT	ErrorBarKind.ebLinesT		45
+nim	ErrorBarKind	ginger/types.html#ErrorBarKind	enum ErrorBarKind		45
+nim	taLeft	ginger/types.html#taLeft	TextAlignKind.taLeft		49
+nim	taCenter	ginger/types.html#taCenter	TextAlignKind.taCenter		49
+nim	taRight	ginger/types.html#taRight	TextAlignKind.taRight		49
+nim	TextAlignKind	ginger/types.html#TextAlignKind	enum TextAlignKind		49
+nim	fsNormal	ginger/types.html#fsNormal	FontSlant.fsNormal		52
+nim	fsItalic	ginger/types.html#fsItalic	FontSlant.fsItalic		52
+nim	fsOblique	ginger/types.html#fsOblique	FontSlant.fsOblique		52
+nim	FontSlant	ginger/types.html#FontSlant	enum FontSlant		52
+nim	Font	ginger/types.html#Font	object Font		55
+nim	mkCircle	ginger/types.html#mkCircle	MarkerKind.mkCircle		63
+nim	mkCross	ginger/types.html#mkCross	MarkerKind.mkCross		63
+nim	mkTriangle	ginger/types.html#mkTriangle	MarkerKind.mkTriangle		63
+nim	mkRhombus	ginger/types.html#mkRhombus	MarkerKind.mkRhombus		63
+nim	mkRectangle	ginger/types.html#mkRectangle	MarkerKind.mkRectangle		63
+nim	mkRotCross	ginger/types.html#mkRotCross	MarkerKind.mkRotCross		63
+nim	mkUpsideDownTriangle	ginger/types.html#mkUpsideDownTriangle	MarkerKind.mkUpsideDownTriangle		63
+nim	mkEmptyCircle	ginger/types.html#mkEmptyCircle	MarkerKind.mkEmptyCircle		63
+nim	mkEmptyRectangle	ginger/types.html#mkEmptyRectangle	MarkerKind.mkEmptyRectangle		63
+nim	mkEmptyRhombus	ginger/types.html#mkEmptyRhombus	MarkerKind.mkEmptyRhombus		63
+nim	MarkerKind	ginger/types.html#MarkerKind	enum MarkerKind		63
+nim	Gradient	ginger/types.html#Gradient	object Gradient		67
+nim	Style	ginger/types.html#Style	object Style		71
+nim	goAxis	ginger/types.html#goAxis	GraphObjectKind.goAxis		83
+nim	goText	ginger/types.html#goText	GraphObjectKind.goText		83
+nim	goLabel	ginger/types.html#goLabel	GraphObjectKind.goLabel		83
+nim	goTick	ginger/types.html#goTick	GraphObjectKind.goTick		83
+nim	goTickLabel	ginger/types.html#goTickLabel	GraphObjectKind.goTickLabel		83
+nim	goPoint	ginger/types.html#goPoint	GraphObjectKind.goPoint		83
+nim	goManyPoints	ginger/types.html#goManyPoints	GraphObjectKind.goManyPoints		83
+nim	goLine	ginger/types.html#goLine	GraphObjectKind.goLine		83
+nim	goRect	ginger/types.html#goRect	GraphObjectKind.goRect		83
+nim	goGrid	ginger/types.html#goGrid	GraphObjectKind.goGrid		83
+nim	goPolyLine	ginger/types.html#goPolyLine	GraphObjectKind.goPolyLine		83
+nim	goRaster	ginger/types.html#goRaster	GraphObjectKind.goRaster		83
+nim	goComposite	ginger/types.html#goComposite	GraphObjectKind.goComposite		83
+nim	GraphObjectKind	ginger/types.html#GraphObjectKind	enum GraphObjectKind		83
+nim	cmpErrorBar	ginger/types.html#cmpErrorBar	CompositeKind.cmpErrorBar		98
+nim	CompositeKind	ginger/types.html#CompositeKind	enum CompositeKind		98
+nim	tkOneSide	ginger/types.html#tkOneSide	TickKind.tkOneSide		101
+nim	tkBothSides	ginger/types.html#tkBothSides	TickKind.tkBothSides		101
+nim	TickKind	ginger/types.html#TickKind	enum TickKind		101
+nim	GraphObject	ginger/types.html#GraphObject	type GraphObject		105
+nim	GraphObjectObj	ginger/types.html#GraphObjectObj	object GraphObjectObj		106
+nim	Scale	ginger/types.html#Scale	tuple Scale		178
+nim	ukRelative	ginger/types.html#ukRelative	UnitKind.ukRelative		180
+nim	ukData	ginger/types.html#ukData	UnitKind.ukData		180
+nim	ukStrWidth	ginger/types.html#ukStrWidth	UnitKind.ukStrWidth		180
+nim	ukStrHeight	ginger/types.html#ukStrHeight	UnitKind.ukStrHeight		180
+nim	ukPoint	ginger/types.html#ukPoint	UnitKind.ukPoint		180
+nim	ukCentimeter	ginger/types.html#ukCentimeter	UnitKind.ukCentimeter		180
+nim	ukInch	ginger/types.html#ukInch	UnitKind.ukInch		180
+nim	UnitKind	ginger/types.html#UnitKind	enum UnitKind		180
+nim	Quantity	ginger/types.html#Quantity	tuple Quantity		197
+nim	Coord1D	ginger/types.html#Coord1D	object Coord1D		202
+nim	Coord	ginger/types.html#Coord	object Coord		229
+nim	Viewport	ginger/types.html#Viewport	type Viewport		236
+nim	CairoBackend	ginger/types.html#CairoBackend	object CairoBackend		269
+nim	TextExtent	ginger/types.html#TextExtent	type TextExtent		274
+nim	TikZBackend	ginger/types.html#TikZBackend	object TikZBackend		296
+nim	clone	ginger/types.html#clone,GraphObject	proc clone(g: GraphObject): GraphObject		304
+nim	clone	ginger/types.html#clone,Viewport	proc clone(v: Viewport): Viewport		357
+nimgrp	clone	ginger/types.html#clone-procs-all	proc		304

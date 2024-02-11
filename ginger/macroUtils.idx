@@ -1,0 +1,2 @@
+nimTitle	macroUtils	ginger/macroUtils.html	module src/ginger/macroUtils		0
+nim	replace	ginger/macroUtils.html#replace.m,typed,untyped	macro replace(c: typed; x: untyped): untyped		28
