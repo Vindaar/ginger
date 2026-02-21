@@ -1209,6 +1209,100 @@ proc embedAsRelative*(view: var Viewport, idx: int, viewToEmbed: Viewport) =
       " children viewports!")
 
 
+proc scaleAbs(q: var Quantity, factor: float) =
+  ## Scales an absolute Quantity (ukPoint, ukCentimeter, ukInch) by `factor`.
+  ## Relative and data quantities are left unchanged.
+  if q.unit in {ukPoint, ukCentimeter, ukInch}:
+    q.val *= factor
+
+proc scaleAbs(c: var Coord1D, factor: float) =
+  ## Scales an absolute Coord1D by `factor`.
+  if c.kind in {ukPoint, ukCentimeter, ukInch}:
+    c.pos *= factor
+
+proc scaleAllSizes*(gobj: GraphObject, xFactor, yFactor, isoFactor: float) =
+  ## Scales all sizes in the given GraphObject with directional factors:
+  ## - `xFactor` for horizontal absolute sizes
+  ## - `yFactor` for vertical absolute sizes
+  ## - `isoFactor` for isotropic sizes (fonts, line widths, markers)
+  if gobj.style.isSome:
+    var s = gobj.style.get
+    s.size *= isoFactor
+    s.lineWidth *= isoFactor
+    s.font.size *= isoFactor
+    gobj.style = some(s)
+  case gobj.kind
+  of goLine, goAxis:
+    gobj.lnStart.x.scaleAbs(xFactor)
+    gobj.lnStart.y.scaleAbs(yFactor)
+    gobj.lnStop.x.scaleAbs(xFactor)
+    gobj.lnStop.y.scaleAbs(yFactor)
+  of goLabel, goText, goTickLabel:
+    gobj.txtFont.size *= isoFactor
+    gobj.txtPos.x.scaleAbs(xFactor)
+    gobj.txtPos.y.scaleAbs(yFactor)
+  of goTick:
+    gobj.tkPos.x.scaleAbs(xFactor)
+    gobj.tkPos.y.scaleAbs(yFactor)
+  of goPoint:
+    gobj.ptSize *= isoFactor
+    gobj.ptPos.x.scaleAbs(xFactor)
+    gobj.ptPos.y.scaleAbs(yFactor)
+  of goManyPoints:
+    gobj.ptsSize *= isoFactor
+    for pos in mitems(gobj.ptsPos):
+      pos.x.scaleAbs(xFactor)
+      pos.y.scaleAbs(yFactor)
+  of goPolyLine:
+    for pos in mitems(gobj.plPos):
+      pos.x.scaleAbs(xFactor)
+      pos.y.scaleAbs(yFactor)
+  of goRect:
+    gobj.reOrigin.x.scaleAbs(xFactor)
+    gobj.reOrigin.y.scaleAbs(yFactor)
+    gobj.reWidth.scaleAbs(xFactor)
+    gobj.reHeight.scaleAbs(yFactor)
+  of goRaster:
+    gobj.rstOrigin.x.scaleAbs(xFactor)
+    gobj.rstOrigin.y.scaleAbs(yFactor)
+    gobj.rstPixWidth.scaleAbs(xFactor)
+    gobj.rstPixHeight.scaleAbs(yFactor)
+  of goGrid:
+    gobj.gdOrigin.x.scaleAbs(xFactor)
+    gobj.gdOrigin.y.scaleAbs(yFactor)
+    gobj.gdOriginDiag.x.scaleAbs(xFactor)
+    gobj.gdOriginDiag.y.scaleAbs(yFactor)
+    for pos in mitems(gobj.gdXPos):
+      pos.scaleAbs(xFactor)
+    for pos in mitems(gobj.gdYPos):
+      pos.scaleAbs(yFactor)
+  of goComposite:
+    discard
+  for ch in gobj.children:
+    ch.scaleAllSizes(xFactor, yFactor, isoFactor)
+
+proc scaleAllSizes*(view: var Viewport, xFactor, yFactor, isoFactor: float) =
+  ## Recursively scales all absolute sizes in the entire viewport tree
+  ## with directional factors:
+  ## - `xFactor` for horizontal absolute sizes (widths, x positions)
+  ## - `yFactor` for vertical absolute sizes (heights, y positions)
+  ## - `isoFactor` for isotropic sizes (font sizes, line widths, markers)
+  ##
+  ## This is useful when embedding a fully constructed viewport at a
+  ## smaller size, so that all absolute dimensions (margins, spacings,
+  ## fonts, line widths) scale proportionally with the embed size.
+  view.style.size *= isoFactor
+  view.style.lineWidth *= isoFactor
+  view.style.font.size *= isoFactor
+  view.origin.x.scaleAbs(xFactor)
+  view.origin.y.scaleAbs(yFactor)
+  view.width.scaleAbs(xFactor)
+  view.height.scaleAbs(yFactor)
+  for gobj in view.objects:
+    gobj.scaleAllSizes(xFactor, yFactor, isoFactor)
+  for ch in mitems(view.children):
+    ch.scaleAllSizes(xFactor, yFactor, isoFactor)
+
 proc len*(view: Viewport): int = view.children.len
 proc high*(view: Viewport): int = view.len - 1
 

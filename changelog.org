@@ -1,3 +1,9 @@
+* v0.6.2
+- add scaling logic that converts absolute values into relative. This
+  allows embedding a plot into a viewport while keeping the /relative/
+  sizes intact. I.e. not to build *a* plot, but to embed a finished
+  viewport. Next version of ggplotnim includes an ~embed~ function,
+  which allows to embed plots into viewports at arbitrary sizes.
 * v0.6.1
 - add ~fkNull~, ~fkDummy~ as ~FileTypeKind~ fields to make sure we
   always use the correct file type kind as a target to determine the
