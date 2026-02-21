@@ -1,0 +1,145 @@
+nimTitle	ginger	ginger.html	module src/ginger		0
+nim	grey92	ginger.html#grey92	const grey92		28
+nim	grey20	ginger.html#grey20	const grey20		29
+nim	black	ginger.html#black	const black		30
+nim	white	ginger.html#white	const white		31
+nim	transparent	ginger.html#transparent	const transparent		32
+nim	DPI	ginger.html#DPI	const DPI		33
+nim	pointWidth	ginger.html#pointWidth,Viewport	proc pointWidth(view: Viewport): Quantity		35
+nim	pointHeight	ginger.html#pointHeight,Viewport	proc pointHeight(view: Viewport): Quantity		36
+nim	XAxisYPos	ginger.html#XAxisYPos.t,Option[Viewport],float	template XAxisYPos(view: Option[Viewport] = none[Viewport](); margin = 0.0;\n          isSecondary = false): untyped		48
+nim	YAxisXPos	ginger.html#YAxisXPos.t,Option[Viewport],float	template YAxisXPos(view: Option[Viewport] = none[Viewport](); margin = 0.0;\n          isSecondary = false): untyped		68
+nim	formatTickValue	ginger.html#formatTickValue,float,float	proc formatTickValue(f: float; scale = 0.0): string		88
+nim	quant	ginger.html#quant,float,UnitKind	proc quant(val: float; unit: UnitKind): Quantity		155
+nim	toPoints	ginger.html#toPoints,Quantity,Option[Quantity]	proc toPoints(q: Quantity; length: Option[Quantity] = none[Quantity]()): Quantity		162
+nim	toInch	ginger.html#toInch,Quantity	proc toInch(q: Quantity): Quantity		182
+nim	toCentimeter	ginger.html#toCentimeter,Quantity	proc toCentimeter(q: Quantity): Quantity		193
+nim	toRelative	ginger.html#toRelative,Quantity,Option[Quantity],Option[Scale]	proc toRelative(q: Quantity; length: Option[Quantity] = none[Quantity]();\n           scale: Option[Scale] = none[Scale]()): Quantity		205
+nim	toData	ginger.html#toData,Quantity,Scale,Option[Quantity]	proc toData(q: Quantity; scale: Scale; length: Option[Quantity] = none[Quantity]()): Quantity		239
+nim	to	ginger.html#to,Quantity,UnitKind	proc to(q: Quantity; kind: UnitKind; length = none[Quantity](); scale = none[Scale]()): Quantity		257
+nim	`+`	ginger.html#+,Coord1D,Coord1D	proc `+`(c1, c2: Coord1D): Coord1D		273
+nim	`-`	ginger.html#-,Coord1D,Coord1D	proc `-`(c1, c2: Coord1D): Coord1D		274
+nim	`*`	ginger.html#*,Coord1D,Coord1D	proc `*`(c1, c2: Coord1D): Coord1D		275
+nim	`/`	ginger.html#/,Coord1D,Coord1D	proc `/`(c1, c2: Coord1D): Coord1D		276
+nim	times	ginger.html#times,Quantity,Quantity,Option[Quantity],Option[Scale]	proc times(q1, q2: Quantity; length: Option[Quantity] = none[Quantity]();\n      scale: Option[Scale] = none[Scale](); asCoordinate = false): Quantity		278
+nim	divide	ginger.html#divide,Quantity,Quantity,Option[Quantity],Option[Scale]	proc divide(q1, q2: Quantity; length: Option[Quantity] = none[Quantity]();\n       scale: Option[Scale] = none[Scale](); asCoordinate = false): Quantity		329
+nim	add	ginger.html#add,Quantity,Quantity,Option[Quantity],Option[Scale]	proc add(q1, q2: Quantity; length: Option[Quantity] = none[Quantity]();\n    scale: Option[Scale] = none[Scale](); asCoordinate = false): Quantity		380
+nim	sub	ginger.html#sub,Quantity,Quantity,Option[Quantity],Option[Scale]	proc sub(q1, q2: Quantity; length: Option[Quantity] = none[Quantity]();\n    scale: Option[Scale] = none[Scale](); asCoordinate = false): Quantity		432
+nim	initCoord1D	ginger.html#initCoord1D,float,UnitKind,AxisKind	proc initCoord1D(at: float; kind: UnitKind = ukRelative; axKind: AxisKind = akX): Coord1D		484
+nim	c1	ginger.html#c1.t,float,UnitKind,AxisKind	template c1(at: float; kind: UnitKind = ukRelative; axKind: AxisKind = akX): Coord1D		494
+nim	initCoord1D	ginger.html#initCoord1D,Viewport,float,AxisKind,UnitKind	proc initCoord1D(view: Viewport; at: float; axKind: AxisKind;\n            kind: UnitKind = ukPoint): Coord1D		499
+nim	c1	ginger.html#c1.t,Viewport,float,AxisKind,UnitKind	template c1(view: Viewport; at: float; axKind: AxisKind; kind: UnitKind = ukPoint): Coord1D		532
+nim	initCoord	ginger.html#initCoord,float,float,UnitKind	proc initCoord(x, y: float; kind: UnitKind = ukRelative): Coord		537
+nim	c	ginger.html#c.t,float,float,UnitKind	template c(x, y: float; kind: UnitKind = ukRelative): Coord		542
+nim	initCoord	ginger.html#initCoord,Viewport,float,float,UnitKind	proc initCoord(view: Viewport; x, y: float; kind: UnitKind = ukRelative): Coord		545
+nim	c	ginger.html#c.t,Viewport,float,float,UnitKind	template c(view: Viewport; x, y: float; kind: UnitKind = ukRelative): Coord		552
+nim	c	ginger.html#c,Coord1D,Coord1D	proc c(cx, cy: Coord1D): Coord		555
+nim	ggColorHue	ginger.html#ggColorHue,int,float,float,float	proc ggColorHue(num: int; hueStart = 15.0; chroma = 100.0; luminance = 65.0): seq[\n    Color]		562
+nim	pretty	ginger.html#pretty,GraphObject,int	proc pretty(gobj: GraphObject; indent = 0): string		584
+nim	`$`	ginger.html#$,GraphObject	proc `$`(gobj: GraphObject): string		643
+nim	toRelative	ginger.html#toRelative,Coord1D,Option[Quantity]	proc toRelative(p: Coord1D; length: Option[Quantity] = none[Quantity]();\n           backend = none[BackendKind]()): Coord1D		646
+nim	toPoints	ginger.html#toPoints,Coord1D,Option[Quantity]	proc toPoints(p: Coord1D; length: Option[Quantity] = none[Quantity]();\n         backend = none[BackendKind]()): Coord1D		700
+nim	toRelative	ginger.html#toRelative,Coord	proc toRelative(p: Coord): Coord		751
+nim	`==`	ginger.html#==,Coord1D,Coord1D	proc `==`(c1, c2: Coord1D): bool		756
+nim	`==`	ginger.html#==,Coord,Coord	proc `==`(c1, c2: Coord): bool		767
+nim	`-`	ginger.html#-,Coord1D,Quantity	proc `-`(c: Coord1D; q: Quantity): Coord1D		917
+nim	`+`	ginger.html#+,Coord1D,Quantity	proc `+`(c: Coord1D; q: Quantity): Coord1D		925
+nim	to	ginger.html#to,Coord1D,UnitKind	proc to(p: Coord1D; toKind: UnitKind; absLength = none[Quantity]();\n   datScale = none[Scale](); datAxis = none[AxisKind]();\n   strText = none[string](); strFont = none[Font]()): Coord1D		1023
+nim	to	ginger.html#to,Coord,UnitKind	proc to(p: Coord; toKind: UnitKind; absWidth = none[Quantity]();\n   absHeight = none[Quantity](); datXScale = none[Scale]();\n   datYScale = none[Scale](); strText = none[string](); strFont = none[Font]()): Coord		1089
+nim	`[]`	ginger.html#[],Viewport,int	proc `[]`(view: Viewport; idx: int): Viewport		1143
+nim	`[]`	ginger.html#[],Viewport,int_2	proc `[]`(view: var Viewport; idx: int): var Viewport		1151
+nim	`[]=`	ginger.html#[]=,Viewport,int,Viewport	proc `[]=`(view: var Viewport; idx: int; viewToSet: Viewport)		1171
+nim	embedAt	ginger.html#embedAt,Viewport,int,Viewport	proc embedAt(view: var Viewport; idx: int; viewToEmbed: Viewport)		1179
+nim	relativeTo	ginger.html#relativeTo,Viewport,Viewport	proc relativeTo(view: Viewport; to: Viewport): Viewport		1192
+nim	embedAsRelative	ginger.html#embedAsRelative,Viewport,int,Viewport	proc embedAsRelative(view: var Viewport; idx: int; viewToEmbed: Viewport)		1193
+nim	scaleAllSizes	ginger.html#scaleAllSizes,GraphObject,float,float,float	proc scaleAllSizes(gobj: GraphObject; xFactor, yFactor, isoFactor: float)		1223
+nim	scaleAllSizes	ginger.html#scaleAllSizes,Viewport,float,float,float	proc scaleAllSizes(view: var Viewport; xFactor, yFactor, isoFactor: float)		1284
+nim	len	ginger.html#len,Viewport	proc len(view: Viewport): int		1306
+nim	high	ginger.html#high,Viewport	proc high(view: Viewport): int		1307
+nim	width	ginger.html#width,Viewport	proc width(view: Viewport): Quantity		1319
+nim	height	ginger.html#height,Viewport	proc height(view: Viewport): Quantity		1325
+nim	updateDataScale	ginger.html#updateDataScale,Viewport,seq[GraphObject]	proc updateDataScale(view: Viewport; objs: var seq[GraphObject])		1397
+nim	updateDataScale	ginger.html#updateDataScale,Viewport	proc updateDataScale(view: Viewport)		1409
+nim	addObj	ginger.html#addObj,Viewport,GraphObject	proc addObj(view: Viewport; obj: GraphObject)		1421
+nim	addObj	ginger.html#addObj,Viewport,varargs[GraphObject]	proc addObj(view: Viewport; objs: varargs[GraphObject])		1435
+nim	embedInto	ginger.html#embedInto,Quantity,AxisKind,Viewport	proc embedInto(q: Quantity; axKind: AxisKind; view: Viewport): Quantity		1471
+nim	initViewport	ginger.html#initViewport,Coord,Quantity,Quantity,string,string,float,float,Option[Quantity],Option[Quantity]	proc initViewport(origin: Coord; width, height: Quantity; style = none[Style]();\n             xScale = none[Scale](); yScale = none[Scale]();\n             rotate = none[float](); scale = none[float](); name = "";\n             parent = ""; wImg = 640.0; hImg = 480.0;\n             wParentView: Option[Quantity] = none[Quantity]();\n             hParentView: Option[Quantity] = none[Quantity]();\n             backend = bkCairo; fType = fkPng; dataAsBitmap = false): Viewport		1553
+nim	initViewport	ginger.html#initViewport,float,float,float,float,string,string,float,float	proc initViewport(left = 0.0; bottom = 0.0; width = 1.0; height = 1.0;\n             style = none[Style](); xScale = none[Scale]();\n             yScale = none[Scale](); rotate = none[float]();\n             scale = none[float](); name = ""; parent = ""; wImg = 640.0;\n             hImg = 480.0; backend = bkCairo; fType = fkPng;\n             dataAsBitmap = false): Viewport		1602
+nim	addViewport	ginger.html#addViewport,Viewport,Coord,Quantity,Quantity,string	proc addViewport(view: Viewport; origin: Coord; width, height: Quantity;\n            style = none[Style](); xScale = none[Scale]();\n            yScale = none[Scale](); rotate = none[float]();\n            scale = none[float](); name = ""; dataAsBitmap = false): Viewport		1633
+nim	addViewport	ginger.html#addViewport,Viewport,float,float,float,float,string	proc addViewport(view: Viewport; left = 0.0; bottom = 0.0; width = 1.0; height = 1.0;\n            style = none[Style](); xScale = none[Scale]();\n            yScale = none[Scale](); rotate = none[float]();\n            scale = none[float](); name = ""; dataAsBitmap = false): Viewport		1668
+nim	xaxis	ginger.html#xaxis,Viewport,float	proc xaxis(view: Viewport; width = 1.0; color = color(0.0, 0.0, 0.0)): GraphObject		1721
+nim	yaxis	ginger.html#yaxis,Viewport,float	proc yaxis(view: Viewport; width = 1.0; color = color(0.0, 0.0, 0.0)): GraphObject		1726
+nim	initRect	ginger.html#initRect,Viewport,Coord,Quantity,Quantity,string	proc initRect(view: Viewport; origin: Coord; width, height: Quantity;\n         color = color(0.0, 0.0, 0.0); gradient = none[Gradient]();\n         style = none[Style](); rotate = none[float](); name = "rect"): GraphObject		1731
+nim	initRect	ginger.html#initRect,Viewport,float,float,float,float,string	proc initRect(view: Viewport; left, bottom, width, height: float;\n         color = color(0.0, 0.0, 0.0); gradient = none[Gradient]();\n         style = none[Style](); name = "rect"): GraphObject		1755
+nim	initRaster	ginger.html#initRaster,Viewport,Coord,Quantity,Quantity,int,int,proc),string	proc initRaster(view: Viewport; origin: Coord; width, height: Quantity;\n           numX, numY: int; drawCb: proc (): seq[uint32];\n           rotate = none[float](); name = "raster"): GraphObject		1774
+nim	initText	ginger.html#initText,Viewport,Coord,string,staticGraphObjectKind,TextAlignKind,Option[Font],string	proc initText(view: Viewport; origin: Coord; text: string;\n         textKind: static GraphObjectKind; alignKind: TextAlignKind;\n         font: Option[Font] = none[Font](); rotate = none[float]();\n         name = "text"): GraphObject		1791
+nim	drawBoundary	ginger.html#drawBoundary,Viewport	proc drawBoundary(view: Viewport; color = none[Color](); writeName = false;\n             writeNumber = none[int](); style = none[Style]())		1812
+nim	strHeight	ginger.html#strHeight,BackendKind,FiletypeKind,float,Font,string	proc strHeight(backend: BackendKind; fType: FiletypeKind; val: float; font: Font;\n          text = "M"): Coord1D		1845
+nim	strHeight	ginger.html#strHeight,Viewport,float,Font,string	proc strHeight(view: Viewport; val: float; font: Font; text = "W"): Coord1D		1856
+nim	strWidth	ginger.html#strWidth,BackendKind,FiletypeKind,float,Font,string	proc strWidth(backend: BackendKind; fType: FiletypeKind; val: float; font: Font;\n         text = "M"): Coord1D		1860
+nim	strWidth	ginger.html#strWidth,Viewport,float,Font,string	proc strWidth(view: Viewport; val: float; font: Font; text = "W"): Coord1D		1871
+nim	LineSpread	ginger.html#LineSpread	var LineSpread		1875
+nim	getStrHeight	ginger.html#getStrHeight,BackendKind,FiletypeKind,string,Font	proc getStrHeight(backend: BackendKind; fType: FiletypeKind; text: string; font: Font): Quantity		1876
+nim	getStrHeight	ginger.html#getStrHeight,Viewport,string,Font	proc getStrHeight(view: Viewport; text: string; font: Font): Quantity		1912
+nim	getStrWidth	ginger.html#getStrWidth,BackendKind,FiletypeKind,string,Font	proc getStrWidth(backend: BackendKind; fType: FiletypeKind; text: string; font: Font): Quantity		1915
+nim	getStrWidth	ginger.html#getStrWidth,Viewport,string,Font	proc getStrWidth(view: Viewport; text: string; font: Font): Quantity		1929
+nim	initMultiLineText	ginger.html#initMultiLineText,Viewport,Coord,string,staticGraphObjectKind,TextAlignKind,Option[Font],string	proc initMultiLineText(view: Viewport; origin: Coord; text: string;\n                  textKind: static GraphObjectKind; alignKind: TextAlignKind;\n                  fontOpt: Option[Font] = none[Font](); rotate = none[float]();\n                  name = "multiLineText"; useRealText = true): seq[GraphObject]		1932
+nim	initLine	ginger.html#initLine,Viewport,Coord,Coord,Option[Style],string	proc initLine(view: Viewport; start: Coord; stop: Coord;\n         style: Option[Style] = none[Style](); name = "line"): GraphObject		2004
+nim	initPoint	ginger.html#initPoint,Viewport,Coord,Style,string	proc initPoint(view: Viewport; pos: Coord; style: Style; name = "point"): GraphObject		2021
+nim	initPoint	ginger.html#initPoint,Viewport,Coord,float,MarkerKind,string	proc initPoint(view: Viewport; pos: Coord; size = 3.0; marker: MarkerKind = mkCircle;\n          color = color(0.0, 0.0, 0.0); name = "point"): GraphObject		2032
+nim	initPoint	ginger.html#initPoint,Viewport,Point,float,MarkerKind,string	proc initPoint(view: Viewport; pos: Point; size = 3.0; marker: MarkerKind = mkCircle;\n          color = color(0.0, 0.0, 0.0); name = "point"): GraphObject		2041
+nim	initManyPoint	ginger.html#initManyPoint,Viewport,seq[Coord],Style,string	proc initManyPoint(view: Viewport; pos: seq[Coord]; style: Style;\n              name = "many_points"): GraphObject		2058
+nim	initErrorBar	ginger.html#initErrorBar,Viewport,Coord,Coord1D,Coord1D,AxisKind,ErrorBarKind,Option[Style],string	proc initErrorBar(view: Viewport; pt: Coord; errorUp: Coord1D; errorDown: Coord1D;\n             axKind: AxisKind; ebKind: ErrorBarKind;\n             style: Option[Style] = none[Style](); name = "errorBar"): GraphObject		2076
+nim	initErrorBar	ginger.html#initErrorBar,Viewport,Point,Coord1D,Coord1D,AxisKind,ErrorBarKind,Option[Style],string	proc initErrorBar(view: Viewport; pt: Point; errorUp: Coord1D; errorDown: Coord1D;\n             axKind: AxisKind; ebKind: ErrorBarKind;\n             style: Option[Style] = none[Style](); name = "errorBar"): GraphObject		2191
+nim	initPolyLine	ginger.html#initPolyLine,Viewport,seq[Coord],Option[Style],string	proc initPolyLine(view: Viewport; pos: seq[Coord];\n             style: Option[Style] = none[Style](); name = "polyLine"): GraphObject		2227
+nim	initPolyLine	ginger.html#initPolyLine,Viewport,seq[Point],Option[Style],string	proc initPolyLine(view: Viewport; pos: seq[Point];\n             style: Option[Style] = none[Style](); name = "polyLine"): GraphObject		2241
+nim	xlabel	ginger.html#xlabel,Viewport,string,Coord1D,string	proc xlabel(view: Viewport; label: string; margin: Coord1D; font = defaultFont();\n       name = "xLabel"; isSecondary = false; rotate = none[float]()): GraphObject		2312
+nim	xlabel	ginger.html#xlabel,Viewport,string,float,string	proc xlabel(view: Viewport; label: string; font = defaultFont(); margin = 1.0;\n       name = "xLabel"; isCustomMargin = false; isSecondary = false;\n       rotate = none[float]()): GraphObject		2327
+nim	ylabel	ginger.html#ylabel,Viewport,string,Coord1D,string	proc ylabel(view: Viewport; label: string; margin: Coord1D; font = defaultFont();\n       name = "yLabel"; isSecondary = false; rotate = none[float]()): GraphObject		2345
+nim	ylabel	ginger.html#ylabel,Viewport,string,float,string	proc ylabel(view: Viewport; label: string; font = defaultFont(); margin = 1.0;\n       name = "yLabel"; isCustomMargin = false; isSecondary = false;\n       rotate = none[float]()): GraphObject		2360
+nim	axisCoord	ginger.html#axisCoord,Coord1D,AxisKind	proc axisCoord(c: Coord1D; axKind: AxisKind; isSecondary = false): Coord		2466
+nim	tickLabels	ginger.html#tickLabels,Viewport,seq[GraphObject],Option[Font],proc(float)	proc tickLabels(view: Viewport; ticks: seq[GraphObject];\n           font: Option[Font] = none[Font](); margin = none[Coord1D]();\n           isSecondary = false; format: proc (x: float): string = nil;\n           rotate = none[float](); alignToOverride = none[TextAlignKind]()): seq[\n    GraphObject]		2478
+nim	tickLabels	ginger.html#tickLabels,Viewport,seq[Coord1D],seq[string],AxisKind,Option[Font],TickKind	proc tickLabels(view: Viewport; tickPos: seq[Coord1D]; tickLabels: seq[string];\n           axKind: AxisKind; font: Option[Font] = none[Font]();\n           isSecondary = false; rotate = none[float]();\n           margin = none[Coord1D](); alignToOverride = none[TextAlignKind]();\n           style = none[Style](); tickKind: TickKind = tkOneSide): (\n    seq[GraphObject], seq[GraphObject])		2570
+nim	calcTickLocations	ginger.html#calcTickLocations,Scale,int	proc calcTickLocations(scale: Scale; numTicks: int): (Scale, float, int)		2632
+nim	initTicks	ginger.html#initTicks,Viewport,AxisKind,int,seq[Coord],TickKind,Option[Style]	proc initTicks(view: Viewport; axKind: AxisKind; numTicks: int = 0;\n          tickLocs: seq[Coord] = @[]; tickKind: TickKind = tkOneSide;\n          major = true; style: Option[Style] = none[Style]();\n          updateScale = true; isSecondary = false; boundScale = none[Scale]()): seq[\n    GraphObject]		2670
+nim	xticks	ginger.html#xticks,Viewport,int,seq[Coord],TickKind,Option[Style]	proc xticks(view: Viewport; numTicks: int = 10; tickLocs: seq[Coord] = @[];\n       major = true; tickKind: TickKind = tkOneSide;\n       style: Option[Style] = none[Style](); updateScale = true;\n       isSecondary = false): seq[GraphObject]		2748
+nim	yticks	ginger.html#yticks,Viewport,int,seq[Coord],TickKind,Option[Style]	proc yticks(view: Viewport; numTicks: int = 10; tickLocs: seq[Coord] = @[];\n       major = true; tickKind: TickKind = tkOneSide;\n       style: Option[Style] = none[Style](); updateScale = true;\n       isSecondary = false): seq[GraphObject]		2770
+nim	initGridLines	ginger.html#initGridLines,Viewport,Option[seq[GraphObject]],Option[seq[GraphObject]],Option[Style],string	proc initGridLines(view: Viewport;\n              xticks: Option[seq[GraphObject]] = none[seq[GraphObject]]();\n              yticks: Option[seq[GraphObject]] = none[seq[GraphObject]]();\n              major = true; style: Option[Style] = none[Style]();\n              name = "GridLines"): GraphObject		2814
+nim	layout	ginger.html#layout,Viewport,int,int,seq[Quantity],seq[Quantity],Quantity	proc layout(view: Viewport; cols, rows: int; colWidths: seq[Quantity] = @[];\n       rowHeights: seq[Quantity] = @[];\n       margin: Quantity = quant(0.0, ukRelative); ignoreOverflow = false)		2886
+nim	background	ginger.html#background,Viewport,Option[Style],string	proc background(view: Viewport; style: Option[Style] = none[Style](); name = "")		2975
+nim	items	ginger.html#items.i,Viewport	iterator items(view: Viewport): Viewport		3310
+nim	mitems	ginger.html#mitems.i,Viewport	iterator mitems(view: var Viewport): var Viewport		3314
+nim	getCenter	ginger.html#getCenter,Viewport	proc getCenter(view: Viewport): (float, float)		3419
+nim	draw	ginger.html#draw,BImage[T],GraphObject	proc draw[T](img: var BImage[T]; gobj: GraphObject)		3430
+nim	draw	ginger.html#draw,BImage[T],Viewport	proc draw[T](img: var BImage[T]; view: Viewport)		3458
+nim	draw	ginger.html#draw,Viewport,string,TeXOptions	proc draw(view: Viewport; filename: string; texOptions: TeXOptions = TeXOptions())		3577
+nimgrp	initpolyline	ginger.html#initPolyLine-procs-all	proc		2227
+nimgrp	-	ginger.html#--procs-all	proc		274
+nimgrp	torelative	ginger.html#toRelative-procs-all	proc		205
+nimgrp	initcoord1d	ginger.html#initCoord1D-procs-all	proc		484
+nimgrp	addviewport	ginger.html#addViewport-procs-all	proc		1633
+nimgrp	strheight	ginger.html#strHeight-procs-all	proc		1845
+nimgrp	initcoord	ginger.html#initCoord-procs-all	proc		537
+nimgrp	initrect	ginger.html#initRect-procs-all	proc		1731
+nimgrp	addobj	ginger.html#addObj-procs-all	proc		1421
+nimgrp	[]	ginger.html#[]-procs-all	proc		1143
+nimgrp	updatedatascale	ginger.html#updateDataScale-procs-all	proc		1397
+nimgrp	to	ginger.html#to-procs-all	proc		257
+nimgrp	initerrorbar	ginger.html#initErrorBar-procs-all	proc		2076
+nimgrp	ticklabels	ginger.html#tickLabels-procs-all	proc		2478
+nimgrp	strwidth	ginger.html#strWidth-procs-all	proc		1860
+nimgrp	topoints	ginger.html#toPoints-procs-all	proc		162
+nimgrp	==	ginger.html#==-procs-all	proc		756
+nimgrp	+	ginger.html#+-procs-all	proc		273
+nimgrp	ylabel	ginger.html#ylabel-procs-all	proc		2345
+nimgrp	getstrheight	ginger.html#getStrHeight-procs-all	proc		1876
+nimgrp	xlabel	ginger.html#xlabel-procs-all	proc		2312
+nimgrp	initpoint	ginger.html#initPoint-procs-all	proc		2021
+nimgrp	scaleallsizes	ginger.html#scaleAllSizes-procs-all	proc		1223
+nimgrp	getstrwidth	ginger.html#getStrWidth-procs-all	proc		1915
+nimgrp	draw	ginger.html#draw-procs-all	proc		3430
+nimgrp	initviewport	ginger.html#initViewport-procs-all	proc		1553
+nimgrp	c	ginger.html#c-templates-all	template		542
+nimgrp	c1	ginger.html#c1-templates-all	template		494
+heading	########## INIT FUNCTIONS	ginger.html#init-functions	 ########## INIT FUNCTIONS		0
+heading	######## DRAWING FUNCTIONS	ginger.html#drawing-functions	 ######## DRAWING FUNCTIONS		0

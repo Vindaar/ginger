@@ -1,0 +1,4 @@
+nimTitle	backends	ginger/backends.html	module src/ginger/backends		0
+nim	parseFilename	ginger/backends.html#parseFilename,string	proc parseFilename(fname: string): FiletypeKind		29
+nim	toBackend	ginger/backends.html#toBackend,FiletypeKind,TeXOptions	proc toBackend(fType: FiletypeKind; texOptions: TeXOptions): BackendKind		43
+nim	getTextExtent	ginger/backends.html#getTextExtent,BackendKind,FiletypeKind,string,Font	proc getTextExtent(backend: BackendKind; fType: FiletypeKind; text: string;\n              font: Font): TextExtent		60
